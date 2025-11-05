@@ -1,15 +1,180 @@
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
-  provider = "prisma-client"
-  output   = "../app/generated/prisma"
+  provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+}
+
+/**
+ * =========================
+ * APP MODELLERİN (MEVCUT)
+ * =========================
+ */
+
+model User {
+  id        String   @id @default(cuid()) // PK
+  email     String   @unique // Benzersiz e-posta
+  name      String? // Görünen ad
+  hashedPw  String // Bcrypt şifre hash (Credentials)
+  role      UserRole @default(CUSTOMER) // Rol
+  seller    Seller? // Satıcı (opsiyonel)
+  orders    Order[] // Siparişleri
+  createdAt DateTime @default(now()) // Oluşturulma
+  updatedAt DateTime @updatedAt // Güncellenme
+
+  // NextAuth için ek alan/ilişkiler:
+  emailVerified DateTime? // E-posta doğrulama tarihi
+  image         String? // Avatar (opsiyonel)
+  accounts      Account[] // NextAuth hesapları
+  sessions      Session[] // NextAuth oturumları
+}
+
+model Seller {
+  id            String    @id @default(cuid())
+  userId        String    @unique
+  user          User      @relation(fields: [userId], references: [id])
+  displayName   String
+  commissionBps Int       @default(1500)
+  products      Product[]
+  payouts       Payout[]
+  createdAt     DateTime  @default(now())
+}
+
+model Category {
+  id       String     @id @default(cuid())
+  name     String     @unique
+  slug     String     @unique
+  parentId String?
+  children Category[] @relation("CategoryToCategory")
+  parent   Category?  @relation("CategoryToCategory", fields: [parentId], references: [id])
+  products Product[]
+}
+
+model Product {
+  id          String         @id @default(cuid())
+  sellerId    String
+  seller      Seller         @relation(fields: [sellerId], references: [id])
+  categoryId  String?
+  category    Category?      @relation(fields: [categoryId], references: [id])
+  title       String
+  slug        String         @unique
+  description String?
+  images      ProductImage[]
+  variants    Variant[]
+  isActive    Boolean        @default(true)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+}
+
+model ProductImage {
+  id        String  @id @default(cuid())
+  productId String
+  url       String
+  alt       String?
+  sort      Int     @default(0)
+  product   Product @relation(fields: [productId], references: [id])
+}
+
+model Variant {
+  id         String      @id @default(cuid())
+  productId  String
+  sku        String      @unique
+  priceCents Int
+  stock      Int         @default(0)
+  attributes Json?
+  product    Product     @relation(fields: [productId], references: [id])
+  // Back-relation: OrderItem.variant
+  orderItems OrderItem[] // <- isim konvansiyonu (daha önce migrate olduysa buna uyarlandı)
+}
+
+model Order {
+  id         String      @id @default(cuid())
+  userId     String
+  status     OrderStatus @default(CART)
+  items      OrderItem[]
+  totalCents Int         @default(0)
+  createdAt  DateTime    @default(now())
+  user       User        @relation(fields: [userId], references: [id])
+}
+
+model OrderItem {
+  id         String  @id @default(cuid())
+  orderId    String
+  variantId  String
+  qty        Int     @default(1)
+  priceCents Int
+  order      Order   @relation(fields: [orderId], references: [id])
+  variant    Variant @relation(fields: [variantId], references: [id])
+}
+
+model Payout {
+  id          String   @id @default(cuid())
+  sellerId    String
+  amountCents Int
+  note        String?
+  createdAt   DateTime @default(now())
+  seller      Seller   @relation(fields: [sellerId], references: [id])
+}
+
+enum UserRole {
+  ADMIN
+  SELLER
+  CUSTOMER
+}
+
+enum OrderStatus {
+  CART
+  PENDING
+  PAID
+  SHIPPED
+  COMPLETED
+  CANCELED
+}
+
+/**
+ * =========================
+ * NEXTAUTH MODELLERİ (YENİ)
+ * =========================
+ */
+
+model Account {
+  id                String @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+
+  refresh_token String? @db.Text
+  access_token  String? @db.Text
+  expires_at    Int?
+  token_type    String?
+  scope         String?
+  id_token      String? @db.Text
+  session_state String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
 }

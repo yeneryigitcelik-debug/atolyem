@@ -1,4 +1,4 @@
-﻿import { prisma } from "../src/lib/db";
+import { prisma } from "../src/lib/db";
 
 async function main() {
   const cat = await prisma.category.upsert({
@@ -7,27 +7,41 @@ async function main() {
     create: { name: "Resim", slug: "resim" },
   });
 
-  const artist = await prisma.user.upsert({
+  const user = await prisma.user.upsert({
     where: { email: "artist@example.com" },
-    update: {},
-    create: { email: "artist@example.com", name: "Deneme Sanatçı", role: "ARTIST" },
+    update: { name: "Deneme Sanatçı", role: "SELLER" },
+    create: {
+      email: "artist@example.com",
+      name: "Deneme Sanatçı",
+      role: "SELLER",
+      // Geliştirme için placeholder parola hash; prod'da gerçek hash gerekir.
+      hashedPw: "dev-only",
+    },
+  });
+
+  const seller = await prisma.seller.upsert({
+    where: { userId: user.id },
+    update: { displayName: user.name ?? "Satıcı" },
+    create: { userId: user.id, displayName: user.name ?? "Satıcı" },
   });
 
   await prisma.product.upsert({
     where: { slug: "ilk-tablo" },
     update: {},
     create: {
+      sellerId: seller.id,
+      categoryId: cat.id,
       title: "İlk Tablo",
       slug: "ilk-tablo",
       description: "Akrilik boya, 50x70",
-      priceTL: 199900,
-      stock: 1,
-      isPublished: true,
-      categoryId: cat.id,
-      artistId: artist.id,
-      images: { create: [{ url: "/uploads/sample.jpg", alt: "Örnek görsel", order: 0 }] },
+      isActive: true,
+      images: { create: [{ url: "/uploads/sample.jpg", alt: "Örnek görsel", sort: 0 }] },
+      variants: {
+        create: [{ sku: "ILK-TABLO-001", priceCents: 199900, stock: 1 }],
+      },
     },
   });
 }
 
 main().finally(() => prisma.$disconnect());
+

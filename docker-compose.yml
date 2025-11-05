@@ -1,0 +1,24 @@
+version: "3.8"
+
+services:
+  postgres:
+    image: postgres:16
+    container_name: atolyem-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: "atolyem"
+      POSTGRES_PASSWORD: "atolyem123"
+      POSTGRES_DB: "atolyem"
+    ports:
+      - "5432:5432"
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+volumes:
+  db-data:
+
