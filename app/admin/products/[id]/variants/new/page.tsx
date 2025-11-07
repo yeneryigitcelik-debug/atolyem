@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
 import { notFound } from "next/navigation";
-import { createVariantAction } from "../../actions";
+import { createVariantAction } from "@/app/admin/products/actions";
 
 export default async function NewVariantPage({ params }: { params: { id: string } }) {
   const product = await db.product.findUnique({

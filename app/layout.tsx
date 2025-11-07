@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import SessionProviderWrapper from "./components/SessionProviderWrapper";
 
 export const metadata: Metadata = {
   title: "atolyem.net - El Yapımı Türk Sanatını Keşfedin",
@@ -26,7 +27,9 @@ export default function RootLayout({
         />
       </head>
       <body className="font-display" style={{ backgroundColor: '#FFF8F1', color: '#1F2937' }}>
-        {children}
+        <SessionProviderWrapper>
+          {children}
+        </SessionProviderWrapper>
       </body>
     </html>
   );

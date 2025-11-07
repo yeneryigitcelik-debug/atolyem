@@ -2,39 +2,51 @@
 
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
+import { useSession, signOut } from "next-auth/react";
+import CategoryMenu from "./CategoryMenu";
 
-export default function Header() {
-  const [isCategoriesOpen, setIsCategoriesOpen] = useState(false);
+interface Category {
+  id: string;
+  name: string;
+  slug: string;
+  children?: Category[];
+}
+
+interface HeaderProps {
+  categories?: Category[];
+}
+
+export default function Header({ categories: initialCategories }: HeaderProps = {}) {
+  const { data: session, status } = useSession();
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
-  const categoriesRef = useRef<HTMLDivElement>(null);
+  const [categories, setCategories] = useState<Category[]>(initialCategories || []);
   const userMenuRef = useRef<HTMLDivElement>(null);
+
+  // Kategorileri API'den çek (eğer prop olarak gelmediyse)
+  useEffect(() => {
+    if (!initialCategories || initialCategories.length === 0) {
+      fetch("/api/categories")
+        .then((res) => res.json())
+        .then((data) => setCategories(data.categories || []))
+        .catch((err) => console.error("Categories fetch error:", err));
+    }
+  }, [initialCategories]);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (categoriesRef.current && !categoriesRef.current.contains(event.target as Node)) {
-        setIsCategoriesOpen(false);
-      }
       if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
         setIsUserMenuOpen(false);
       }
     }
 
-    if (isCategoriesOpen || isUserMenuOpen) {
+    if (isUserMenuOpen) {
       document.addEventListener("mousedown", handleClickOutside);
     }
 
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [isCategoriesOpen, isUserMenuOpen]);
-
-  const categories = [
-    { name: "Tablo", slug: "tablo", href: "/kategori/tablo" },
-    { name: "Seramik", slug: "seramik", href: "/kategori/seramik" },
-    { name: "Takı", slug: "taki", href: "/kategori/taki" },
-    { name: "Ev Dekor", slug: "ev-dekor", href: "/kategori/ev-dekor" },
-    { name: "Giyim", slug: "giyim", href: "/kategori/giyim" },
-  ];
+  }, [isUserMenuOpen]);
 
   return (
     <header className="flex w-full items-center justify-between whitespace-nowrap border-b border-solid border-border px-4 md:px-10 py-3">
@@ -55,41 +67,32 @@ export default function Header() {
           </h2>
         </Link>
         <div className="hidden lg:flex items-center gap-4">
-          <div className="relative" ref={categoriesRef}>
-            <button
-              onClick={() => setIsCategoriesOpen(!isCategoriesOpen)}
-              className="flex max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 bg-white border border-border text-[#1F2937] gap-2 text-sm font-medium leading-normal tracking-[0.015em] min-w-0 px-3 hover:bg-gray-50 transition-colors"
-            >
-              <span className="material-symbols-outlined">menu</span>
-              <span>Kategoriler</span>
-            </button>
-            {isCategoriesOpen && (
-              <div className="absolute top-full left-0 mt-2 w-48 rounded-lg bg-white border border-border shadow-xl z-50 overflow-hidden">
-                {categories.map((category) => (
-                  <Link
-                    key={category.slug}
-                    href={category.href}
-                    onClick={() => setIsCategoriesOpen(false)}
-                    className="block px-4 py-3 text-sm text-[#1F2937] hover:bg-gray-50 transition-colors"
-                  >
-                    {category.name}
-                  </Link>
-                ))}
-              </div>
-            )}
-          </div>
-          <label className="flex flex-col min-w-40 !h-10 max-w-56">
+          {categories.length > 0 && <CategoryMenu categories={categories} />}
+          <form
+            action="/search"
+            method="get"
+            className="flex flex-col min-w-40 !h-10 max-w-56"
+            onSubmit={(e) => {
+              const form = e.currentTarget;
+              const input = form.querySelector('input[name="q"]') as HTMLInputElement;
+              if (!input?.value.trim()) {
+                e.preventDefault();
+              }
+            }}
+          >
             <div className="flex w-full flex-1 items-stretch rounded-lg h-full">
               <div className="text-gray-500 flex border-none bg-white border-r border-border items-center justify-center pl-4 rounded-l-lg">
                 <span className="material-symbols-outlined">search</span>
               </div>
               <input
+                name="q"
+                type="search"
                 className="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-[#1F2937] focus:outline-0 focus:ring-2 focus:ring-primary border-none bg-white focus:border-none h-full placeholder:text-gray-400 px-4 rounded-l-none border-l-0 pl-2 text-base font-normal leading-normal"
                 placeholder="Ara"
                 defaultValue=""
               />
             </div>
-          </label>
+          </form>
         </div>
       </div>
       <div className="flex flex-1 justify-end gap-8">
@@ -101,11 +104,26 @@ export default function Header() {
             Pazar
           </Link>
           <Link
-            href="/seller"
+            href="/akademi"
             className="text-[#1F2937] text-sm font-medium leading-normal hover:text-primary transition-colors"
           >
-            Atölyeni Oluştur
+            Atölyem Akademi
           </Link>
+          {status !== "loading" && session?.user && ((session.user as any)?.role === "SELLER" || (session.user as any)?.role === "ADMIN") ? (
+            <Link
+              href="/seller"
+              className="text-[#1F2937] text-sm font-medium leading-normal hover:text-primary transition-colors"
+            >
+              Atölyem
+            </Link>
+          ) : status !== "loading" ? (
+            <Link
+              href="/seller"
+              className="text-[#1F2937] text-sm font-medium leading-normal hover:text-primary transition-colors"
+            >
+              Atölyeni Oluştur
+            </Link>
+          ) : null}
         </div>
         <div className="flex gap-2">
           <Link
@@ -128,21 +146,98 @@ export default function Header() {
               <span className="material-symbols-outlined text-xl">person</span>
             </button>
             {isUserMenuOpen && (
-              <div className="absolute right-0 mt-2 w-48 rounded-lg bg-white border border-border shadow-xl z-50 overflow-hidden">
-                <Link
-                  href="/login"
-                  onClick={() => setIsUserMenuOpen(false)}
-                  className="block px-4 py-3 text-sm text-[#1F2937] hover:bg-gray-50 transition-colors font-medium"
-                >
-                  Giriş Yap
-                </Link>
-                <Link
-                  href="/register"
-                  onClick={() => setIsUserMenuOpen(false)}
-                  className="block px-4 py-3 text-sm text-[#1F2937] hover:bg-gray-50 transition-colors border-t border-border font-medium"
-                >
-                  Kayıt Ol
-                </Link>
+              <div className="absolute right-0 mt-2 w-56 rounded-lg bg-white border border-border shadow-xl z-50 overflow-hidden">
+                {status === "loading" ? (
+                  <div className="px-4 py-3 text-sm text-gray-500">Yükleniyor...</div>
+                ) : session?.user ? (
+                  <>
+                    <div className="px-4 py-3 border-b border-border">
+                      <p className="text-sm font-semibold text-[#1F2937]">
+                        {session.user.name || session.user.email}
+                      </p>
+                      <p className="text-xs text-gray-500 mt-1">{session.user.email}</p>
+                    </div>
+                    <Link
+                      href="/profile"
+                      onClick={() => setIsUserMenuOpen(false)}
+                      className="block px-4 py-3 text-sm text-[#1F2937] hover:bg-gray-50 transition-colors font-medium"
+                    >
+                      Profilim
+                    </Link>
+                    <Link
+                      href="/orders"
+                      onClick={() => setIsUserMenuOpen(false)}
+                      className="block px-4 py-3 text-sm text-[#1F2937] hover:bg-gray-50 transition-colors"
+                    >
+                      Siparişlerim
+                    </Link>
+                    <Link
+                      href="/messages"
+                      onClick={() => setIsUserMenuOpen(false)}
+                      className="block px-4 py-3 text-sm text-[#1F2937] hover:bg-gray-50 transition-colors"
+                    >
+                      Mesajlar
+                    </Link>
+                    {(session.user as any)?.role === "SELLER" || (session.user as any)?.role === "ADMIN" ? (
+                      <Link
+                        href="/seller"
+                        onClick={() => setIsUserMenuOpen(false)}
+                        className="block px-4 py-3 text-sm text-[#1F2937] hover:bg-gray-50 transition-colors border-t border-border"
+                      >
+                        Satıcı Paneli
+                      </Link>
+                    ) : null}
+                    {(session.user as any)?.role === "ADMIN" && (
+                      <Link
+                        href="/admin"
+                        onClick={() => setIsUserMenuOpen(false)}
+                        className="block px-4 py-3 text-sm text-[#1F2937] hover:bg-gray-50 transition-colors border-t border-border"
+                      >
+                        Admin Paneli
+                      </Link>
+                    )}
+                    <Link
+                      href="/settings"
+                      onClick={() => setIsUserMenuOpen(false)}
+                      className="block px-4 py-3 text-sm text-[#1F2937] hover:bg-gray-50 transition-colors border-t border-border"
+                    >
+                      Ayarlar
+                    </Link>
+                    <Link
+                      href="/help"
+                      onClick={() => setIsUserMenuOpen(false)}
+                      className="block px-4 py-3 text-sm text-[#1F2937] hover:bg-gray-50 transition-colors"
+                    >
+                      Yardım Merkezi
+                    </Link>
+                    <button
+                      onClick={() => {
+                        setIsUserMenuOpen(false);
+                        signOut({ callbackUrl: "/" });
+                      }}
+                      className="block w-full text-left px-4 py-3 text-sm text-red-600 hover:bg-red-50 transition-colors border-t border-border font-medium"
+                    >
+                      Çıkış Yap
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <Link
+                      href="/login"
+                      onClick={() => setIsUserMenuOpen(false)}
+                      className="block px-4 py-3 text-sm text-[#1F2937] hover:bg-gray-50 transition-colors font-medium"
+                    >
+                      Giriş Yap
+                    </Link>
+                    <Link
+                      href="/register"
+                      onClick={() => setIsUserMenuOpen(false)}
+                      className="block px-4 py-3 text-sm text-[#1F2937] hover:bg-gray-50 transition-colors border-t border-border font-medium"
+                    >
+                      Kayıt Ol
+                    </Link>
+                  </>
+                )}
               </div>
             )}
           </div>

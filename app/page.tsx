@@ -89,30 +89,45 @@ export default async function Home() {
                       const sellerName = product.seller.user.name || product.seller.displayName || "Sanatçı";
 
                       return (
-                        <Link
-                          key={product.id}
-                          href={`/products/${product.slug}`}
-                          className="flex flex-col gap-3 pb-3 group"
-                        >
-                          <div className="w-full aspect-[3/4] rounded-lg overflow-hidden transition-transform duration-300 group-hover:scale-105 bg-surface-light dark:bg-surface-dark">
-                            <ProductImage
-                              src={imageUrl}
-                              alt={product.images[0]?.alt || product.title}
-                              className="w-full h-full object-cover"
-                            />
-                          </div>
+                        <div key={product.id} className="flex flex-col gap-3 pb-3 group">
+                          <Link
+                            href={`/products/${product.slug}`}
+                            className="block"
+                          >
+                            <div className="w-full aspect-[3/4] rounded-lg overflow-hidden transition-transform duration-300 group-hover:scale-105 bg-surface-light dark:bg-surface-dark">
+                              <ProductImage
+                                src={imageUrl}
+                                alt={product.images[0]?.alt || product.title}
+                                className="w-full h-full object-cover"
+                              />
+                            </div>
+                          </Link>
                           <div>
-                            <p className="text-[#1F2937] text-base font-medium leading-normal">
-                              {product.title}
-                            </p>
-                            <p className="text-gray-600 text-sm font-normal leading-normal">
-                              {sellerName} tarafından
-                            </p>
-                            <p className="text-[#1F2937] text-sm font-medium leading-normal">
-                              {minPrice > 0 ? `€${(minPrice / 100).toLocaleString("tr-TR")}` : "Fiyat yok"}
-                            </p>
+                            {product.category && (
+                              <Link
+                                href={`/search?category=${product.category.slug}`}
+                                className="text-xs text-gray-500 hover:text-[#D97706] transition-colors"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                {product.category.name}
+                              </Link>
+                            )}
+                            <Link
+                              href={`/products/${product.slug}`}
+                              className="block"
+                            >
+                              <p className="text-[#1F2937] text-base font-medium leading-normal">
+                                {product.title}
+                              </p>
+                              <p className="text-gray-600 text-sm font-normal leading-normal">
+                                {sellerName} tarafından
+                              </p>
+                              <p className="text-[#1F2937] text-sm font-medium leading-normal">
+                                {minPrice > 0 ? `€${(minPrice / 100).toLocaleString("tr-TR")}` : "Fiyat yok"}
+                              </p>
+                            </Link>
                           </div>
-                        </Link>
+                        </div>
                       );
                     })}
                   </div>
@@ -135,30 +150,45 @@ export default async function Home() {
                       const sellerName = product.seller.user.name || product.seller.displayName || "Sanatçı";
 
                       return (
-                        <Link
-                          key={product.id}
-                          href={`/products/${product.slug}`}
-                          className="flex flex-col gap-3 pb-3 group"
-                        >
-                          <div className="w-full aspect-[3/4] rounded-lg overflow-hidden transition-transform duration-300 group-hover:scale-105 bg-surface-light dark:bg-surface-dark">
-                            <ProductImage
-                              src={imageUrl}
-                              alt={product.images[0]?.alt || product.title}
-                              className="w-full h-full object-cover"
-                            />
-                          </div>
+                        <div key={product.id} className="flex flex-col gap-3 pb-3 group">
+                          <Link
+                            href={`/products/${product.slug}`}
+                            className="block"
+                          >
+                            <div className="w-full aspect-[3/4] rounded-lg overflow-hidden transition-transform duration-300 group-hover:scale-105 bg-surface-light dark:bg-surface-dark">
+                              <ProductImage
+                                src={imageUrl}
+                                alt={product.images[0]?.alt || product.title}
+                                className="w-full h-full object-cover"
+                              />
+                            </div>
+                          </Link>
                           <div>
-                            <p className="text-[#1F2937] text-base font-medium leading-normal">
-                              {product.title}
-                            </p>
-                            <p className="text-gray-600 text-sm font-normal leading-normal">
-                              {sellerName} tarafından
-                            </p>
-                            <p className="text-[#1F2937] text-sm font-medium leading-normal">
-                              {minPrice > 0 ? `€${(minPrice / 100).toLocaleString("tr-TR")}` : "Fiyat yok"}
-                            </p>
+                            {product.category && (
+                              <Link
+                                href={`/search?category=${product.category.slug}`}
+                                className="text-xs text-gray-500 hover:text-[#D97706] transition-colors"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                {product.category.name}
+                              </Link>
+                            )}
+                            <Link
+                              href={`/products/${product.slug}`}
+                              className="block"
+                            >
+                              <p className="text-[#1F2937] text-base font-medium leading-normal">
+                                {product.title}
+                              </p>
+                              <p className="text-gray-600 text-sm font-normal leading-normal">
+                                {sellerName} tarafından
+                              </p>
+                              <p className="text-[#1F2937] text-sm font-medium leading-normal">
+                                {minPrice > 0 ? `€${(minPrice / 100).toLocaleString("tr-TR")}` : "Fiyat yok"}
+                              </p>
+                            </Link>
                           </div>
-                        </Link>
+                        </div>
                       );
                     })}
                   </div>
@@ -173,9 +203,9 @@ export default async function Home() {
                     <h2 className="text-3xl md:text-4xl font-bold text-[#1F2937] mb-2">
                       Atölyem nedir?
                     </h2>
-                    <a className="text-primary hover:underline font-medium" href="#">
+                    <Link className="text-primary hover:underline font-medium" href="/about">
                       Hikâyemizi oku →
-                    </a>
+                    </Link>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 md:gap-12 mb-12">
                     <div className="flex flex-col items-center text-center">
@@ -212,12 +242,12 @@ export default async function Home() {
                   </div>
                   <div className="text-center border-t border-border pt-8">
                     <p className="text-lg font-bold mb-3">Sorun mu var?</p>
-                    <a
+                    <Link
                       className="inline-block bg-primary text-white px-6 py-3 rounded-lg font-bold text-sm hover:bg-secondary transition-colors"
-                      href="#"
+                      href="/help"
                     >
                       Destek Merkezine Git
-                    </a>
+                    </Link>
                   </div>
                 </div>
               </section>
@@ -242,7 +272,7 @@ export default async function Home() {
                       </button>
                     </form>
                     <p className="text-xs text-gray-600 mt-3">
-                      Abone olarak <a className="underline" href="#">Gizlilik Politikamızı</a> kabul etmiş
+                      Abone olarak <Link className="underline" href="/privacy">Gizlilik Politikamızı</Link> kabul etmiş
                       olursunuz.
                     </p>
                   </div>
@@ -314,24 +344,24 @@ export default async function Home() {
                   <h3 className="font-bold mb-4">Hakkında</h3>
                   <ul className="space-y-2 text-sm text-gray-600">
                     <li>
-                      <a className="hover:text-primary" href="#">
+                      <Link className="hover:text-primary" href="/about">
                         Hikayemiz
-                      </a>
+                      </Link>
                     </li>
                     <li>
-                      <a className="hover:text-primary" href="#">
+                      <Link className="hover:text-primary" href="/artists">
                         Sanatçılarla Tanışın
-                      </a>
+                      </Link>
                     </li>
                     <li>
-                      <a className="hover:text-primary" href="#">
+                      <Link className="hover:text-primary" href="/contact">
                         Bize Ulaşın
-                      </a>
+                      </Link>
                     </li>
                     <li>
-                      <a className="hover:text-primary" href="#">
+                      <Link className="hover:text-primary" href="/help">
                         SSS
-                      </a>
+                      </Link>
                     </li>
                   </ul>
                 </div>

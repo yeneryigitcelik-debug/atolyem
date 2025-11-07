@@ -33,7 +33,19 @@ export default function RegisterPage() {
       if (result?.error) {
         setError(result.error);
       } else {
-        router.push("/login?registered=true");
+        // Kayıt başarılı, otomatik giriş yap
+        const signInResult = await signIn("credentials", {
+          email: formData.email,
+          password: formData.password,
+          redirect: false,
+        });
+
+        if (signInResult?.error) {
+          setError("Kayıt başarılı ancak giriş yapılamadı. Lütfen giriş sayfasından giriş yapın.");
+        } else {
+          router.push("/");
+          router.refresh();
+        }
       }
     } catch (err) {
       setError("Bir hata oluştu");

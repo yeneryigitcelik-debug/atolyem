@@ -14,7 +14,10 @@ export default function ProductImage({ src, alt, className = "" }: ProductImageP
       className={className}
       onError={(e) => {
         const target = e.target as HTMLImageElement;
-        target.src = "https://via.placeholder.com/400x533?text=Görsel+Yok";
+        // Eğer zaten placeholder değilse, placeholder'a geç
+        if (!target.src.includes("placeholder")) {
+          target.src = "https://via.placeholder.com/400x533?text=Görsel+Yok";
+        }
       }}
     />
   );

@@ -13,10 +13,22 @@ export async function addToCart(variantId: string, qty: number) {
 
   const variant = await db.variant.findUnique({
     where: { id: variantId },
+    include: {
+      product: {
+        include: {
+          seller: true,
+        },
+      },
+    },
   });
 
   if (!variant || variant.stock < qty) {
     throw new Error("Yeterli stok yok");
+  }
+
+  // Satıcı kendi ürününü satın alamaz
+  if (variant.product.seller.userId === session.user.id) {
+    throw new Error("Kendi ürününüzü satın alamazsınız");
   }
 
   let cart = await db.order.findFirst({

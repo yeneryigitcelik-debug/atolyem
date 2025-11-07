@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import Header from "@/app/components/Header";
 
 type Props = { params: Promise<{ id: string }> };
 
@@ -33,41 +34,13 @@ export default async function ArtistProfilePage({ params }: Props) {
   const artistImage = seller.user.image || "https://lh3.googleusercontent.com/aida-public/AB6AXuDDoFd-5Lopq13T-VJrLgwgSt7uH3WDYxeEUTgjk2BUXy1HdMKoQ7Aftco9cHpc54mE-kkrDTu7DAjHnYauF54_iNFcTp9woSfkGwN0Dc9TRU_xslY2zqg2Vmm4qVCMnBnCKi1vu0bRR9aUoVF4mvYVeTdxifsNl49PQTKOhWb4fJJkjqZlXeWZSdinHELFarnoPT3p_jgD0JzCHE-SNsUl2cE9DP59vnhW2zncJ2ygxHzkjImID2c0-caDfiSMSn8H7rycDNSHCn0w";
 
   return (
-    <div className="flex min-h-screen w-full flex-col bg-[#FFF8F1] dark:bg-gray-900">
-      {/* Header */}
-      <header className="sticky top-0 z-10 w-full border-b border-[#E5E7EB] bg-[#FFF8F1]/80 backdrop-blur-sm dark:border-gray-700 dark:bg-gray-900/80">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center gap-8">
-            <Link href="/" className="flex items-center gap-3">
-              <svg className="h-6 w-6 text-[#D97706]" fill="none" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
-                <path clipRule="evenodd" d="M24 4H6V17.3333V30.6667H24V44H42V30.6667V17.3333H24V4Z" fill="currentColor" fillRule="evenodd"></path>
-              </svg>
-              <h2 className="text-xl font-bold">Atölyem.net</h2>
-            </Link>
-            <nav className="hidden items-center gap-8 md:flex">
-              <Link href="/" className="text-sm font-medium hover:text-[#D97706] dark:text-zinc-300 dark:hover:text-[#D97706]">
-                Ana Sayfa
-              </Link>
-              <Link href="/catalog" className="text-sm font-medium hover:text-[#D97706] dark:text-zinc-300 dark:hover:text-[#D97706]">
-                Kategoriler
-              </Link>
-              <Link href="/catalog" className="text-sm font-medium hover:text-[#D97706] dark:text-zinc-300 dark:hover:text-[#D97706]">
-                Sanatçılar
-              </Link>
-            </nav>
-          </div>
-          <div className="flex items-center gap-4">
-            <Link href="/catalog" className="hidden rounded-lg p-2 text-zinc-500 hover:bg-zinc-100 hover:text-[#D97706] dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-[#D97706] sm:block">
-              <svg fill="currentColor" height="20px" viewBox="0 0 256 256" width="20px" xmlns="http://www.w3.org/2000/svg">
-                <path d="M229.66,218.34l-50.07-50.06a88.11,88.11,0,1,0-11.31,11.31l50.06,50.07a8,8,0,0,0,11.32-11.32ZM40,112a72,72,0,1,1,72,72A72.08,72.08,0,0,1,40,112Z"></path>
-              </svg>
-            </Link>
-            <Link href="/login" className="size-10 rounded-full bg-cover bg-center bg-no-repeat" style={{ backgroundImage: `url("${artistImage}")` }}></Link>
-          </div>
-        </div>
-      </header>
+    <div className="relative flex min-h-screen w-full flex-col overflow-x-hidden" style={{ backgroundColor: '#FFF8F1' }}>
+      <div className="layout-container flex h-full grow flex-col">
+        <div className="flex flex-1 justify-center px-4 sm:px-8 md:px-12 lg:px-20 xl:px-40 py-5">
+          <div className="layout-content-container flex w-full max-w-[1280px] flex-1 flex-col">
+            <Header />
 
-      <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 lg:px-8">
+            <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 lg:px-8">
         {/* Banner */}
         <div
           className="h-64 w-full rounded-xl bg-cover bg-center bg-no-repeat"
@@ -102,12 +75,12 @@ export default async function ArtistProfilePage({ params }: Props) {
         {/* Tab Navigation */}
         <div className="border-b border-zinc-200 dark:border-zinc-800">
           <div className="-mb-px flex space-x-8 px-4">
-            <a className="border-b-2 border-[#D97706] py-4 px-1 text-sm font-medium text-[#D97706]" href="#">
+            <button className="border-b-2 border-[#D97706] py-4 px-1 text-sm font-medium text-[#D97706]">
               Eserleri
-            </a>
-            <a className="border-b-2 border-transparent py-4 px-1 text-sm font-medium text-zinc-500 hover:border-zinc-300 hover:text-zinc-700 dark:text-zinc-400 dark:hover:border-zinc-700 dark:hover:text-zinc-300" href="#">
+            </button>
+            <button className="border-b-2 border-transparent py-4 px-1 text-sm font-medium text-zinc-500 hover:border-zinc-300 hover:text-zinc-700 dark:text-zinc-400 dark:hover:border-zinc-700 dark:hover:text-zinc-300">
               Yorumlar
-            </a>
+            </button>
           </div>
         </div>
 
@@ -143,7 +116,10 @@ export default async function ArtistProfilePage({ params }: Props) {
             })}
           </div>
         )}
-      </main>
+            </main>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

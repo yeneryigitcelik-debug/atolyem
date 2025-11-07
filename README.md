@@ -286,11 +286,90 @@ Get-Service postgresql-17
 DATABASE_URL="postgresql://atolyem:atolyem123@localhost:5432/atolyem?schema=public"
 NEXTAUTH_SECRET="dev-only-change-me"
 NEXTAUTH_URL="http://localhost:3000"
+
+# Cloudflare Images
+CLOUDFLARE_ACCOUNT_ID="your-account-id-here"
+CLOUDFLARE_ACCOUNT_HASH="your-account-hash-here"
+CLOUDFLARE_IMAGES_API_TOKEN="your-api-token-here"
+CLOUDFLARE_IMAGES_VARIANT="public"
 ```
 
 * `DATABASE_URL`: Postgres bağlantı dizesi
 * `NEXTAUTH_SECRET`: JWT/Session imzalama gizli anahtarı
 * `NEXTAUTH_URL`: Auth callback tabanı
+* `CLOUDFLARE_ACCOUNT_ID`: Cloudflare hesap ID'si (Dashboard > Sağ sidebar > Account ID)
+* `CLOUDFLARE_ACCOUNT_HASH`: Cloudflare Images Account Hash (Cloudflare Images > Settings > Account Hash)
+* `CLOUDFLARE_IMAGES_API_TOKEN`: Cloudflare Images API token (My Profile > API Tokens > Create Token)
+* `CLOUDFLARE_IMAGES_VARIANT`: Cloudflare Images variant (varsayılan: "public")
+
+### Cloudflare Images Kurulumu
+
+1. **Account ID**: Cloudflare Dashboard > Sağ sidebar'dan Account ID'yi kopyalayın
+2. **Account Hash**: 
+   - Cloudflare Dashboard > Images > Settings
+   - "Account Hash" değerini kopyalayın
+   - Veya ilk görsel yüklemesinden sonra API response'unda da bulunabilir
+3. **API Token**:
+   - My Profile > API Tokens > Create Token
+   - Permissions: `Cloudflare Images:Edit`
+   - Token'ı kopyalayın (sadece bir kez gösterilir)
+   - ⚠️ **GÜVENLİK**: Bu mesajda görünen token'ı rotate edin (yeni token oluşturup eskisini silin)
+
+---
+
+## Vercel Deployment & Production Environment Variables
+
+### Vercel'de Environment Variables Ayarlama
+
+Vercel Dashboard > Projeniz > Settings > Environment Variables bölümüne gidin ve şu değişkenleri ekleyin:
+
+#### Production Environment:
+```ini
+NEXTAUTH_URL=https://atolyem.net
+NEXTAUTH_SECRET=<güçlü-random-string-32+karakter>
+DATABASE_URL=<neon-supabase-prod-url>
+CLOUDFLARE_ACCOUNT_ID=<account-id>
+CLOUDFLARE_ACCOUNT_HASH=5uHlQDyzeO-VZtA207nD0w
+CLOUDFLARE_IMAGES_API_TOKEN=<yeni-rotate-edilmiş-token>
+CLOUDFLARE_IMAGES_VARIANT=public
+```
+
+#### Preview Environment:
+Aynı değişkenleri Preview environment için de ekleyin (test için farklı değerler kullanabilirsiniz).
+
+### Güvenlik Kontrol Listesi
+
+1. ✅ **`.env` dosyası git'te izlenmiyor**: `.gitignore` içinde `.env*` mevcut
+2. ⚠️ **Token Rotate**: Bu mesajda görünen API token'ı rotate edin:
+   - Cloudflare Dashboard > My Profile > API Tokens
+   - Yeni token oluşturun (Cloudflare Images:Edit yetkili)
+   - Eski token'ı silin
+   - Yeni token'ı hem lokal `.env` hem de Vercel env'lere ekleyin
+3. ✅ **NextAuth v4 kullanılıyor**: `NEXTAUTH_URL` ve `NEXTAUTH_SECRET` doğru
+4. ✅ **Next/Image remotePatterns**: `next.config.ts` içinde Cloudflare Images domain'i eklendi
+
+### Database Migration (Production)
+
+Production'a deploy etmeden önce:
+
+```bash
+# Production database'e migration uygula
+npx prisma migrate deploy
+```
+
+Veya Vercel Build Command'a ekleyin:
+```json
+{
+  "buildCommand": "prisma generate && prisma migrate deploy && next build"
+}
+```
+
+### Lokal vs Production Database
+
+- **Lokal**: `.env.local` dosyasında `DATABASE_URL` (localhost PostgreSQL)
+- **Production**: Vercel Environment Variables'da `DATABASE_URL` (Neon/Supabase prod URL)
+
+⚠️ **Önemli**: Lokal ve production database'leri ayrı tutun. Production'da test verisi oluşturmayın.
 
 ---
 
@@ -438,3 +517,10 @@ atolyem/
 ---
 
 **Lisans**: Proje sahibinin tercihine göre belirlenecek.
+
+
+
+
+
+
+cloudflare api: 8VeF4K0GsakGgSvKi_LRKP2r-s16H-8uIewowy-y

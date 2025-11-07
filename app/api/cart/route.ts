@@ -56,7 +56,13 @@ export async function POST(request: NextRequest) {
     // Variant'ı kontrol et
     const variant = await db.variant.findUnique({
       where: { id: variantId },
-      include: { product: true },
+      include: {
+        product: {
+          include: {
+            seller: true,
+          },
+        },
+      },
     });
 
     if (!variant) {
@@ -65,6 +71,11 @@ export async function POST(request: NextRequest) {
 
     if (variant.stock < qty) {
       return NextResponse.json({ error: "Yeterli stok yok" }, { status: 400 });
+    }
+
+    // Satıcı kendi ürününü satın alamaz
+    if (variant.product.seller.userId === session.user.id) {
+      return NextResponse.json({ error: "Kendi ürününüzü satın alamazsınız" }, { status: 400 });
     }
 
     // Sepeti bul veya oluştur

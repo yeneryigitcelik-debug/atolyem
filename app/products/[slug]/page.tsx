@@ -3,12 +3,19 @@ import { notFound } from "next/navigation";
 import { addToCart } from "@/app/cart/actions";
 import Link from "next/link";
 import Header from "../../components/Header";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import StartConversationButton from "./StartConversationButton";
 
-type Props = { params: { slug: string } };
+type Props = { params: Promise<{ slug: string }> };
 
 export default async function ProductPage({ params }: Props) {
+  const { slug } = await params;
+  const session = await getServerSession(authOptions);
+  const currentUserId = (session?.user as any)?.id;
+  
   const product = await db.product.findUnique({
-    where: { slug: params.slug },
+    where: { slug },
     include: {
       images: { orderBy: { sort: "asc" } },
       category: true,
@@ -22,6 +29,7 @@ export default async function ProductPage({ params }: Props) {
   if (!product || !product.isActive) return notFound();
 
   const minPrice = product.variants[0]?.priceCents || 0;
+  const isOwnProduct = currentUserId === product.seller.userId;
 
   return (
     <div className="relative flex min-h-screen w-full flex-col overflow-x-hidden" style={{ backgroundColor: '#FFF8F1' }}>
@@ -68,6 +76,11 @@ export default async function ProductPage({ params }: Props) {
                         product.seller.user.email}
                     </Link>
                   </div>
+                  {currentUserId && !isOwnProduct && (
+                    <div className="mt-4">
+                      <StartConversationButton productId={product.id} sellerId={product.seller.id} />
+                    </div>
+                  )}
                   <div className="mt-6">
                     <h2 className="mb-2 font-semibold text-[#1F2937]">
                       Varyantlar

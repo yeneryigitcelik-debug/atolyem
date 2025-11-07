@@ -3,6 +3,7 @@ import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { redirect } from "next/navigation";
 import { createSellerProductAction } from "../actions";
+import SlugGenerator from "./SlugGenerator";
 
 export default async function NewSellerProductPage() {
   const session = await getServerSession(authOptions);
@@ -24,6 +25,7 @@ export default async function NewSellerProductPage() {
     <div className="min-h-screen bg-[#FFF8F1] dark:bg-gray-900 p-8">
       <div className="mx-auto max-w-4xl">
         <h1 className="mb-6 text-3xl font-bold text-gray-900">Yeni Ürün</h1>
+        <SlugGenerator />
         <form action={createSellerProductAction} className="space-y-6 rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div>
@@ -46,10 +48,10 @@ export default async function NewSellerProductPage() {
                 type="text"
                 id="slug"
                 name="slug"
-                required
                 className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-primary focus:outline-none focus:ring-primary"
-                placeholder="ornek-urun"
+                placeholder="Otomatik oluşturulacak (başlıktan)"
               />
+              <p className="mt-1 text-xs text-gray-500">Slug otomatik oluşturulur. İsterseniz manuel olarak düzenleyebilirsiniz.</p>
             </div>
           </div>
           <div>

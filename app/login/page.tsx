@@ -102,12 +102,12 @@ export default function LoginPage() {
             </label>
 
             <div className="flex items-center justify-end">
-              <a
+              <Link
                 className="text-sm font-medium text-[#D97706] dark:text-[#D97706] underline-offset-4 hover:underline hover:text-[#92400E]"
-                href="#"
+                href="/forgot-password"
               >
                 Şifremi Unuttum?
-              </a>
+              </Link>
             </div>
 
             <button

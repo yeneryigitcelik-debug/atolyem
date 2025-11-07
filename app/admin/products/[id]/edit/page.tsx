@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
 import { notFound } from "next/navigation";
-import { updateProductAction } from "../actions";
+import { updateProductAction } from "@/app/admin/products/actions";
 import Link from "next/link";
 
 export default async function EditProductPage({ params }: { params: { id: string } }) {

@@ -5,6 +5,7 @@ import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { generateSlug, generateUniqueSlug } from "@/lib/slug";
 
 export async function createSellerProductAction(formData: FormData) {
   const session = await getServerSession(authOptions);
@@ -23,14 +24,27 @@ export async function createSellerProductAction(formData: FormData) {
   }
 
   const title = formData.get("title") as string;
-  const slug = formData.get("slug") as string;
+  let slug = formData.get("slug") as string;
   const description = formData.get("description") as string | null;
   const categoryId = formData.get("categoryId") as string | null;
   const isActive = formData.get("isActive") === "on";
 
-  if (!title || !slug) {
-    return { error: "Başlık ve slug gereklidir" };
+  if (!title) {
+    return { error: "Başlık gereklidir" };
   }
+
+  // Eğer slug boşsa, başlıktan otomatik oluştur
+  if (!slug || slug.trim() === "") {
+    slug = generateSlug(title);
+  } else {
+    slug = generateSlug(slug);
+  }
+
+  // Benzersiz slug oluştur
+  slug = await generateUniqueSlug(slug, async (s) => {
+    const existing = await db.product.findUnique({ where: { slug: s } });
+    return !existing;
+  });
 
   try {
     await db.product.create({

@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
 import { notFound } from "next/navigation";
-import { updateVariantAction } from "../../../actions";
+import { updateVariantAction } from "@/app/admin/products/actions";
 
 export default async function EditVariantPage({
   params,

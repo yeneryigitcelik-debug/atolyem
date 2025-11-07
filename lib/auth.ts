@@ -29,12 +29,14 @@ export const authOptions: NextAuthOptions = {
       if (user) {
         token.id = user.id;
         token.sub = user.id; // Middleware'de token.sub kullanılıyor
+        token.role = (user as any).role; // Role'ü token'a ekle
       }
       return token;
     },
     async session({ session, token }) {
       if (session.user && token.id) {
         (session.user as any).id = token.id as string;
+        (session.user as any).role = token.role; // Role'ü session'a ekle
       }
       return session;
     },
