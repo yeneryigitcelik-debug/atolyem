@@ -4,7 +4,7 @@ import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-export async function createCategoryAction(formData: FormData) {
+export async function createCategoryAction(prevState: any, formData: FormData) {
   const name = formData.get("name") as string;
   const slug = formData.get("slug") as string;
   const parentId = formData.get("parentId") as string | null;
@@ -32,7 +32,7 @@ export async function createCategoryAction(formData: FormData) {
   }
 }
 
-export async function updateCategoryAction(id: string, formData: FormData) {
+export async function updateCategoryAction(id: string, prevState: any, formData: FormData) {
   const name = formData.get("name") as string;
   const slug = formData.get("slug") as string;
   const parentId = formData.get("parentId") as string | null;

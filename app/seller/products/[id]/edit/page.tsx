@@ -37,7 +37,14 @@ export default async function EditSellerProductPage({ params }: { params: { id: 
     <div className="min-h-screen bg-[#FFF8F1] dark:bg-gray-900 p-8">
       <div className="mx-auto max-w-4xl">
         <h1 className="mb-6 text-3xl font-bold text-gray-900">Ürün Düzenle</h1>
-        <form action={updateSellerProductAction.bind(null, params.id)} className="space-y-6 rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+        <form action={async (formData: FormData) => {
+          "use server";
+          const result = await updateSellerProductAction(params.id, null, formData);
+          if (result && "error" in result) {
+            // Error handling - could redirect or show error
+            return;
+          }
+        }} className="space-y-6 rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div>
               <label htmlFor="title" className="block text-sm font-medium text-gray-700">

@@ -52,6 +52,20 @@ async function main() {
   });
   console.log("Seller kullanıcı oluşturuldu:", sellerUser.email);
 
+  // Customer kullanıcı oluştur
+  const customerHashedPw = await bcrypt.hash("customer123", 10);
+  const customer = await prisma.user.upsert({
+    where: { email: "customer@example.com" },
+    update: { name: "Test Müşteri", hashedPw: customerHashedPw },
+    create: {
+      email: "customer@example.com",
+      name: "Test Müşteri",
+      role: "CUSTOMER",
+      hashedPw: customerHashedPw,
+    },
+  });
+  console.log("Customer kullanıcı oluşturuldu:", customer.email);
+
   // Kategorileri oluştur
   const categories = [
     {
@@ -297,29 +311,79 @@ async function main() {
     console.log(`Kategori oluşturuldu: ${cat.name} (${cat.children.length} alt kategori)`);
   }
 
-  // Örnek ürün oluştur
-  const exampleCategory = await prisma.category.findFirst({
+  // Örnek ürünler oluştur (3 ürün, 5 variant toplam)
+  const tabloCategory = await prisma.category.findFirst({
     where: { slug: "tablo-resim" },
   });
+  const fotografCategory = await prisma.category.findFirst({
+    where: { slug: "fotograf" },
+  });
 
-  if (exampleCategory) {
+  if (tabloCategory) {
+    // Ürün 1: Tablo (2 variant)
     await prisma.product.upsert({
       where: { slug: "ilk-tablo" },
       update: {},
       create: {
         sellerId: seller.id,
-        categoryId: exampleCategory.id,
+        categoryId: tabloCategory.id,
         title: "İlk Tablo",
         slug: "ilk-tablo",
-        description: "Akrilik boya, 50x70",
+        description: "Akrilik boya, 50x70 cm",
         isActive: true,
         images: { create: [{ url: "/uploads/sample.jpg", alt: "Örnek görsel", sort: 0 }] },
         variants: {
-          create: [{ sku: "ILK-TABLO-001", priceCents: 199900, stock: 1 }],
+          create: [
+            { sku: "ILK-TABLO-001", priceCents: 199900, stock: 1 },
+            { sku: "ILK-TABLO-002", priceCents: 249900, stock: 2 },
+          ],
         },
       },
     });
-    console.log("Örnek ürün oluşturuldu: İlk Tablo");
+    console.log("Ürün oluşturuldu: İlk Tablo (2 variant)");
+
+    // Ürün 2: Başka bir tablo (2 variant)
+    await prisma.product.upsert({
+      where: { slug: "ikinci-tablo" },
+      update: {},
+      create: {
+        sellerId: seller.id,
+        categoryId: tabloCategory.id,
+        title: "İkinci Tablo",
+        slug: "ikinci-tablo",
+        description: "Yağlıboya, 40x60 cm",
+        isActive: true,
+        images: { create: [{ url: "/uploads/sample2.jpg", alt: "İkinci tablo", sort: 0 }] },
+        variants: {
+          create: [
+            { sku: "IKINCI-TABLO-001", priceCents: 299900, stock: 1 },
+            { sku: "IKINCI-TABLO-002", priceCents: 349900, stock: 0 },
+          ],
+        },
+      },
+    });
+    console.log("Ürün oluşturuldu: İkinci Tablo (2 variant)");
+  }
+
+  if (fotografCategory) {
+    // Ürün 3: Fotoğraf (1 variant)
+    await prisma.product.upsert({
+      where: { slug: "ornek-fotograf" },
+      update: {},
+      create: {
+        sellerId: seller.id,
+        categoryId: fotografCategory.id,
+        title: "Örnek Fotoğraf",
+        slug: "ornek-fotograf",
+        description: "Siyah-beyaz analog fotoğraf, limitli edisyon",
+        isActive: true,
+        images: { create: [{ url: "/uploads/sample3.jpg", alt: "Örnek fotoğraf", sort: 0 }] },
+        variants: {
+          create: [{ sku: "FOTO-001", priceCents: 49900, stock: 5 }],
+        },
+      },
+    });
+    console.log("Ürün oluşturuldu: Örnek Fotoğraf (1 variant)");
   }
 }
 

@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import Header from "@/app/components/Header";
+import AddressManager from "./_components/AddressManager";
 
 export default async function ProfilePage() {
   const session = await getServerSession(authOptions);
@@ -232,6 +233,11 @@ export default async function ProfilePage() {
                     <h3 className="font-semibold text-[#1F2937] mb-2">Sepetim</h3>
                     <p className="text-sm text-gray-600">Sepetinizi görüntüleyin</p>
                   </Link>
+                </div>
+
+                {/* Address Management */}
+                <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+                  <AddressManager />
                 </div>
               </div>
             </main>

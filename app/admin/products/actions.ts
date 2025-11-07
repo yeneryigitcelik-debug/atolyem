@@ -3,28 +3,62 @@
 import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { Prisma } from "@prisma/client";
+import { productSchema, variantSchema } from "@/lib/validators";
 
-export async function createProductAction(formData: FormData) {
+export async function createProductAction(prevState: any, formData: FormData) {
   const title = formData.get("title") as string;
   const slug = formData.get("slug") as string;
   const description = formData.get("description") as string | null;
   const sellerId = formData.get("sellerId") as string;
   const categoryId = formData.get("categoryId") as string | null;
   const isActive = formData.get("isActive") === "on";
+  const imagesStr = formData.get("images") as string | null;
 
-  if (!title || !slug || !sellerId) {
-    return { error: "Başlık, slug ve satıcı gereklidir" };
+  // Parse images JSON
+  let images: Array<{ url: string; alt?: string; sort: number }> = [];
+  if (imagesStr) {
+    try {
+      images = JSON.parse(imagesStr);
+    } catch {
+      // Invalid JSON, ignore
+    }
   }
+
+  // Validate with Zod
+  const validation = productSchema.safeParse({
+    title,
+    slug,
+    description,
+    sellerId,
+    categoryId: categoryId || null,
+    isActive,
+    images,
+  });
+
+  if (!validation.success) {
+    const firstError = validation.error.issues[0];
+    return { error: firstError?.message || "Geçersiz form verisi" };
+  }
+
+  const data = validation.data;
 
   try {
     await db.product.create({
       data: {
-        title,
-        slug,
-        description: description || null,
-        sellerId,
-        categoryId: categoryId || null,
-        isActive,
+        title: data.title,
+        slug: data.slug,
+        description: data.description,
+        sellerId: data.sellerId,
+        categoryId: data.categoryId,
+        isActive: data.isActive,
+        images: {
+          create: data.images.map((img) => ({
+            url: img.url,
+            alt: img.alt || null,
+            sort: img.sort || 0,
+          })),
+        },
       },
     });
 
@@ -38,26 +72,69 @@ export async function createProductAction(formData: FormData) {
   }
 }
 
-export async function updateProductAction(id: string, formData: FormData) {
+export async function updateProductAction(id: string, prevState: any, formData: FormData) {
   const title = formData.get("title") as string;
   const slug = formData.get("slug") as string;
   const description = formData.get("description") as string | null;
   const categoryId = formData.get("categoryId") as string | null;
   const isActive = formData.get("isActive") === "on";
+  const imagesStr = formData.get("images") as string | null;
 
-  if (!title || !slug) {
-    return { error: "Başlık ve slug gereklidir" };
+  // Get existing product to preserve sellerId
+  const existing = await db.product.findUnique({ where: { id } });
+  if (!existing) {
+    return { error: "Ürün bulunamadı" };
   }
 
+  // Parse images JSON
+  let images: Array<{ url: string; alt?: string; sort: number }> = [];
+  if (imagesStr) {
+    try {
+      images = JSON.parse(imagesStr);
+    } catch {
+      // Invalid JSON, ignore
+    }
+  }
+
+  // Validate with Zod
+  const validation = productSchema.safeParse({
+    title,
+    slug,
+    description,
+    sellerId: existing.sellerId,
+    categoryId: categoryId || null,
+    isActive,
+    images,
+  });
+
+  if (!validation.success) {
+    const firstError = validation.error.issues[0];
+    return { error: firstError?.message || "Geçersiz form verisi" };
+  }
+
+  const data = validation.data;
+
   try {
+    // Delete existing images and create new ones
+    await db.productImage.deleteMany({
+      where: { productId: id },
+    });
+
     await db.product.update({
       where: { id },
       data: {
-        title,
-        slug,
-        description: description || null,
-        categoryId: categoryId || null,
-        isActive,
+        title: data.title,
+        slug: data.slug,
+        description: data.description,
+        categoryId: data.categoryId,
+        isActive: data.isActive,
+        images: {
+          create: data.images.map((img) => ({
+            url: img.url,
+            alt: img.alt || null,
+            sort: img.sort || 0,
+          })),
+        },
       },
     });
 
@@ -71,15 +148,14 @@ export async function updateProductAction(id: string, formData: FormData) {
   }
 }
 
-export async function createVariantAction(productId: string, formData: FormData) {
+export async function createVariantAction(productId: string, prevState: any, formData: FormData) {
   const sku = formData.get("sku") as string;
-  const priceCents = parseInt(formData.get("priceCents") as string);
-  const stock = parseInt(formData.get("stock") as string);
+  const priceCentsStr = formData.get("priceCents") as string;
+  const stockStr = formData.get("stock") as string;
   const attributesStr = formData.get("attributes") as string | null;
 
-  if (!sku || isNaN(priceCents) || isNaN(stock)) {
-    return { error: "SKU, fiyat ve stok gereklidir" };
-  }
+  const priceCents = priceCentsStr ? parseInt(priceCentsStr) : NaN;
+  const stock = stockStr ? parseInt(stockStr) : NaN;
 
   let attributes = null;
   if (attributesStr && attributesStr.trim()) {
@@ -90,14 +166,29 @@ export async function createVariantAction(productId: string, formData: FormData)
     }
   }
 
+  // Validate with Zod
+  const validation = variantSchema.safeParse({
+    sku,
+    priceCents,
+    stock,
+    attributes,
+  });
+
+  if (!validation.success) {
+    const firstError = validation.error.issues[0];
+    return { error: firstError?.message || "Geçersiz form verisi" };
+  }
+
+  const data = validation.data;
+
   try {
     await db.variant.create({
       data: {
         productId,
-        sku,
-        priceCents,
-        stock,
-        attributes,
+        sku: data.sku,
+        priceCents: data.priceCents,
+        stock: data.stock,
+        attributes: (data.attributes ?? Prisma.JsonNull) as Prisma.InputJsonValue,
       },
     });
 
@@ -111,15 +202,14 @@ export async function createVariantAction(productId: string, formData: FormData)
   }
 }
 
-export async function updateVariantAction(variantId: string, formData: FormData) {
+export async function updateVariantAction(variantId: string, prevState: any, formData: FormData) {
   const sku = formData.get("sku") as string;
-  const priceCents = parseInt(formData.get("priceCents") as string);
-  const stock = parseInt(formData.get("stock") as string);
+  const priceCentsStr = formData.get("priceCents") as string;
+  const stockStr = formData.get("stock") as string;
   const attributesStr = formData.get("attributes") as string | null;
 
-  if (!sku || isNaN(priceCents) || isNaN(stock)) {
-    return { error: "SKU, fiyat ve stok gereklidir" };
-  }
+  const priceCents = priceCentsStr ? parseInt(priceCentsStr) : NaN;
+  const stock = stockStr ? parseInt(stockStr) : NaN;
 
   let attributes = null;
   if (attributesStr && attributesStr.trim()) {
@@ -130,14 +220,29 @@ export async function updateVariantAction(variantId: string, formData: FormData)
     }
   }
 
+  // Validate with Zod
+  const validation = variantSchema.safeParse({
+    sku,
+    priceCents,
+    stock,
+    attributes,
+  });
+
+  if (!validation.success) {
+    const firstError = validation.error.issues[0];
+    return { error: firstError?.message || "Geçersiz form verisi" };
+  }
+
+  const data = validation.data;
+
   try {
     const variant = await db.variant.update({
       where: { id: variantId },
       data: {
-        sku,
-        priceCents,
-        stock,
-        attributes,
+        sku: data.sku,
+        priceCents: data.priceCents,
+        stock: data.stock,
+        attributes: (data.attributes ?? Prisma.JsonNull) as Prisma.InputJsonValue,
       },
     });
 

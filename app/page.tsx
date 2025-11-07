@@ -107,7 +107,6 @@ export default async function Home() {
                               <Link
                                 href={`/search?category=${product.category.slug}`}
                                 className="text-xs text-gray-500 hover:text-[#D97706] transition-colors"
-                                onClick={(e) => e.stopPropagation()}
                               >
                                 {product.category.name}
                               </Link>
@@ -168,7 +167,6 @@ export default async function Home() {
                               <Link
                                 href={`/search?category=${product.category.slug}`}
                                 className="text-xs text-gray-500 hover:text-[#D97706] transition-colors"
-                                onClick={(e) => e.stopPropagation()}
                               >
                                 {product.category.name}
                               </Link>

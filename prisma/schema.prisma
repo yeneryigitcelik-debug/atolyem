@@ -24,6 +24,7 @@ model User {
   role      UserRole @default(CUSTOMER) // Rol
   seller    Seller? // Satıcı (opsiyonel)
   orders    Order[] // Siparişleri
+  addresses Address[] // Kullanıcı adresleri
   createdAt DateTime @default(now()) // Oluşturulma
   updatedAt DateTime @updatedAt // Güncellenme
 
@@ -51,6 +52,7 @@ model Seller {
   commissionBps Int       @default(1500)
   products      Product[]
   payouts       Payout[]
+  payoutLedger SellerPayoutLedger[] // Komisyon defteri
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   
@@ -141,6 +143,10 @@ model Order {
   sellerReviews SellerReview[] @relation("SellerReviewOrder") // Satıcı yorumları
   couponCode String? // Uygulanan kupon kodu
   discountCents Int @default(0) // İndirim tutarı (cents)
+  addressId  String? // Sipariş adresi
+  address    Address?   @relation(fields: [addressId], references: [id])
+  shipments  Shipment[] // Kargo kayıtları
+  payments   Payment[]  // Ödeme kayıtları
 }
 
 model OrderItem {
@@ -175,6 +181,25 @@ enum OrderStatus {
   SHIPPED
   COMPLETED
   CANCELED
+}
+
+enum ShipmentStatus {
+  CREATED
+  IN_TRANSIT
+  DELIVERED
+  RETURNED
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+enum PaymentGateway {
+  IYZICO
+  PAYTR
 }
 
 /**
@@ -363,4 +388,72 @@ model VerificationToken {
   expires    DateTime
 
   @@unique([identifier, token])
+}
+
+/**
+ * =========================
+ * ADRES & KARGO & ÖDEME MODELLERİ
+ * =========================
+ */
+
+model Address {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title      String   // "Ev", "İş", "Diğer" gibi
+  city       String   // Şehir
+  district   String   // İlçe
+  addressLine String  // Detaylı adres
+  phone      String?  // Telefon
+  isDefault  Boolean  @default(false) // Varsayılan adres
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  orders     Order[]  // Bu adrese gönderilen siparişler
+
+  @@index([userId])
+}
+
+model Shipment {
+  id           String         @id @default(cuid())
+  orderId      String
+  order        Order          @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  carrier      String         // "PTT", "Yurtiçi", "Aras", "MNG" vb.
+  trackingCode String?        // Takip numarası
+  status       ShipmentStatus @default(CREATED)
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  @@index([orderId])
+  @@index([trackingCode])
+}
+
+model Payment {
+  id         String         @id @default(cuid())
+  orderId    String
+  order      Order          @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  gateway    PaymentGateway // İyzico veya PayTR
+  txnId      String?        @unique // Gateway transaction ID
+  status     PaymentStatus  @default(PENDING)
+  amountCents Int           // Ödeme tutarı (cents)
+  rawPayload  Json?          // Gateway'den gelen ham yanıt (webhook için)
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
+
+  @@index([orderId])
+  @@index([txnId])
+  @@unique([orderId, txnId]) // Aynı sipariş için aynı txnId tekrar edemez (idempotency)
+}
+
+model SellerPayoutLedger {
+  id        String   @id @default(cuid())
+  sellerId  String
+  seller    Seller   @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  orderId   String?  // Hangi siparişten kaynaklandı (opsiyonel, manuel girişler için)
+  type      String   // "debit" veya "credit"
+  amountCents Int    // Tutar (cents)
+  note      String?  // Açıklama
+  createdAt DateTime @default(now())
+
+  @@index([sellerId])
+  @@index([orderId])
 }

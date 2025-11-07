@@ -99,7 +99,10 @@ export default async function ProductPage({ params }: Props) {
                               €{(variant.priceCents / 100).toLocaleString("tr-TR")} - Stok: {variant.stock}
                             </div>
                           </div>
-                          <form action={addToCart.bind(null, variant.id, 1)}>
+                          <form action={async () => {
+                            "use server";
+                            await addToCart(variant.id, 1);
+                          }}>
                             <button
                               type="submit"
                               disabled={variant.stock === 0}

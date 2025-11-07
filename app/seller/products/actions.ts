@@ -7,7 +7,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { generateSlug, generateUniqueSlug } from "@/lib/slug";
 
-export async function createSellerProductAction(formData: FormData) {
+export async function createSellerProductAction(prevState: any, formData: FormData) {
   const session = await getServerSession(authOptions);
   const userId = (session?.user as any)?.id;
   if (!userId) {
@@ -68,7 +68,7 @@ export async function createSellerProductAction(formData: FormData) {
   }
 }
 
-export async function updateSellerProductAction(productId: string, formData: FormData) {
+export async function updateSellerProductAction(productId: string, prevState: any, formData: FormData) {
   const session = await getServerSession(authOptions);
   const userId = (session?.user as any)?.id;
   if (!userId) {

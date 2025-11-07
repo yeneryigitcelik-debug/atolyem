@@ -189,16 +189,7 @@ export default function CartPage() {
                   </div>
                 </div>
                 <button
-                  onClick={async () => {
-                    try {
-                      const res = await fetch("/api/orders", { method: "POST" });
-                      if (res.ok) {
-                        router.push("/orders");
-                      }
-                    } catch (error) {
-                      console.error("Order error:", error);
-                    }
-                  }}
+                  onClick={() => router.push("/checkout")}
                   className="w-full rounded-md bg-[#D97706] px-4 py-2 text-white hover:bg-[#92400E]"
                 >
                   Siparişi Tamamla

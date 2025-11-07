@@ -329,7 +329,7 @@ NEXTAUTH_URL=https://atolyem.net
 NEXTAUTH_SECRET=<güçlü-random-string-32+karakter>
 DATABASE_URL=<neon-supabase-prod-url>
 CLOUDFLARE_ACCOUNT_ID=<account-id>
-CLOUDFLARE_ACCOUNT_HASH=5uHlQDyzeO-VZtA207nD0w
+CLOUDFLARE_ACCOUNT_HASH=<your-account-hash-here>
 CLOUDFLARE_IMAGES_API_TOKEN=<yeni-rotate-edilmiş-token>
 CLOUDFLARE_IMAGES_VARIANT=public
 ```
@@ -523,4 +523,3 @@ atolyem/
 
 
 
-cloudflare api: 8VeF4K0GsakGgSvKi_LRKP2r-s16H-8uIewowy-y

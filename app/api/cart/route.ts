@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { db } from "@/lib/db";
+import { getCart, updateCartItem, removeFromCart } from "@/lib/orderService";
 
+/**
+ * GET /api/cart - Get user's cart
+ */
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
@@ -10,135 +13,24 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Kullanıcının sepetini bul (CART durumundaki sipariş)
-    const cart = await db.order.findFirst({
-      where: {
-        userId: session.user.id,
-        status: "CART",
-      },
-      include: {
-        items: {
-          include: {
-            variant: {
-              include: {
-                product: {
-                  include: {
-                    images: { orderBy: { sort: "asc" }, take: 1 },
-                  },
-                },
-              },
-            },
-          },
-        },
-      },
-    });
-
-    return NextResponse.json({ items: cart?.items || [] });
-  } catch (error) {
-    console.error("Cart GET error:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
-  }
-}
-
-export async function POST(request: NextRequest) {
-  try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const { variantId, qty } = await request.json();
-
-    if (!variantId || !qty || qty < 1) {
-      return NextResponse.json({ error: "Invalid request" }, { status: 400 });
-    }
-
-    // Variant'ı kontrol et
-    const variant = await db.variant.findUnique({
-      where: { id: variantId },
-      include: {
-        product: {
-          include: {
-            seller: true,
-          },
-        },
-      },
-    });
-
-    if (!variant) {
-      return NextResponse.json({ error: "Variant not found" }, { status: 404 });
-    }
-
-    if (variant.stock < qty) {
-      return NextResponse.json({ error: "Yeterli stok yok" }, { status: 400 });
-    }
-
-    // Satıcı kendi ürününü satın alamaz
-    if (variant.product.seller.userId === session.user.id) {
-      return NextResponse.json({ error: "Kendi ürününüzü satın alamazsınız" }, { status: 400 });
-    }
-
-    // Sepeti bul veya oluştur
-    let cart = await db.order.findFirst({
-      where: {
-        userId: session.user.id,
-        status: "CART",
-      },
-    });
-
+    const cart = await getCart(session.user.id);
     if (!cart) {
-      cart = await db.order.create({
-        data: {
-          userId: session.user.id,
-          status: "CART",
-          totalCents: 0,
-        },
-      });
+      return NextResponse.json({ items: [], totalCents: 0 });
     }
 
-    // Aynı variant zaten sepette var mı kontrol et
-    const existingItem = await db.orderItem.findFirst({
-      where: {
-        orderId: cart.id,
-        variantId,
-      },
+    return NextResponse.json({
+      items: cart.items,
+      totalCents: cart.totalCents,
     });
-
-    if (existingItem) {
-      // Miktarı güncelle
-      await db.orderItem.update({
-        where: { id: existingItem.id },
-        data: { qty: existingItem.qty + qty },
-      });
-    } else {
-      // Yeni item ekle
-      await db.orderItem.create({
-        data: {
-          orderId: cart.id,
-          variantId,
-          qty,
-          priceCents: variant.priceCents,
-        },
-      });
-    }
-
-    // Toplamı güncelle
-    const items = await db.orderItem.findMany({
-      where: { orderId: cart.id },
-    });
-    const totalCents = items.reduce((sum, item) => sum + item.priceCents * item.qty, 0);
-    await db.order.update({
-      where: { id: cart.id },
-      data: { totalCents },
-    });
-
-    return NextResponse.json({ success: true });
-  } catch (error) {
-    console.error("Cart POST error:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  } catch (error: any) {
+    console.error("Cart GET error:", error);
+    return NextResponse.json({ error: error.message || "Internal error" }, { status: 500 });
   }
 }
 
+/**
+ * PATCH /api/cart - Update cart item quantity
+ */
 export async function PATCH(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
@@ -146,50 +38,25 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { itemId, qty } = await request.json();
+    const body = await request.json();
+    const { itemId, qty } = body;
 
-    if (!itemId || qty < 1) {
+    if (!itemId || typeof qty !== "number" || qty < 1) {
       return NextResponse.json({ error: "Invalid request" }, { status: 400 });
     }
 
-    const item = await db.orderItem.findUnique({
-      where: { id: itemId },
-      include: {
-        order: true,
-        variant: true,
-      },
-    });
-
-    if (!item || item.order.userId !== session.user.id || item.order.status !== "CART") {
-      return NextResponse.json({ error: "Item not found" }, { status: 404 });
-    }
-
-    if (item.variant.stock < qty) {
-      return NextResponse.json({ error: "Yeterli stok yok" }, { status: 400 });
-    }
-
-    await db.orderItem.update({
-      where: { id: itemId },
-      data: { qty },
-    });
-
-    // Toplamı güncelle
-    const items = await db.orderItem.findMany({
-      where: { orderId: item.orderId },
-    });
-    const totalCents = items.reduce((sum, i) => sum + i.priceCents * i.qty, 0);
-    await db.order.update({
-      where: { id: item.orderId },
-      data: { totalCents },
-    });
+    await updateCartItem(session.user.id, itemId, qty);
 
     return NextResponse.json({ success: true });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Cart PATCH error:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return NextResponse.json({ error: error.message || "Internal error" }, { status: 500 });
   }
 }
 
+/**
+ * DELETE /api/cart - Remove item from cart
+ */
 export async function DELETE(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
@@ -197,39 +64,18 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { itemId } = await request.json();
+    const body = await request.json();
+    const { itemId } = body;
 
     if (!itemId) {
       return NextResponse.json({ error: "Invalid request" }, { status: 400 });
     }
 
-    const item = await db.orderItem.findUnique({
-      where: { id: itemId },
-      include: { order: true },
-    });
-
-    if (!item || item.order.userId !== session.user.id || item.order.status !== "CART") {
-      return NextResponse.json({ error: "Item not found" }, { status: 404 });
-    }
-
-    await db.orderItem.delete({
-      where: { id: itemId },
-    });
-
-    // Toplamı güncelle
-    const items = await db.orderItem.findMany({
-      where: { orderId: item.orderId },
-    });
-    const totalCents = items.reduce((sum, i) => sum + i.priceCents * i.qty, 0);
-    await db.order.update({
-      where: { id: item.orderId },
-      data: { totalCents },
-    });
+    await removeFromCart(session.user.id, itemId);
 
     return NextResponse.json({ success: true });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Cart DELETE error:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return NextResponse.json({ error: error.message || "Internal error" }, { status: 500 });
   }
 }
-

@@ -100,7 +100,6 @@ export default async function CatalogPage() {
                   <Link
                     href={`/artist/${p.seller.id}`}
                     className="mt-1 block text-xs text-gray-500 hover:text-[#D97706]"
-                    onClick={(e) => e.stopPropagation()}
                   >
                     {p.seller.user.name || p.seller.displayName || p.seller.user.email}
                   </Link>

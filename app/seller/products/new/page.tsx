@@ -26,7 +26,13 @@ export default async function NewSellerProductPage() {
       <div className="mx-auto max-w-4xl">
         <h1 className="mb-6 text-3xl font-bold text-gray-900">Yeni Ürün</h1>
         <SlugGenerator />
-        <form action={createSellerProductAction} className="space-y-6 rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+        <form action={async (formData: FormData) => {
+          "use server";
+          const result = await createSellerProductAction(null, formData);
+          if (result && "error" in result) {
+            return;
+          }
+        }} className="space-y-6 rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div>
               <label htmlFor="title" className="block text-sm font-medium text-gray-700">

@@ -49,7 +49,7 @@ export async function uploadImageToCloudflare(
     formData.append("file", file);
   } else {
     // Buffer ise Blob'a çevir
-    const blob = new Blob([file]);
+    const blob = new Blob([file as BlobPart]);
     formData.append("file", blob, filename || "image.jpg");
   }
 
