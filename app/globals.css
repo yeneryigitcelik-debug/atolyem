@@ -1,26 +1,48 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #FFF8F1;
+  --foreground: #1F2937;
+  
+  /* Sıcak Atölye Renk Paleti */
+  --primary: #D97706;
+  --primary-hover: #92400E;
+  --secondary: #92400E;
+  --accent: #10B981;
+  --border: #E5E7EB;
+  --error: #EF4444;
+  --warning: #F59E0B;
+  --success: #22C55E;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-primary: #D97706;
+  --color-primary-hover: #92400E;
+  --color-secondary: #92400E;
+  --color-accent: #10B981;
+  --color-background-light: #FFF8F1;
+  --color-background-dark: #1F2937;
+  --color-content-light: #1F2937;
+  --color-content-dark: #FFF8F1;
+  --color-subtle-light: #6B7280;
+  --color-subtle-dark: #9CA3AF;
+  --color-surface-light: #FFF8F1;
+  --color-surface-dark: #374151;
+  --color-border: #E5E7EB;
+  --color-error: #EF4444;
+  --color-warning: #F59E0B;
+  --color-success: #22C55E;
+  
+  --font-display: "Plus Jakarta Sans", sans-serif;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* Dark mode devre dışı - sadece krem rengi kullanılıyor */
+html, body {
+  background-color: #FFF8F1 !important;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: #FFF8F1 !important;
+  color: #1F2937;
+  font-family: "Plus Jakarta Sans", sans-serif;
 }

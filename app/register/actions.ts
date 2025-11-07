@@ -1,7 +1,6 @@
 "use server";
 
 import { db } from "@/lib/db";
-import bcrypt from "bcrypt";
 import { revalidatePath } from "next/cache";
 
 export async function registerAction(formData: {
@@ -20,6 +19,7 @@ export async function registerAction(formData: {
     }
 
     // Şifreyi hashle
+    const bcrypt = await import("bcrypt");
     const hashedPw = await bcrypt.hash(formData.password, 10);
 
     // Kullanıcıyı oluştur

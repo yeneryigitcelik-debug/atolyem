@@ -7,7 +7,7 @@ import bcrypt from "bcrypt";                          // Şifre karşılaştırm
 
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(db) as any,                  // Session/Account tablolarını kullan
-  session: { strategy: "database" },                  // Oturumları DB'de tut
+  session: { strategy: "jwt" },                       // JWT strategy (Credentials ile uyumlu)
   providers: [
     Credentials({
       name: "Email & Password",
@@ -25,8 +25,17 @@ export const authOptions: NextAuthOptions = {
     }),
   ],
   callbacks: {
-    async session({ session, user }) {
-      if (session.user) (session.user as any).id = user.id; // session.user.id erişimi
+    async jwt({ token, user }) {
+      if (user) {
+        token.id = user.id;
+        token.sub = user.id; // Middleware'de token.sub kullanılıyor
+      }
+      return token;
+    },
+    async session({ session, token }) {
+      if (session.user && token.id) {
+        (session.user as any).id = token.id as string;
+      }
       return session;
     },
   },
