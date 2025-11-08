@@ -2,10 +2,11 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { redirect, notFound } from "next/navigation";
-import { updateSellerProductAction } from "../../actions";
 import Link from "next/link";
+import SellerProductForm from "../../_components/SellerProductForm";
 
-export default async function EditSellerProductPage({ params }: { params: { id: string } }) {
+export default async function EditSellerProductPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   const session = await getServerSession(authOptions);
   const userId = (session?.user as any)?.id;
   if (!userId) redirect("/login");
@@ -18,10 +19,10 @@ export default async function EditSellerProductPage({ params }: { params: { id: 
   if (!user?.seller) redirect("/seller");
 
   const product = await db.product.findUnique({
-    where: { id: params.id },
+    where: { id },
     include: {
       variants: true,
-      images: true,
+      images: { orderBy: { sort: "asc" } },
     },
   });
 
@@ -37,98 +38,31 @@ export default async function EditSellerProductPage({ params }: { params: { id: 
     <div className="min-h-screen bg-[#FFF8F1] dark:bg-gray-900 p-8">
       <div className="mx-auto max-w-4xl">
         <h1 className="mb-6 text-3xl font-bold text-gray-900">Ürün Düzenle</h1>
-        <form action={async (formData: FormData) => {
-          "use server";
-          const result = await updateSellerProductAction(params.id, null, formData);
-          if (result && "error" in result) {
-            // Error handling - could redirect or show error
-            return;
-          }
-        }} className="space-y-6 rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <div>
-              <label htmlFor="title" className="block text-sm font-medium text-gray-700">
-                Başlık
-              </label>
-              <input
-                type="text"
-                id="title"
-                name="title"
-                required
-                defaultValue={product.title}
-                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-[#D97706] focus:outline-none focus:ring-[#D97706]"
-              />
-            </div>
-            <div>
-              <label htmlFor="slug" className="block text-sm font-medium text-gray-700">
-                Slug
-              </label>
-              <input
-                type="text"
-                id="slug"
-                name="slug"
-                required
-                defaultValue={product.slug}
-                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-[#D97706] focus:outline-none focus:ring-[#D97706]"
-              />
-            </div>
-          </div>
-          <div>
-            <label htmlFor="description" className="block text-sm font-medium text-gray-700">
-              Açıklama
-            </label>
-            <textarea
-              id="description"
-              name="description"
-              rows={4}
-              defaultValue={product.description || ""}
-              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-[#D97706] focus:outline-none focus:ring-[#D97706]"
-            />
-          </div>
-          <div>
-            <label htmlFor="categoryId" className="block text-sm font-medium text-gray-700">
-              Kategori
-            </label>
-            <select
-              id="categoryId"
-              name="categoryId"
-              defaultValue={product.categoryId || ""}
-              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-[#D97706] focus:outline-none focus:ring-[#D97706]"
-            >
-              <option value="">Seçiniz</option>
-              {categories.map((cat) => (
-                <option key={cat.id} value={cat.id}>
-                  {cat.name}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="flex items-center">
-              <input
-                type="checkbox"
-                name="isActive"
-                defaultChecked={product.isActive}
-                className="rounded border-gray-300 text-[#D97706] focus:ring-[#D97706]"
-              />
-              <span className="ml-2 text-sm text-gray-700">Aktif</span>
-            </label>
-          </div>
-          <div className="flex gap-4">
-            <button
-              type="submit"
-              className="rounded-md bg-[#D97706] px-4 py-2 text-white hover:bg-[#92400E]"
-            >
-              Güncelle
-            </button>
-            <Link
-              href="/seller/products"
-              className="rounded-md border border-gray-300 px-4 py-2 text-gray-700 hover:bg-gray-50"
-            >
-              İptal
-            </Link>
-          </div>
-        </form>
+        <SellerProductForm
+          productId={id}
+          defaultValues={{
+            title: product.title,
+            slug: product.slug,
+            description: product.description || undefined,
+            categoryId: product.categoryId || undefined,
+            isActive: product.isActive,
+            images: product.images.map((img) => ({
+              id: img.id,
+              url: img.url,
+              alt: img.alt || undefined,
+              sort: img.sort,
+            })),
+            variants: product.variants.map((variant) => ({
+              id: variant.id,
+              sku: variant.sku,
+              priceCents: variant.priceCents,
+              stock: variant.stock,
+            })),
+          }}
+          categories={categories}
+          submitLabel="Güncelle"
+          cancelHref="/seller/products"
+        />
 
         <div className="mt-8 rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
           <div className="mb-4 flex items-center justify-between">

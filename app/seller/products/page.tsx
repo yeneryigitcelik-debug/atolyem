@@ -29,14 +29,8 @@ export default async function SellerProductsPage() {
   return (
     <div className="min-h-screen bg-[#FFF8F1] dark:bg-gray-900 p-8">
       <div className="mx-auto max-w-7xl">
-        <div className="mb-6 flex items-center justify-between">
+        <div className="mb-6">
           <h1 className="text-3xl font-bold text-gray-900">Ürünlerim</h1>
-          <Link
-            href="/seller/products/new"
-            className="rounded-md bg-primary px-4 py-2 text-white hover:bg-secondary transition-colors"
-          >
-            Yeni Ürün
-          </Link>
         </div>
 
         <div className="rounded-lg border border-gray-200 bg-white shadow-sm">
@@ -48,6 +42,9 @@ export default async function SellerProductsPage() {
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
                   Kategori
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                  Fiyat
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
                   Varyant
@@ -69,6 +66,39 @@ export default async function SellerProductsPage() {
                   </td>
                   <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
                     {product.category?.name || "-"}
+                  </td>
+                  <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-900">
+                    {product.variants.length > 0 ? (
+                      product.variants.length === 1 ? (
+                        <span className="font-medium">
+                          {(product.variants[0].priceCents / 100).toLocaleString("tr-TR", {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          })}{" "}
+                          TL
+                        </span>
+                      ) : (
+                        <div className="flex flex-col">
+                          <span className="font-medium">
+                            {(Math.min(...product.variants.map((v) => v.priceCents)) / 100).toLocaleString("tr-TR", {
+                              minimumFractionDigits: 2,
+                              maximumFractionDigits: 2,
+                            })}{" "}
+                            -{" "}
+                            {(Math.max(...product.variants.map((v) => v.priceCents)) / 100).toLocaleString("tr-TR", {
+                              minimumFractionDigits: 2,
+                              maximumFractionDigits: 2,
+                            })}{" "}
+                            TL
+                          </span>
+                          <span className="text-xs text-gray-500">
+                            ({product.variants.length} varyant)
+                          </span>
+                        </div>
+                      )
+                    ) : (
+                      <span className="text-gray-400">Fiyat yok</span>
+                    )}
                   </td>
                   <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
                     {product._count.variants}

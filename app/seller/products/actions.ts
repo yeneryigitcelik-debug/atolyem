@@ -98,12 +98,53 @@ export async function updateSellerProductAction(productId: string, prevState: an
   const description = formData.get("description") as string | null;
   const categoryId = formData.get("categoryId") as string | null;
   const isActive = formData.get("isActive") === "on";
+  const imagesStr = formData.get("images") as string | null;
 
   if (!title || !slug) {
     return { error: "Başlık ve slug gereklidir" };
   }
 
+  // Parse images JSON
+  let images: Array<{ url: string; alt?: string; sort: number }> = [];
+  if (imagesStr) {
+    try {
+      images = JSON.parse(imagesStr);
+    } catch {
+      // Invalid JSON, ignore
+    }
+  }
+
+  // Extract variant updates from formData
+  const variantUpdates: Array<{ id: string; priceCents: number; stock: number }> = [];
+  for (const [key, value] of formData.entries()) {
+    if (key.startsWith("variant-price-")) {
+      const variantId = key.replace("variant-price-", "");
+      const priceStr = value as string;
+      const stockKey = `variant-stock-${variantId}`;
+      const stockStr = formData.get(stockKey) as string;
+
+      if (priceStr && stockStr) {
+        const price = parseFloat(priceStr);
+        const stock = parseInt(stockStr);
+
+        if (!isNaN(price) && price >= 0 && !isNaN(stock) && stock >= 0) {
+          variantUpdates.push({
+            id: variantId,
+            priceCents: Math.round(price * 100),
+            stock: stock,
+          });
+        }
+      }
+    }
+  }
+
   try {
+    // Delete existing images and create new ones
+    await db.productImage.deleteMany({
+      where: { productId: productId },
+    });
+
+    // Update product
     await db.product.update({
       where: { id: productId },
       data: {
@@ -112,8 +153,34 @@ export async function updateSellerProductAction(productId: string, prevState: an
         description: description || null,
         categoryId: categoryId || null,
         isActive,
+        images: {
+          create: images.map((img) => ({
+            url: img.url,
+            alt: img.alt || null,
+            sort: img.sort || 0,
+          })),
+        },
       },
     });
+
+    // Update variants
+    for (const variantUpdate of variantUpdates) {
+      // Verify variant belongs to this product and seller
+      const variant = await db.variant.findUnique({
+        where: { id: variantUpdate.id },
+        include: { product: true },
+      });
+
+      if (variant && variant.productId === productId && variant.product.sellerId === user.seller.id) {
+        await db.variant.update({
+          where: { id: variantUpdate.id },
+          data: {
+            priceCents: variantUpdate.priceCents,
+            stock: variantUpdate.stock,
+          },
+        });
+      }
+    }
 
     revalidatePath("/seller/products");
     redirect("/seller/products");
