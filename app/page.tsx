@@ -1,49 +1,22 @@
 import Link from "next/link";
-import { db } from "@/lib/db";
-import Header from "./components/Header";
 import ProductImage from "./components/ProductImage";
+import { getFeaturedProducts, getNewProducts } from "@/lib/data";
+
+// Route-level revalidate: 300 saniye (5 dakika)
+export const revalidate = 300;
 
 export default async function Home() {
-  // Öne çıkan ürünler
-  const featuredProducts = await db.product.findMany({
-    where: { isActive: true },
-    include: {
-      images: { orderBy: { sort: "asc" }, take: 1 },
-      category: true,
-      seller: { include: { user: true } },
-      variants: {
-        orderBy: { priceCents: "asc" },
-        take: 1,
-      },
-    },
-    orderBy: { createdAt: "desc" },
-    take: 4,
-  });
+  // Öne çıkan ürünler (cache'lenmiş)
+  const featuredProducts = await getFeaturedProducts(4);
 
-  // Yeni gelenler
-  const newProducts = await db.product.findMany({
-    where: { isActive: true },
-    include: {
-      images: { orderBy: { sort: "asc" }, take: 1 },
-      category: true,
-      seller: { include: { user: true } },
-      variants: {
-        orderBy: { priceCents: "asc" },
-        take: 1,
-      },
-    },
-    orderBy: { createdAt: "desc" },
-    take: 4,
-    skip: 4,
-  });
+  // Yeni gelenler (cache'lenmiş)
+  const newProducts = await getNewProducts(4, 4);
 
   return (
     <div className="relative flex min-h-screen w-full flex-col overflow-x-hidden" style={{ backgroundColor: '#FFF8F1' }}>
       <div className="layout-container flex h-full grow flex-col">
         <div className="flex flex-1 justify-center px-4 sm:px-8 md:px-12 lg:px-20 xl:px-40 py-5">
           <div className="layout-content-container flex w-full max-w-[1280px] flex-1 flex-col">
-            <Header />
-
             <main className="flex-1">
               <div className="my-6 @container">
                 <div className="@[480px]:p-4">
@@ -85,8 +58,8 @@ export default async function Home() {
                   <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6 p-4">
                     {featuredProducts.map((product) => {
                       const minPrice = product.variants[0]?.priceCents || 0;
-                      const imageUrl = product.images[0]?.url || "/uploads/sample.jpg";
-                      const sellerName = product.seller.user.name || product.seller.displayName || "Sanatçı";
+                      const imageUrl = product.images[0]?.url || "https://via.placeholder.com/400x400?text=Görsel+Yok";
+                      const sellerName = product.seller.user.name || product.seller.displayName || product.seller.user.email || "Sanatçı";
 
                       return (
                         <div key={product.id} className="flex flex-col gap-3 pb-3 group">
@@ -122,7 +95,7 @@ export default async function Home() {
                                 {sellerName} tarafından
                               </p>
                               <p className="text-[#1F2937] text-sm font-medium leading-normal">
-                                {minPrice > 0 ? `€${(minPrice / 100).toLocaleString("tr-TR")}` : "Fiyat yok"}
+                                {minPrice > 0 ? `${(minPrice / 100).toLocaleString("tr-TR")} TL` : "Fiyat yok"}
                               </p>
                             </Link>
                           </div>
@@ -145,8 +118,8 @@ export default async function Home() {
                   <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6 p-4">
                     {newProducts.map((product) => {
                       const minPrice = product.variants[0]?.priceCents || 0;
-                      const imageUrl = product.images[0]?.url || "/uploads/sample.jpg";
-                      const sellerName = product.seller.user.name || product.seller.displayName || "Sanatçı";
+                      const imageUrl = product.images[0]?.url || "https://via.placeholder.com/400x400?text=Görsel+Yok";
+                      const sellerName = product.seller.user.name || product.seller.displayName || product.seller.user.email || "Sanatçı";
 
                       return (
                         <div key={product.id} className="flex flex-col gap-3 pb-3 group">
@@ -182,7 +155,7 @@ export default async function Home() {
                                 {sellerName} tarafından
                               </p>
                               <p className="text-[#1F2937] text-sm font-medium leading-normal">
-                                {minPrice > 0 ? `€${(minPrice / 100).toLocaleString("tr-TR")}` : "Fiyat yok"}
+                                {minPrice > 0 ? `${(minPrice / 100).toLocaleString("tr-TR")} TL` : "Fiyat yok"}
                               </p>
                             </Link>
                           </div>
@@ -289,7 +262,7 @@ export default async function Home() {
             </div>
 
             <footer className="mt-auto border-t border-solid border-border py-10 px-4">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-8">
                 <div className="col-span-2 md:col-span-1">
                   <div className="flex items-center gap-4 text-[#1F2937] mb-4">
                     <div className="size-6 text-primary">
@@ -352,13 +325,48 @@ export default async function Home() {
                       </Link>
                     </li>
                     <li>
+                      <Link className="hover:text-primary" href="/become-seller">
+                        Satıcı Ol
+                      </Link>
+                    </li>
+                    <li>
                       <Link className="hover:text-primary" href="/contact">
                         Bize Ulaşın
                       </Link>
                     </li>
                     <li>
                       <Link className="hover:text-primary" href="/help">
-                        SSS
+                        Yardım Merkezi
+                      </Link>
+                    </li>
+                  </ul>
+                </div>
+                <div>
+                  <h3 className="font-bold mb-4">Yasal & Destek</h3>
+                  <ul className="space-y-2 text-sm text-gray-600">
+                    <li>
+                      <Link className="hover:text-primary" href="/terms">
+                        Kullanım Şartları
+                      </Link>
+                    </li>
+                    <li>
+                      <Link className="hover:text-primary" href="/privacy">
+                        Gizlilik Politikası
+                      </Link>
+                    </li>
+                    <li>
+                      <Link className="hover:text-primary" href="/returns">
+                        İade Politikası
+                      </Link>
+                    </li>
+                    <li>
+                      <Link className="hover:text-primary" href="/shipping">
+                        Kargo & Teslimat
+                      </Link>
+                    </li>
+                    <li>
+                      <Link className="hover:text-primary" href="/track-order">
+                        Sipariş Takibi
                       </Link>
                     </li>
                   </ul>
