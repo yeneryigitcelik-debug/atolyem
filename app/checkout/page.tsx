@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import CouponInput from "./CouponInput";
 
 /**
  * Checkout page - Place order with address selection
@@ -46,6 +47,8 @@ export default function CheckoutPage() {
   const [loading, setLoading] = useState(true);
   const [placing, setPlacing] = useState(false);
   const [error, setError] = useState("");
+  const [discountCents, setDiscountCents] = useState(0);
+  const [appliedCouponCode, setAppliedCouponCode] = useState("");
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -138,7 +141,8 @@ export default function CheckoutPage() {
     }
   };
 
-  const totalCents = cart.reduce((sum, item) => sum + item.priceCents * item.qty, 0);
+  const subtotalCents = cart.reduce((sum, item) => sum + item.priceCents * item.qty, 0);
+  const totalCents = subtotalCents - discountCents;
 
   if (loading) {
     return (
@@ -238,6 +242,15 @@ export default function CheckoutPage() {
               )}
             </div>
 
+            {/* Coupon Code */}
+            <CouponInput
+              cartTotalCents={cart.reduce((sum, item) => sum + item.priceCents * item.qty, 0)}
+              onCouponApplied={(discount, code) => {
+                setDiscountCents(discount);
+                setAppliedCouponCode(code);
+              }}
+            />
+
             {/* Order Items */}
             <div className="rounded-lg border border-gray-200 bg-white p-6">
               <h2 className="mb-4 text-lg font-semibold">Sipariş Detayları</h2>
@@ -246,7 +259,7 @@ export default function CheckoutPage() {
                   <div key={item.id} className="flex gap-4">
                     <div className="relative h-20 w-20 flex-shrink-0 overflow-hidden rounded-lg bg-gray-100">
                       <Image
-                        src={item.variant.product.images[0]?.url ?? "/uploads/sample.jpg"}
+                        src={item.variant.product.images[0]?.url || "https://via.placeholder.com/200x200?text=Görsel+Yok"}
                         alt={item.variant.product.images[0]?.alt ?? item.variant.product.title}
                         fill
                         className="object-cover"
@@ -283,8 +296,14 @@ export default function CheckoutPage() {
               <div className="mb-4 space-y-2">
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Ara Toplam</span>
-                  <span>{(totalCents / 100).toLocaleString("tr-TR")} TL</span>
+                  <span>{(subtotalCents / 100).toLocaleString("tr-TR")} TL</span>
                 </div>
+                {discountCents > 0 && (
+                  <div className="flex justify-between text-sm text-green-600">
+                    <span>İndirim ({appliedCouponCode})</span>
+                    <span>-{(discountCents / 100).toLocaleString("tr-TR")} TL</span>
+                  </div>
+                )}
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Kargo</span>
                   <span>Ücretsiz</span>

@@ -2,7 +2,6 @@
 
 import { useState, useEffect, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import Header from "@/app/components/Header";
 import Link from "next/link";
 
 function SearchContent() {
@@ -71,8 +70,6 @@ function SearchContent() {
       <div className="layout-container flex h-full grow flex-col">
         <div className="flex flex-1 justify-center px-4 sm:px-8 md:px-12 lg:px-20 xl:px-40 py-5">
           <div className="layout-content-container flex w-full max-w-[1280px] flex-1 flex-col">
-            <Header />
-
             <main className="flex-1 my-8">
               <div className="max-w-6xl mx-auto px-4">
                 <h1 className="text-4xl font-bold text-[#1F2937] mb-2">
@@ -127,7 +124,7 @@ function SearchContent() {
                         >
                           <div className="aspect-square w-full overflow-hidden rounded-lg bg-gray-200">
                             <img
-                              src={product.images?.[0]?.url || "/uploads/sample.jpg"}
+                              src={product.images?.[0]?.url || "https://via.placeholder.com/400x400?text=Görsel+Yok"}
                               alt={product.title}
                               className="w-full h-full object-cover transition-transform group-hover:scale-105"
                             />
@@ -165,7 +162,6 @@ export default function SearchPage() {
         <div className="layout-container flex h-full grow flex-col">
           <div className="flex flex-1 justify-center px-4 sm:px-8 md:px-12 lg:px-20 xl:px-40 py-5">
             <div className="layout-content-container flex w-full max-w-[1280px] flex-1 flex-col">
-              <Header />
               <main className="flex-1 my-8">
                 <div className="max-w-6xl mx-auto px-4">
                   <p className="text-gray-600">Yükleniyor...</p>

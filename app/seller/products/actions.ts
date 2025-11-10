@@ -24,7 +24,6 @@ export async function createSellerProductAction(prevState: any, formData: FormDa
   }
 
   const title = formData.get("title") as string;
-  let slug = formData.get("slug") as string;
   const description = formData.get("description") as string | null;
   const categoryId = formData.get("categoryId") as string | null;
   const isActive = formData.get("isActive") === "on";
@@ -33,12 +32,8 @@ export async function createSellerProductAction(prevState: any, formData: FormDa
     return { error: "Başlık gereklidir" };
   }
 
-  // Eğer slug boşsa, başlıktan otomatik oluştur
-  if (!slug || slug.trim() === "") {
-    slug = generateSlug(title);
-  } else {
-    slug = generateSlug(slug);
-  }
+  // Slug'ı başlıktan otomatik oluştur
+  let slug = generateSlug(title);
 
   // Benzersiz slug oluştur
   slug = await generateUniqueSlug(slug, async (s) => {
@@ -94,22 +89,35 @@ export async function updateSellerProductAction(productId: string, prevState: an
   }
 
   const title = formData.get("title") as string;
-  const slug = formData.get("slug") as string;
   const description = formData.get("description") as string | null;
   const categoryId = formData.get("categoryId") as string | null;
   const isActive = formData.get("isActive") === "on";
   const imagesStr = formData.get("images") as string | null;
 
-  if (!title || !slug) {
-    return { error: "Başlık ve slug gereklidir" };
+  if (!title) {
+    return { error: "Başlık gereklidir" };
   }
 
+  // Slug'ı başlıktan otomatik oluştur
+  let slug = generateSlug(title);
+  
+  // Benzersiz slug oluştur (mevcut ürünün slug'ını hariç tut)
+  slug = await generateUniqueSlug(slug, async (s) => {
+    const existing = await db.product.findUnique({ where: { slug: s } });
+    // Mevcut ürünün slug'ı ise kabul et
+    if (existing && existing.id === productId) {
+      return true;
+    }
+    return !existing;
+  });
+
   // Parse images JSON
-  let images: Array<{ url: string; alt?: string; sort: number }> = [];
+  let images: Array<{ url: string; alt?: string; sort: number; cfImageId?: string }> = [];
   if (imagesStr) {
     try {
       images = JSON.parse(imagesStr);
-    } catch {
+    } catch (e) {
+      console.error("Failed to parse images JSON:", e);
       // Invalid JSON, ignore
     }
   }
@@ -154,10 +162,11 @@ export async function updateSellerProductAction(productId: string, prevState: an
         categoryId: categoryId || null,
         isActive,
         images: {
-          create: images.map((img) => ({
+          create: images.map((img, index) => ({
             url: img.url,
             alt: img.alt || null,
-            sort: img.sort || 0,
+            sort: img.sort ?? index,
+            cfImageId: img.cfImageId || null,
           })),
         },
       },
@@ -185,10 +194,73 @@ export async function updateSellerProductAction(productId: string, prevState: an
     revalidatePath("/seller/products");
     redirect("/seller/products");
   } catch (error: any) {
+    console.error("Update product error:", error);
+    console.error("Error details:", {
+      message: error.message,
+      code: error.code,
+      stack: error.stack,
+      productId,
+    });
+    
     if (error.code === "P2002") {
       return { error: "Bu slug zaten kullanılıyor" };
     }
-    return { error: "Ürün güncellenirken bir hata oluştu" };
+    
+    // Daha detaylı hata mesajı
+    const errorMessage = error.message || "Ürün güncellenirken bir hata oluştu";
+    return { 
+      error: process.env.NODE_ENV === "development" 
+        ? `${errorMessage} (${error.code || "unknown"})` 
+        : errorMessage 
+    };
+  }
+}
+
+export async function deleteSellerProductAction(productId: string) {
+  const session = await getServerSession(authOptions);
+  const userId = (session?.user as any)?.id;
+  if (!userId) {
+    return { error: "Giriş yapmanız gerekiyor" };
+  }
+
+  const user = await db.user.findUnique({
+    where: { id: userId },
+    include: { seller: true },
+  });
+
+  if (!user?.seller) {
+    return { error: "Satıcı hesabı bulunamadı" };
+  }
+
+  // Ürünün bu satıcıya ait olduğunu kontrol et
+  const product = await db.product.findUnique({
+    where: { id: productId },
+  });
+
+  if (!product || product.sellerId !== user.seller.id) {
+    return { error: "Bu ürünü silme yetkiniz yok" };
+  }
+
+  try {
+    // Önce ilişkili kayıtları sil
+    await db.productImage.deleteMany({
+      where: { productId: productId },
+    });
+
+    await db.variant.deleteMany({
+      where: { productId: productId },
+    });
+
+    // Sonra ürünü sil
+    await db.product.delete({
+      where: { id: productId },
+    });
+
+    revalidatePath("/seller/products");
+    return { success: true };
+  } catch (error: any) {
+    console.error("Delete product error:", error);
+    return { error: "Ürün silinirken bir hata oluştu" };
   }
 }
 

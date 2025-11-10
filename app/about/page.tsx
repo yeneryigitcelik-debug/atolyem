@@ -1,4 +1,3 @@
-import Header from "@/app/components/Header";
 import Link from "next/link";
 
 export default function AboutPage() {
@@ -7,8 +6,6 @@ export default function AboutPage() {
       <div className="layout-container flex h-full grow flex-col">
         <div className="flex flex-1 justify-center px-4 sm:px-8 md:px-12 lg:px-20 xl:px-40 py-5">
           <div className="layout-content-container flex w-full max-w-[1280px] flex-1 flex-col">
-            <Header />
-
             <main className="flex-1 my-8">
               <div className="max-w-4xl mx-auto px-4">
                 <h1 className="text-4xl font-bold text-[#1F2937] mb-8">Hikayemiz</h1>

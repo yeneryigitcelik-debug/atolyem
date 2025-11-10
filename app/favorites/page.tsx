@@ -3,7 +3,6 @@ import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { db } from "@/lib/db";
-import Header from "@/app/components/Header";
 
 export default async function FavoritesPage() {
   const session = await getServerSession(authOptions);
@@ -13,17 +12,51 @@ export default async function FavoritesPage() {
     redirect("/login");
   }
 
-  // Şimdilik boş - favoriler sistemi eklendiğinde gerçek veriler çekilecek
-  const favoriteProducts: any[] = [];
-  const favoriteSellers: any[] = [];
+  // Favori ürünleri çek
+  const favoriteProducts = await db.favoriteProduct.findMany({
+    where: { userId },
+    include: {
+      product: {
+        include: {
+          images: { orderBy: { sort: "asc" }, take: 1 },
+          variants: { orderBy: { priceCents: "asc" }, take: 1 },
+        },
+      },
+    },
+    orderBy: { createdAt: "desc" },
+  });
+
+  // Favori satıcıları çek
+  const favoriteSellers = await db.favoriteSeller.findMany({
+    where: { userId },
+    include: {
+      seller: {
+        include: {
+          user: {
+            select: {
+              name: true,
+              email: true,
+              image: true,
+            },
+          },
+          products: {
+            where: { isActive: true },
+            include: {
+              images: { orderBy: { sort: "asc" }, take: 1 },
+            },
+            take: 1,
+          },
+        },
+      },
+    },
+    orderBy: { createdAt: "desc" },
+  });
 
   return (
     <div className="relative flex min-h-screen w-full flex-col overflow-x-hidden" style={{ backgroundColor: '#FFF8F1' }}>
       <div className="layout-container flex h-full grow flex-col">
         <div className="flex flex-1 justify-center px-4 sm:px-8 md:px-12 lg:px-20 xl:px-40 py-5">
           <div className="layout-content-container flex w-full max-w-[1280px] flex-1 flex-col">
-            <Header />
-
             <main className="flex-1 my-8">
               <div className="max-w-6xl mx-auto px-4">
                 {/* Breadcrumb */}
@@ -52,20 +85,25 @@ export default async function FavoritesPage() {
                         </Link>
                       </div>
                     ) : (
-                      favoriteSellers.map((seller) => (
-                        <Link key={seller.id} href={`/artist/${seller.id}`} className="flex flex-col gap-4 group">
-                          <div
-                            className="w-full bg-center bg-no-repeat aspect-square bg-cover rounded-lg overflow-hidden"
-                            style={{
-                              backgroundImage: seller.image ? `url("${seller.image}")` : "none",
-                              backgroundColor: seller.image ? "transparent" : "#e5e7eb",
-                            }}
-                          ></div>
-                          <div>
-                            <p className="text-base font-medium text-[#1F2937] group-hover:text-[#D97706] transition-colors">{seller.displayName}</p>
-                          </div>
-                        </Link>
-                      ))
+                      favoriteSellers.map((fav) => {
+                        const seller = fav.seller;
+                        const productImage = seller.products[0]?.images[0]?.url;
+                        const userImage = seller.user.image;
+                        return (
+                          <Link key={fav.id} href={`/artist/${seller.id}`} className="flex flex-col gap-4 group">
+                            <div
+                              className="w-full bg-center bg-no-repeat aspect-square bg-cover rounded-lg overflow-hidden"
+                              style={{
+                                backgroundImage: productImage ? `url("${productImage}")` : userImage ? `url("${userImage}")` : "none",
+                                backgroundColor: productImage || userImage ? "transparent" : "#e5e7eb",
+                              }}
+                            ></div>
+                            <div>
+                              <p className="text-base font-medium text-[#1F2937] group-hover:text-[#D97706] transition-colors">{seller.displayName}</p>
+                            </div>
+                          </Link>
+                        );
+                      })
                     )}
                   </div>
                 </section>
@@ -85,13 +123,14 @@ export default async function FavoritesPage() {
                         </Link>
                       </div>
                     ) : (
-                      favoriteProducts.map((product) => {
-                        const firstImage = product.images?.[0];
-                        const firstVariant = product.variants?.[0];
+                      favoriteProducts.map((fav) => {
+                        const product = fav.product;
+                        const firstImage = product.images[0];
+                        const firstVariant = product.variants[0];
                         const price = firstVariant ? (firstVariant.priceCents / 100).toLocaleString("tr-TR", { minimumFractionDigits: 2 }) + " TL" : "Fiyat yok";
 
                         return (
-                          <Link key={product.id} href={`/products/${product.slug}`} className="flex flex-col gap-4 group">
+                          <Link key={fav.id} href={`/products/${product.slug}`} className="flex flex-col gap-4 group">
                             <div
                               className="w-full bg-center bg-no-repeat aspect-square bg-cover rounded-lg overflow-hidden group-hover:opacity-90 transition-opacity"
                               style={{

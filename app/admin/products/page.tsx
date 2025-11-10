@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import Link from "next/link";
 
 export default async function ProductsPage() {
+  // Admin yetki kontrolü layout'ta yapılıyor
   const products = await db.product.findMany({
     include: {
       seller: { include: { user: true } },
@@ -13,20 +14,36 @@ export default async function ProductsPage() {
   });
 
   return (
-    <div className="min-h-screen bg-[#FFF8F1] dark:bg-gray-900 p-8">
-      <div className="mx-auto max-w-7xl">
-        <div className="mb-6 flex items-center justify-between">
-          <h1 className="text-3xl font-bold text-gray-900">Ürünler</h1>
-          <Link
-            href="/admin/products/new"
-            className="rounded-md bg-primary px-4 py-2 text-white hover:bg-secondary transition-colors"
-          >
-            Yeni Ürün
-          </Link>
+    <div className="min-h-screen bg-[#FFF8F1] dark:bg-gray-900">
+      <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        <div className="mb-8 flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Ürünler</h1>
+            <p className="text-sm text-gray-600">Tüm ürünleri yönet</p>
+          </div>
+          <div className="flex items-center gap-4">
+            <Link
+              href="/admin"
+              className="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+            >
+              Geri Dön
+            </Link>
+            <Link
+              href="/admin/products/new"
+              className="rounded-md bg-[#D97706] px-4 py-2 text-sm font-medium text-white hover:bg-[#92400E] transition-colors"
+            >
+              Yeni Ürün
+            </Link>
+          </div>
         </div>
 
-        <div className="rounded-lg border border-gray-200 bg-white shadow-sm">
-          <table className="w-full">
+        {products.length === 0 ? (
+          <div className="rounded-lg border border-gray-200 bg-white p-12 text-center">
+            <p className="text-gray-600">Henüz ürün bulunmamaktadır.</p>
+          </div>
+        ) : (
+          <div className="rounded-lg border border-gray-200 bg-white shadow-sm">
+            <table className="w-full">
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
@@ -79,7 +96,7 @@ export default async function ProductsPage() {
                   <td className="whitespace-nowrap px-6 py-4 text-right text-sm font-medium">
                     <Link
                       href={`/admin/products/${product.id}/edit`}
-                      className="text-primary hover:text-primary/80"
+                      className="text-[#D97706] hover:text-[#92400E]"
                     >
                       Düzenle
                     </Link>
@@ -89,7 +106,8 @@ export default async function ProductsPage() {
             </tbody>
           </table>
         </div>
-      </div>
+        )}
+      </main>
     </div>
   );
 }

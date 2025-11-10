@@ -1,5 +1,3 @@
-"use server";
-
 /**
  * PayTR Payment Gateway Client (Sandbox)
  * Documentation: https://dev.paytr.com/
@@ -58,13 +56,13 @@ export async function initPaytrPayment(
 /**
  * Verify PayTR webhook signature
  */
-export function verifyPaytrWebhook(
+export async function verifyPaytrWebhook(
   hash: string,
   merchantSalt: string,
   merchantOid: string,
   status: string,
   totalAmount: string
-): boolean {
+): Promise<boolean> {
   // In sandbox, always return true
   if (process.env.PAYTR_SANDBOX === "true") {
     return true;

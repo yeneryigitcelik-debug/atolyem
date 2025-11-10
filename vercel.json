@@ -1,0 +1,9 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/seller-metrics",
+      "schedule": "0 2 * * *"
+    }
+  ]
+}
+

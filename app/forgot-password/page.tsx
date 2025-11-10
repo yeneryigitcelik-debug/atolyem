@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import Header from "@/app/components/Header";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
@@ -19,8 +18,6 @@ export default function ForgotPasswordPage() {
       <div className="layout-container flex h-full grow flex-col">
         <div className="flex flex-1 justify-center px-4 sm:px-8 md:px-12 lg:px-20 xl:px-40 py-5">
           <div className="layout-content-container flex w-full max-w-[1280px] flex-1 flex-col">
-            <Header />
-
             <main className="flex-1 my-8">
               <div className="max-w-md mx-auto px-4">
                 <h1 className="text-3xl font-bold text-[#1F2937] mb-2">Şifremi Unuttum</h1>

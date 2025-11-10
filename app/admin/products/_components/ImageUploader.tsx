@@ -186,6 +186,7 @@ export default function ImageUploader({
                   fill
                   className="object-cover"
                   sizes="(max-width: 768px) 50vw, 25vw"
+                  unoptimized={image.url.includes("imagedelivery.net")}
                 />
                 <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center gap-2">
                   <button

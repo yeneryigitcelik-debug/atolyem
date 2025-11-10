@@ -3,6 +3,8 @@ import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import DeleteProductButton from "./_components/DeleteProductButton";
+import PriceEditor from "./_components/PriceEditor";
 
 export default async function SellerProductsPage() {
   const session = await getServerSession(authOptions);
@@ -47,9 +49,6 @@ export default async function SellerProductsPage() {
                   Fiyat
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                  Varyant
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
                   Durum
                 </th>
                 <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">
@@ -67,41 +66,32 @@ export default async function SellerProductsPage() {
                   <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
                     {product.category?.name || "-"}
                   </td>
-                  <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-900">
+                  <td className="px-6 py-4 text-sm text-gray-900">
                     {product.variants.length > 0 ? (
                       product.variants.length === 1 ? (
-                        <span className="font-medium">
-                          {(product.variants[0].priceCents / 100).toLocaleString("tr-TR", {
-                            minimumFractionDigits: 2,
-                            maximumFractionDigits: 2,
-                          })}{" "}
-                          TL
-                        </span>
+                        <PriceEditor
+                          productId={product.id}
+                          variantId={product.variants[0].id}
+                          currentPrice={product.variants[0].priceCents}
+                          currentStock={product.variants[0].stock}
+                        />
                       ) : (
-                        <div className="flex flex-col">
-                          <span className="font-medium">
-                            {(Math.min(...product.variants.map((v) => v.priceCents)) / 100).toLocaleString("tr-TR", {
-                              minimumFractionDigits: 2,
-                              maximumFractionDigits: 2,
-                            })}{" "}
-                            -{" "}
-                            {(Math.max(...product.variants.map((v) => v.priceCents)) / 100).toLocaleString("tr-TR", {
-                              minimumFractionDigits: 2,
-                              maximumFractionDigits: 2,
-                            })}{" "}
-                            TL
-                          </span>
-                          <span className="text-xs text-gray-500">
-                            ({product.variants.length} varyant)
-                          </span>
+                        <div className="space-y-2">
+                          {product.variants.map((variant) => (
+                            <div key={variant.id} className="flex items-center gap-2">
+                              <PriceEditor
+                                productId={product.id}
+                                variantId={variant.id}
+                                currentPrice={variant.priceCents}
+                                currentStock={variant.stock}
+                              />
+                            </div>
+                          ))}
                         </div>
                       )
                     ) : (
                       <span className="text-gray-400">Fiyat yok</span>
                     )}
-                  </td>
-                  <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
-                    {product._count.variants}
                   </td>
                   <td className="whitespace-nowrap px-6 py-4">
                     <span
@@ -115,12 +105,15 @@ export default async function SellerProductsPage() {
                     </span>
                   </td>
                   <td className="whitespace-nowrap px-6 py-4 text-right text-sm font-medium">
-                    <Link
-                      href={`/seller/products/${product.id}/edit`}
-                      className="text-primary hover:text-primary/80"
-                    >
-                      Düzenle
-                    </Link>
+                    <div className="flex items-center justify-end gap-4">
+                      <Link
+                        href={`/seller/products/${product.id}/edit`}
+                        className="text-[#D97706] hover:text-[#92400E]"
+                      >
+                        Düzenle
+                      </Link>
+                      <DeleteProductButton productId={product.id} productTitle={product.title} />
+                    </div>
                   </td>
                 </tr>
               ))}

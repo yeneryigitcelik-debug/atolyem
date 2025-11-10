@@ -30,7 +30,13 @@ export async function addToCart(
     // Get variant with stock check
     const variant = await tx.variant.findUnique({
       where: { id: variantId },
-      include: { product: true },
+      include: {
+        product: {
+          include: {
+            seller: true,
+          },
+        },
+      },
     });
 
     if (!variant) {
@@ -39,6 +45,11 @@ export async function addToCart(
 
     if (!variant.product.isActive) {
       throw new OrderError("Ürün aktif değil", "PRODUCT_INACTIVE");
+    }
+
+    // Satıcı kendi ürününü satın alamaz
+    if (variant.product.seller.userId === userId) {
+      throw new OrderError("Kendi ürününüzü satın alamazsınız", "OWN_PRODUCT");
     }
 
     if (variant.stock < qty) {

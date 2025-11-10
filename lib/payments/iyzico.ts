@@ -1,5 +1,3 @@
-"use server";
-
 /**
  * İyzico Payment Gateway Client (Sandbox)
  * Documentation: https://dev.iyzipay.com/
@@ -84,11 +82,11 @@ export async function initIyzicoPayment(
 /**
  * Verify İyzico webhook signature
  */
-export function verifyIyzicoWebhook(
+export async function verifyIyzicoWebhook(
   signature: string,
   requestBody: string,
   secretKey: string
-): boolean {
+): Promise<boolean> {
   // In sandbox, always return true
   if (process.env.IYZICO_SANDBOX === "true") {
     return true;

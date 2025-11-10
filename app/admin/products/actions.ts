@@ -20,9 +20,13 @@ export async function createProductAction(prevState: any, formData: FormData) {
   if (imagesStr) {
     try {
       images = JSON.parse(imagesStr);
-    } catch {
+      console.log("Parsed images:", images);
+    } catch (error) {
+      console.error("Failed to parse images JSON:", error);
       // Invalid JSON, ignore
     }
+  } else {
+    console.warn("No images string found in form data");
   }
 
   // Validate with Zod
@@ -37,6 +41,7 @@ export async function createProductAction(prevState: any, formData: FormData) {
   });
 
   if (!validation.success) {
+    console.error("Validation errors:", validation.error.issues);
     const firstError = validation.error.issues[0];
     return { error: firstError?.message || "Geçersiz form verisi" };
   }
@@ -44,7 +49,8 @@ export async function createProductAction(prevState: any, formData: FormData) {
   const data = validation.data;
 
   try {
-    await db.product.create({
+    console.log("Creating product with images:", data.images);
+    const product = await db.product.create({
       data: {
         title: data.title,
         slug: data.slug,
@@ -61,6 +67,7 @@ export async function createProductAction(prevState: any, formData: FormData) {
         },
       },
     });
+    console.log("Product created successfully:", product.id);
 
     revalidatePath("/admin/products");
     redirect("/admin/products");

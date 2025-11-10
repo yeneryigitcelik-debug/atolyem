@@ -42,7 +42,13 @@ export async function POST(request: NextRequest) {
 
     // Cloudflare Images'a yükle
     try {
+      if (process.env.NODE_ENV === "development") {
+        console.log("Starting Cloudflare upload for file:", file.name, "Size:", file.size);
+      }
       const result = await uploadImageToCloudflare(file, file.name);
+      if (process.env.NODE_ENV === "development") {
+        console.log("Cloudflare upload successful:", { id: result.id, url: result.url });
+      }
 
       if (!result || !result.url || !result.id) {
         console.error("Cloudflare upload result:", result);
@@ -61,7 +67,11 @@ export async function POST(request: NextRequest) {
         filename: file.name,
       });
     } catch (cloudflareError: any) {
-      console.error("Cloudflare upload error:", cloudflareError);
+      console.error("Cloudflare upload error:", {
+        message: cloudflareError.message,
+        stack: cloudflareError.stack,
+        name: cloudflareError.name,
+      });
       
       // Cloudflare hatalarını daha anlaşılır hale getir
       let errorMessage = "Görsel yüklenirken bir hata oluştu";
@@ -69,9 +79,9 @@ export async function POST(request: NextRequest) {
       if (cloudflareError.message) {
         if (cloudflareError.message.includes("CLOUDFLARE_ACCOUNT_ID") || 
             cloudflareError.message.includes("CLOUDFLARE_IMAGES_API_TOKEN")) {
-          errorMessage = "Cloudflare yapılandırması eksik. Lütfen yöneticiye bildirin.";
+          errorMessage = cloudflareError.message || "Cloudflare yapılandırması eksik. Lütfen .env dosyanızı kontrol edin ve development server'ı yeniden başlatın.";
         } else if (cloudflareError.message.includes("CLOUDFLARE_ACCOUNT_HASH")) {
-          errorMessage = "Cloudflare hesap hash'i eksik. Lütfen yöneticiye bildirin.";
+          errorMessage = cloudflareError.message || "Cloudflare hesap hash'i eksik. Lütfen .env dosyanızı kontrol edin ve development server'ı yeniden başlatın.";
         } else if (cloudflareError.message.includes("upload failed")) {
           errorMessage = `Cloudflare'e yükleme başarısız: ${cloudflareError.message}`;
         } else {
@@ -82,6 +92,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           error: errorMessage,
+          details: process.env.NODE_ENV === "development" ? cloudflareError.message : undefined,
         },
         { status: 500 }
       );

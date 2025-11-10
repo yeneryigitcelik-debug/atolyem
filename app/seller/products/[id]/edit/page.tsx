@@ -51,6 +51,7 @@ export default async function EditSellerProductPage({ params }: { params: Promis
               url: img.url,
               alt: img.alt || undefined,
               sort: img.sort,
+              cfImageId: img.cfImageId || undefined,
             })),
             variants: product.variants.map((variant) => ({
               id: variant.id,
@@ -63,39 +64,6 @@ export default async function EditSellerProductPage({ params }: { params: Promis
           submitLabel="Güncelle"
           cancelHref="/seller/products"
         />
-
-        <div className="mt-8 rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-xl font-semibold text-gray-900">Varyantlar</h2>
-            <Link
-              href={`/seller/products/${product.id}/variants/new`}
-              className="rounded-md bg-primary px-4 py-2 text-sm text-white hover:bg-secondary transition-colors"
-            >
-              Yeni Varyant
-            </Link>
-          </div>
-          <div className="space-y-2">
-            {product.variants.map((variant) => (
-              <div
-                key={variant.id}
-                className="flex items-center justify-between rounded-md border border-gray-200 p-3"
-              >
-                <div>
-                  <div className="font-medium">{variant.sku}</div>
-                  <div className="text-sm text-gray-500">
-                    {(variant.priceCents / 100).toLocaleString("tr-TR")} TL - Stok: {variant.stock}
-                  </div>
-                </div>
-                <Link
-                  href={`/seller/products/${product.id}/variants/${variant.id}/edit`}
-                  className="text-sm text-[#D97706] hover:text-[#92400E]"
-                >
-                  Düzenle
-                </Link>
-              </div>
-            ))}
-          </div>
-        </div>
       </div>
     </div>
   );

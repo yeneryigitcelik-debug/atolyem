@@ -2,35 +2,20 @@
 
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
-import { useSession, signOut } from "next-auth/react";
+import { signOut } from "next-auth/react";
 import CategoryMenu from "./CategoryMenu";
-
-interface Category {
-  id: string;
-  name: string;
-  slug: string;
-  children?: Category[];
-}
+import { Category } from "@/lib/data";
+import { Session } from "next-auth";
 
 interface HeaderProps {
-  categories?: Category[];
+  categories: Category[];
+  session: Session | null;
+  pathname?: string;
 }
 
-export default function Header({ categories: initialCategories }: HeaderProps = {}) {
-  const { data: session, status } = useSession();
+export default function Header({ categories, session, pathname }: HeaderProps) {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
-  const [categories, setCategories] = useState<Category[]>(initialCategories || []);
   const userMenuRef = useRef<HTMLDivElement>(null);
-
-  // Kategorileri API'den çek (eğer prop olarak gelmediyse)
-  useEffect(() => {
-    if (!initialCategories || initialCategories.length === 0) {
-      fetch("/api/categories")
-        .then((res) => res.json())
-        .then((data) => setCategories(data.categories || []))
-        .catch((err) => console.error("Categories fetch error:", err));
-    }
-  }, [initialCategories]);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -67,7 +52,7 @@ export default function Header({ categories: initialCategories }: HeaderProps = 
           </h2>
         </Link>
         <div className="hidden lg:flex items-center gap-4">
-          {categories.length > 0 && <CategoryMenu categories={categories} />}
+          {categories.length > 0 && <CategoryMenu categories={categories} pathname={pathname} />}
           <form
             action="/search"
             method="get"
@@ -109,21 +94,21 @@ export default function Header({ categories: initialCategories }: HeaderProps = 
           >
             Atölyem Akademi
           </Link>
-          {status !== "loading" && session?.user && ((session.user as any)?.role === "SELLER" || (session.user as any)?.role === "ADMIN") ? (
+          {session?.user ? (
             <Link
-              href="/seller"
+              href="/profile"
               className="text-[#1F2937] text-sm font-medium leading-normal hover:text-primary transition-colors"
             >
               Atölyem
             </Link>
-          ) : status !== "loading" ? (
+          ) : (
             <Link
               href="/seller"
               className="text-[#1F2937] text-sm font-medium leading-normal hover:text-primary transition-colors"
             >
               Atölyeni Oluştur
             </Link>
-          ) : null}
+          )}
         </div>
         <div className="flex gap-2">
           <Link
@@ -147,9 +132,7 @@ export default function Header({ categories: initialCategories }: HeaderProps = 
             </button>
             {isUserMenuOpen && (
               <div className="absolute right-0 mt-2 w-56 rounded-lg bg-white border border-border shadow-xl z-50 overflow-hidden">
-                {status === "loading" ? (
-                  <div className="px-4 py-3 text-sm text-gray-500">Yükleniyor...</div>
-                ) : session?.user ? (
+                {session?.user ? (
                   <>
                     <div className="px-4 py-3 border-b border-border">
                       <p className="text-sm font-semibold text-[#1F2937]">
@@ -179,13 +162,36 @@ export default function Header({ categories: initialCategories }: HeaderProps = 
                       Mesajlar
                     </Link>
                     {(session.user as any)?.role === "SELLER" || (session.user as any)?.role === "ADMIN" ? (
-                      <Link
-                        href="/seller"
-                        onClick={() => setIsUserMenuOpen(false)}
-                        className="block px-4 py-3 text-sm text-[#1F2937] hover:bg-gray-50 transition-colors border-t border-border"
-                      >
-                        Satıcı Paneli
-                      </Link>
+                      <>
+                        <Link
+                          href="/seller"
+                          onClick={() => setIsUserMenuOpen(false)}
+                          className="block px-4 py-3 text-sm text-[#1F2937] hover:bg-gray-50 transition-colors border-t border-border"
+                        >
+                          Satıcı Paneli
+                        </Link>
+                        <Link
+                          href="/analytics"
+                          onClick={() => setIsUserMenuOpen(false)}
+                          className="block px-4 py-3 text-sm text-[#1F2937] hover:bg-gray-50 transition-colors"
+                        >
+                          Satış Analitikleri
+                        </Link>
+                        <Link
+                          href="/feedback"
+                          onClick={() => setIsUserMenuOpen(false)}
+                          className="block px-4 py-3 text-sm text-[#1F2937] hover:bg-gray-50 transition-colors"
+                        >
+                          Geri Bildirimler
+                        </Link>
+                        <Link
+                          href="/premium"
+                          onClick={() => setIsUserMenuOpen(false)}
+                          className="block px-4 py-3 text-sm text-[#D97706] hover:bg-orange-50 transition-colors font-medium"
+                        >
+                          Premium Abonelik
+                        </Link>
+                      </>
                     ) : null}
                     {(session.user as any)?.role === "ADMIN" && (
                       <Link

@@ -1,4 +1,3 @@
-import Header from "@/app/components/Header";
 import Link from "next/link";
 import { db } from "@/lib/db";
 
@@ -28,8 +27,6 @@ export default async function ArtistsPage() {
       <div className="layout-container flex h-full grow flex-col">
         <div className="flex flex-1 justify-center px-4 sm:px-8 md:px-12 lg:px-20 xl:px-40 py-5">
           <div className="layout-content-container flex w-full max-w-[1280px] flex-1 flex-col">
-            <Header />
-
             <main className="flex-1 my-8">
               <div className="max-w-6xl mx-auto px-4">
                 <h1 className="text-4xl font-bold text-[#1F2937] mb-4">Sanatçılarla Tanışın</h1>
@@ -45,7 +42,7 @@ export default async function ArtistsPage() {
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {sellers.map((seller) => {
                       const userImage = seller.user.image || "https://lh3.googleusercontent.com/aida-public/AB6AXuDDoFd-5Lopq13T-VJrLgwgSt7uH3WDYxeEUTgjk2BUXy1HdMKoQ7Aftco9cHpc54mE-kkrDTu7DAjHnYauF54_iNFcTp9woSfkGwN0Dc9TRU_xslY2zqg2Vmm4qVCMnBnCKi1vu0bRR9aUoVF4mvYVeTdxifsNl49PQTKOhWb4fJJkjqZlXeWZSdinHELFarnoPT3p_jgD0JzCHE-SNsUl2cE9DP59vnhW2zncJ2ygxHzkjImID2c0-caDfiSMSn8H7rycDNSHCn0w";
-                      const productImage = seller.products[0]?.images[0]?.url || "/uploads/sample.jpg";
+                      const productImage = seller.products[0]?.images[0]?.url || "https://via.placeholder.com/400x400?text=Görsel+Yok";
                       
                       return (
                         <Link

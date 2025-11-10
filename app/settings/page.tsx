@@ -1,8 +1,9 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
-import Header from "@/app/components/Header";
 import { db } from "@/lib/db";
+import Link from "next/link";
+import AddressManager from "../profile/_components/AddressManager";
 
 export default async function SettingsPage() {
   const session = await getServerSession(authOptions);
@@ -14,10 +15,28 @@ export default async function SettingsPage() {
 
   const user = await db.user.findUnique({
     where: { id: userId },
-    select: {
-      name: true,
-      email: true,
-      role: true,
+    include: {
+      seller: true,
+      orders: {
+        where: { status: { not: "CART" } },
+        orderBy: { createdAt: "desc" },
+        take: 5,
+        include: {
+          items: {
+            include: {
+              variant: {
+                include: {
+                  product: {
+                    include: {
+                      images: { take: 1 },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
     },
   });
 
@@ -25,13 +44,18 @@ export default async function SettingsPage() {
     redirect("/login");
   }
 
+  const orderCount = await db.order.count({
+    where: {
+      userId: user.id,
+      status: { not: "CART" },
+    },
+  });
+
   return (
     <div className="relative flex min-h-screen w-full flex-col overflow-x-hidden" style={{ backgroundColor: "#FFF8F1" }}>
       <div className="layout-container flex h-full grow flex-col">
         <div className="flex flex-1 justify-center px-4 sm:px-8 md:px-12 lg:px-20 xl:px-40 py-5">
           <div className="layout-content-container flex w-full max-w-[1280px] flex-1 flex-col">
-            <Header />
-
             <main className="flex-1 my-8">
               <div className="max-w-4xl mx-auto">
                 <h1 className="text-3xl font-bold text-[#1F2937] mb-8">Hesap Ayarları</h1>
@@ -57,7 +81,104 @@ export default async function SettingsPage() {
                           {user.role === "CUSTOMER" && "Müşteri"}
                         </p>
                       </div>
+                      {user.seller && (
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Satıcı Adı</label>
+                          <p className="text-[#1F2937]">{user.seller.displayName}</p>
+                        </div>
+                      )}
                     </div>
+                  </div>
+
+                  {/* İstatistikler */}
+                  <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+                    <h2 className="text-xl font-semibold text-[#1F2937] mb-4">İstatistikler</h2>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-sm text-gray-600">Toplam Sipariş</p>
+                        <p className="text-2xl font-bold text-[#1F2937]">{orderCount}</p>
+                      </div>
+                      {user.seller && (
+                        <div>
+                          <p className="text-sm text-gray-600">Ürün Sayısı</p>
+                          <p className="text-2xl font-bold text-[#1F2937]">
+                            {await db.product.count({ where: { sellerId: user.seller.id } })}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Son Siparişler */}
+                  <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+                    <div className="flex items-center justify-between mb-4">
+                      <h2 className="text-xl font-semibold text-[#1F2937]">Son Siparişler</h2>
+                      {orderCount > 0 && (
+                        <Link
+                          href="/orders"
+                          className="text-sm text-[#D97706] hover:text-[#92400E] font-medium"
+                        >
+                          Tümünü Gör
+                        </Link>
+                      )}
+                    </div>
+                    {user.orders.length === 0 ? (
+                      <p className="text-gray-600">Henüz siparişiniz yok.</p>
+                    ) : (
+                      <div className="space-y-3">
+                        {user.orders.map((order) => (
+                          <div
+                            key={order.id}
+                            className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                          >
+                            <div className="flex items-center gap-4">
+                              {order.items[0]?.variant?.product?.images[0] && (
+                                <img
+                                  src={order.items[0].variant.product.images[0].url}
+                                  alt={order.items[0].variant.product.title}
+                                  className="w-16 h-16 object-cover rounded"
+                                />
+                              )}
+                              <div>
+                                <p className="font-medium text-[#1F2937]">
+                                  {order.items.length} ürün
+                                </p>
+                                <p className="text-sm text-gray-600">
+                                  {new Date(order.createdAt).toLocaleDateString("tr-TR")}
+                                </p>
+                                <p className="text-sm text-gray-500">
+                                  {(order.totalCents / 100).toLocaleString("tr-TR")} TL
+                                </p>
+                              </div>
+                            </div>
+                            <div>
+                              <span
+                                className={`px-3 py-1 rounded-full text-xs font-medium ${
+                                  order.status === "PAID"
+                                    ? "bg-green-100 text-green-800"
+                                    : order.status === "SHIPPED"
+                                    ? "bg-blue-100 text-blue-800"
+                                    : order.status === "COMPLETED"
+                                    ? "bg-gray-100 text-gray-800"
+                                    : "bg-yellow-100 text-yellow-800"
+                                }`}
+                              >
+                                {order.status === "PAID" && "Ödendi"}
+                                {order.status === "SHIPPED" && "Kargoda"}
+                                {order.status === "COMPLETED" && "Tamamlandı"}
+                                {order.status === "PENDING" && "Beklemede"}
+                                {order.status === "CANCELED" && "İptal"}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Adres Yönetimi */}
+                  <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+                    <AddressManager />
                   </div>
 
                   {/* Güvenlik */}

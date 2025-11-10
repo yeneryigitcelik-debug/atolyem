@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import Header from "@/app/components/Header";
 
 export default async function AkademiPage() {
   const session = await getServerSession(authOptions);
@@ -11,8 +10,6 @@ export default async function AkademiPage() {
       <div className="layout-container flex h-full grow flex-col">
         <div className="flex flex-1 justify-center px-4 sm:px-8 md:px-12 lg:px-20 xl:px-40 py-5">
           <div className="layout-content-container flex w-full max-w-[1280px] flex-1 flex-col">
-            <Header />
-
             <main className="flex-grow">
         {/* Hero Section */}
         <section className="py-16 md:py-24">

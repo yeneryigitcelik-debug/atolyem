@@ -6,12 +6,16 @@ const nextConfig: NextConfig = {
       {
         protocol: "https",
         hostname: "imagedelivery.net",
-        // Cloudflare Images delivery URL formatı:
-        // https://imagedelivery.net/{account_hash}/{image_id}/{variant}
-        // Account hash environment variable'dan alınacak, pathname pattern ile eşleşir
+        pathname: "/**",
+      },
+      {
+        protocol: "https",
+        hostname: "via.placeholder.com",
         pathname: "/**",
       },
     ],
+    // Cloudflare Images için unoptimized kullanabiliriz (CDN zaten optimize ediyor)
+    // unoptimized: true, // İsterseniz açabilirsiniz
   },
 };
 

@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { createEserAction } from "./actions";
-import SlugGenerator from "@/app/seller/products/new/SlugGenerator";
+import { useToast } from "@/app/components/ui/ToastProvider";
 
 interface Category {
   id: string;
@@ -19,8 +19,9 @@ interface EserYukleFormProps {
 
 export default function EserYukleForm({ categories }: EserYukleFormProps) {
   const router = useRouter();
+  const { showToast } = useToast();
+  const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<string>("");
   const [images, setImages] = useState<File[]>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
@@ -66,77 +67,84 @@ export default function EserYukleForm({ categories }: EserYukleFormProps) {
   };
 
   const handleSubmit = async (formData: FormData) => {
-    setLoading(true);
     setError(null);
 
-    try {
-      // Önce görselleri yükle
-      const uploadedImages: string[] = [];
-      for (let i = 0; i < images.length; i++) {
-        const image = images[i];
-        setUploadProgress(`Görsel ${i + 1}/${images.length} yükleniyor...`);
-        
-        const uploadFormData = new FormData();
-        uploadFormData.append("file", image);
+    startTransition(async () => {
+      try {
+        // Önce görselleri yükle
+        const uploadedImages: string[] = [];
+        for (let i = 0; i < images.length; i++) {
+          const image = images[i];
+          setUploadProgress(`Görsel ${i + 1}/${images.length} yükleniyor...`);
+          
+          const uploadFormData = new FormData();
+          uploadFormData.append("file", image);
 
-        try {
-          const uploadResponse = await fetch("/api/upload", {
-            method: "POST",
-            body: uploadFormData,
-          });
+          try {
+            const uploadResponse = await fetch("/api/upload", {
+              method: "POST",
+              body: uploadFormData,
+            });
 
-          if (!uploadResponse.ok) {
-            const errorData = await uploadResponse.json().catch(() => ({ error: "Bilinmeyen hata" }));
-            const errorMsg = errorData.error || `Görsel ${i + 1} yüklenirken bir hata oluştu (${uploadResponse.status})`;
-            console.error("Upload error:", errorMsg, errorData);
-            throw new Error(errorMsg);
+            if (!uploadResponse.ok) {
+              const errorData = await uploadResponse.json().catch(() => ({ error: "Bilinmeyen hata" }));
+              const errorMsg = errorData.error || `Görsel ${i + 1} yüklenirken bir hata oluştu (${uploadResponse.status})`;
+              console.error("Upload error:", errorMsg, errorData);
+              throw new Error(errorMsg);
+            }
+
+            const uploadData = await uploadResponse.json();
+            if (!uploadData.url) {
+              console.error("Upload data:", uploadData);
+              throw new Error(`Görsel ${i + 1} yüklendi ancak URL alınamadı`);
+            }
+            uploadedImages.push(uploadData.url);
+          } catch (err: any) {
+            console.error(`Image ${i + 1} upload error:`, err);
+            // Yüklenen görselleri temizle
+            uploadedImages.forEach((url) => {
+              // Cloudflare'den silme işlemi yapılabilir ama şimdilik sadece hata göster
+            });
+            throw new Error(
+              err.message || `Görsel ${i + 1} yüklenirken bir hata oluştu: ${err.toString()}`
+            );
           }
-
-          const uploadData = await uploadResponse.json();
-          if (!uploadData.url) {
-            console.error("Upload data:", uploadData);
-            throw new Error(`Görsel ${i + 1} yüklendi ancak URL alınamadı`);
-          }
-          uploadedImages.push(uploadData.url);
-        } catch (err: any) {
-          console.error(`Image ${i + 1} upload error:`, err);
-          // Yüklenen görselleri temizle
-          uploadedImages.forEach((url) => {
-            // Cloudflare'den silme işlemi yapılabilir ama şimdilik sadece hata göster
-          });
-          throw new Error(
-            err.message || `Görsel ${i + 1} yüklenirken bir hata oluştu: ${err.toString()}`
-          );
         }
-      }
-      
-      setUploadProgress("Görseller yüklendi, eser kaydediliyor...");
+        
+        setUploadProgress("Görseller yüklendi, eser kaydediliyor...");
 
-      // Görselleri formData'ya ekle
-      uploadedImages.forEach((url, index) => {
-        formData.append(`imageUrl_${index}`, url);
-      });
-      formData.append("imageCount", uploadedImages.length.toString());
+        // Görselleri formData'ya ekle
+        uploadedImages.forEach((url, index) => {
+          formData.append(`imageUrl_${index}`, url);
+        });
+        formData.append("imageCount", uploadedImages.length.toString());
 
-      const result = await createEserAction(formData);
-      if (result?.error) {
-        setError(result.error);
-      } else {
-        router.push("/seller/products");
-        router.refresh();
+        const result = await createEserAction(formData);
+        if (result?.error) {
+          setError(result.error);
+          showToast(result.error, "error");
+        } else if (result?.success) {
+          // Başarılı mesajı göster
+          showToast("Ürününüz başarıyla onaya gönderildi", "success");
+          // Kısa bir gecikme sonrası yönlendir
+          setTimeout(() => {
+            router.push("/seller/products");
+            router.refresh();
+          }, 1500);
+        }
+      } catch (err: any) {
+        console.error("Form submit error:", err);
+        const errorMessage = err.message || "Bir hata oluştu";
+        setError(errorMessage);
+        showToast(errorMessage, "error");
+      } finally {
+        setUploadProgress("");
       }
-    } catch (err: any) {
-      console.error("Form submit error:", err);
-      setError(err.message || "Bir hata oluştu");
-    } finally {
-      setLoading(false);
-      setUploadProgress("");
-    }
+    });
   };
 
   return (
     <div className="space-y-6">
-      <SlugGenerator />
       {error && (
         <div className="rounded-md bg-red-50 dark:bg-red-900/20 p-3 text-sm text-red-800 dark:text-red-400">
           <p className="font-semibold">Hata:</p>
@@ -154,33 +162,18 @@ export default function EserYukleForm({ categories }: EserYukleFormProps) {
         <div className="space-y-4">
           <h2 className="text-xl font-semibold text-[#1F2937] border-b border-gray-200 pb-2">Temel Bilgiler</h2>
           
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <div>
-              <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-1">
-                Eser Adı *
-              </label>
-              <input
-                type="text"
-                id="title"
-                name="title"
-                required
-                className="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-[#D97706] focus:outline-none focus:ring-2 focus:ring-[#D97706]/20"
-                placeholder="Örn: El Yapımı Seramik Vazo"
-              />
-            </div>
-            <div>
-              <label htmlFor="slug" className="block text-sm font-medium text-gray-700 mb-1">
-                Slug
-              </label>
-              <input
-                type="text"
-                id="slug"
-                name="slug"
-                className="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-[#D97706] focus:outline-none focus:ring-2 focus:ring-[#D97706]/20"
-                placeholder="Otomatik oluşturulacak"
-              />
-              <p className="mt-1 text-xs text-gray-500">URL için kullanılacak benzersiz adres</p>
-            </div>
+          <div>
+            <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-1">
+              Eser Adı *
+            </label>
+            <input
+              type="text"
+              id="title"
+              name="title"
+              required
+              className="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-[#D97706] focus:outline-none focus:ring-2 focus:ring-[#D97706]/20"
+              placeholder="Örn: El Yapımı Seramik Vazo"
+            />
           </div>
 
           <div>
@@ -367,10 +360,10 @@ export default function EserYukleForm({ categories }: EserYukleFormProps) {
         <div className="flex gap-4 pt-4">
           <button
             type="submit"
-            disabled={loading}
+            disabled={isPending}
             className="flex-1 rounded-md bg-[#D97706] px-6 py-3 text-white hover:bg-[#92400E] transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {loading ? "Yükleniyor..." : "Eseri Yükle"}
+            {isPending ? "Yükleniyor..." : "Eseri Yükle"}
           </button>
           <button
             type="button"

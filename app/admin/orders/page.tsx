@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import Link from "next/link";
 
 export default async function AdminOrdersPage() {
+  // Admin yetki kontrolü layout'ta yapılıyor
   const orders = await db.order.findMany({
     where: { status: { not: "CART" } },
     include: {
@@ -21,7 +22,6 @@ export default async function AdminOrdersPage() {
       },
     },
     orderBy: { createdAt: "desc" },
-    take: 50,
   });
 
   const statusLabels: Record<string, string> = {
@@ -42,25 +42,19 @@ export default async function AdminOrdersPage() {
 
   return (
     <div className="min-h-screen bg-[#FFF8F1] dark:bg-gray-900">
-      {/* Header */}
-      <header className="border-b bg-white">
-        <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">Siparişler</h1>
-              <p className="text-sm text-gray-600">Tüm siparişleri görüntüle ve yönet</p>
-            </div>
-            <Link
-              href="/admin"
-              className="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-            >
-              Geri Dön
-            </Link>
-          </div>
-        </div>
-      </header>
-
       <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        <div className="mb-8 flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Siparişler</h1>
+            <p className="text-sm text-gray-600">Tüm siparişleri görüntüle ve yönet</p>
+          </div>
+          <Link
+            href="/admin"
+            className="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+          >
+            Geri Dön
+          </Link>
+        </div>
         {orders.length === 0 ? (
           <div className="rounded-lg border border-gray-200 bg-white p-12 text-center">
             <p className="text-gray-600">Henüz sipariş bulunmamaktadır.</p>
@@ -95,7 +89,7 @@ export default async function AdminOrdersPage() {
                       <div className="h-16 w-16 flex-shrink-0 overflow-hidden rounded-lg bg-gray-100">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
-                          src={item.variant.product.images[0]?.url ?? "/uploads/sample.jpg"}
+                          src={item.variant.product.images[0]?.url || "https://via.placeholder.com/200x200?text=Görsel+Yok"}
                           alt={item.variant.product.images[0]?.alt ?? item.variant.product.title}
                           className="h-full w-full object-cover"
                         />

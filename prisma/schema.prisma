@@ -22,15 +22,18 @@ model User {
   name      String? // Görünen ad
   hashedPw  String // Bcrypt şifre hash (Credentials)
   role      UserRole @default(CUSTOMER) // Rol
+  isPremium Boolean  @default(false) // Premium abonelik durumu
   seller    Seller? // Satıcı (opsiyonel)
   orders    Order[] // Siparişleri
   addresses Address[] // Kullanıcı adresleri
+  subscriptions Subscription[] // Premium abonelikler
   createdAt DateTime @default(now()) // Oluşturulma
   updatedAt DateTime @updatedAt // Güncellenme
 
   // NextAuth için ek alan/ilişkiler:
   emailVerified DateTime? // E-posta doğrulama tarihi
   image         String? // Avatar (opsiyonel)
+  bannerImage   String? // Profil arka plan görseli (opsiyonel)
   accounts      Account[] // NextAuth hesapları
   sessions      Session[] // NextAuth oturumları
   
@@ -42,6 +45,7 @@ model User {
   sellerReviews SellerReview[] @relation("SellerReviews") // Satıcı yorumları
   favoriteSellers FavoriteSeller[] @relation("FavoriteSellers") // Favori satıcılar
   favoriteProducts FavoriteProduct[] @relation("FavoriteProducts") // Favori ürünler
+  feedbacks     Feedback[] // Geri bildirimler
 }
 
 model Seller {
@@ -53,6 +57,8 @@ model Seller {
   products      Product[]
   payouts       Payout[]
   payoutLedger SellerPayoutLedger[] // Komisyon defteri
+  metrics       SellerMetrics[] // Performans metrikleri
+  feedbacks     Feedback[] // Geri bildirimler
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   
@@ -110,12 +116,13 @@ model Product {
 }
 
 model ProductImage {
-  id        String  @id @default(cuid())
-  productId String
-  url       String
-  alt       String?
-  sort      Int     @default(0)
-  product   Product @relation(fields: [productId], references: [id])
+  id         String  @id @default(cuid())
+  productId  String
+  url        String
+  cfImageId  String? // Cloudflare Images ID (direct upload için)
+  alt        String?
+  sort       Int     @default(0)
+  product    Product @relation(fields: [productId], references: [id])
 }
 
 model Variant {
@@ -147,6 +154,7 @@ model Order {
   address    Address?   @relation(fields: [addressId], references: [id])
   shipments  Shipment[] // Kargo kayıtları
   payments   Payment[]  // Ödeme kayıtları
+  feedbacks  Feedback[] @relation("FeedbackOrder") // Geri bildirimler
 }
 
 model OrderItem {
@@ -456,4 +464,106 @@ model SellerPayoutLedger {
 
   @@index([sellerId])
   @@index([orderId])
+}
+
+/**
+ * =========================
+ * PREMIUM ABONELİK MODELLERİ
+ * =========================
+ */
+
+model Subscription {
+  id            String          @id @default(cuid())
+  userId        String
+  user          User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan          SubscriptionPlan @default(BASIC)
+  status        SubscriptionStatus @default(ACTIVE)
+  amountCents   Int             // Aylık ücret (cents)
+  startedAt     DateTime        @default(now())
+  expiresAt     DateTime?       // Otomatik yenileme varsa null
+  canceledAt    DateTime?       // İptal tarihi
+  paymentGateway PaymentGateway // Ödeme sağlayıcısı
+  gatewaySubscriptionId String? // Gateway'deki subscription ID
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  @@index([userId])
+  @@index([status])
+  @@index([expiresAt])
+}
+
+model SellerMetrics {
+  id              String   @id @default(cuid())
+  sellerId        String
+  seller          Seller   @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  month           Int      // 1-12
+  year            Int      // Yıl
+  totalSales      Int      @default(0) // Toplam satış sayısı
+  totalRevenueCents Int    @default(0) // Toplam gelir (cents)
+  completedOrders Int      @default(0) // Tamamlanan sipariş sayısı
+  canceledOrders  Int      @default(0) // İptal edilen sipariş sayısı
+  averageOrderValueCents Int @default(0) // Ortalama sipariş değeri (cents)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([sellerId, month, year])
+  @@index([sellerId])
+  @@index([year, month])
+}
+
+enum SubscriptionPlan {
+  BASIC      // Ücretsiz plan
+  PREMIUM    // Premium plan
+  ENTERPRISE // Kurumsal plan
+}
+
+enum SubscriptionStatus {
+  ACTIVE     // Aktif
+  CANCELED   // İptal edilmiş
+  EXPIRED    // Süresi dolmuş
+  PENDING    // Ödeme bekliyor
+}
+
+/**
+ * =========================
+ * GERİ BİLDİRİM MODELLERİ
+ * =========================
+ */
+
+model Feedback {
+  id          String         @id @default(cuid())
+  sellerId    String
+  seller      Seller         @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User           @relation(fields: [userId], references: [id])
+  orderId     String?        // Hangi sipariş için geri bildirim
+  order       Order?         @relation("FeedbackOrder", fields: [orderId], references: [id])
+  rating      Int            // 1-5 arası puan
+  comment     String?       // Geri bildirim metni
+  category    FeedbackCategory // Geri bildirim kategorisi
+  status      FeedbackStatus @default(PENDING) // Admin onay durumu
+  adminNote   String?       // Admin notu
+  reviewedBy  String?       // Onaylayan admin ID
+  reviewedAt  DateTime?     // Onay tarihi
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  @@index([sellerId])
+  @@index([userId])
+  @@index([status])
+  @@index([orderId])
+}
+
+enum FeedbackCategory {
+  PRODUCT_QUALITY    // Ürün kalitesi
+  SHIPPING          // Kargo
+  COMMUNICATION     // İletişim
+  PRICING           // Fiyatlandırma
+  GENERAL           // Genel
+}
+
+enum FeedbackStatus {
+  PENDING    // Beklemede
+  APPROVED   // Onaylandı
+  REJECTED   // Reddedildi
 }

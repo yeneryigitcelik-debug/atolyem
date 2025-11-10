@@ -2,25 +2,33 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
 import { db } from "@/lib/db";
+import { jwtVerify } from "jose";
+
+const ADMIN_SECRET = new TextEncoder().encode(
+  process.env.ADMIN_SECRET || process.env.NEXTAUTH_SECRET || "admin-secret-key"
+);
+
+async function verifyAdminSession(token: string | undefined): Promise<boolean> {
+  if (!token) return false;
+
+  try {
+    await jwtVerify(token, ADMIN_SECRET);
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  // Admin rotaları
-  if (pathname.startsWith("/admin")) {
-    const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
-    if (!token) {
-      return NextResponse.redirect(new URL("/login", req.url));
-    }
+  // Admin rotaları - ayrı auth sistemi (login hariç)
+  if (pathname.startsWith("/admin") && pathname !== "/admin/login") {
+    const adminToken = req.cookies.get("admin-session")?.value;
+    const isValid = await verifyAdminSession(adminToken);
 
-    // Kullanıcı rolünü kontrol et
-    const user = await db.user.findUnique({
-      where: { id: token.sub },
-      select: { role: true },
-    });
-
-    if (!user || user.role !== "ADMIN") {
-      return NextResponse.redirect(new URL("/", req.url));
+    if (!isValid) {
+      return NextResponse.redirect(new URL("/admin-login", req.url));
     }
 
     return NextResponse.next();
@@ -43,6 +51,21 @@ export async function middleware(req: NextRequest) {
       return NextResponse.redirect(new URL("/", req.url));
     }
 
+    // Premium özellikler için kontrol (örnek: gelişmiş raporlar)
+    const isPremium = (user as any)?.isPremium || false;
+    if (pathname.startsWith("/seller/advanced") && !isPremium) {
+      return NextResponse.redirect(new URL("/premium", req.url));
+    }
+
+    return NextResponse.next();
+  }
+
+  // Premium rotaları
+  if (pathname.startsWith("/premium")) {
+    const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
+    if (!token) {
+      return NextResponse.redirect(new URL("/login", req.url));
+    }
     return NextResponse.next();
   }
 
@@ -50,6 +73,6 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/admin/:path*", "/seller/:path*"],
+  matcher: ["/admin/:path*", "/seller/:path*", "/premium/:path*"],
 };
 

@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import Header from "@/app/components/Header";
 import ChatComposer from "./ChatComposer";
 import MessageList from "./MessageList";
 
@@ -90,7 +89,6 @@ export default function MessagesPage() {
         <div className="layout-container flex h-full grow flex-col">
           <div className="flex flex-1 justify-center px-4 sm:px-8 md:px-12 lg:px-20 xl:px-40 py-5">
             <div className="layout-content-container flex w-full max-w-[1280px] flex-1 flex-col">
-              <Header />
               <main className="flex-1 my-8">
                 <div className="text-center py-12">
                   <p className="text-gray-600">Yükleniyor...</p>
@@ -108,8 +106,6 @@ export default function MessagesPage() {
       <div className="layout-container flex h-full grow flex-col">
         <div className="flex flex-1 justify-center px-4 sm:px-8 md:px-12 lg:px-20 xl:px-40 py-5">
           <div className="layout-content-container flex w-full max-w-[1280px] flex-1 flex-col">
-            <Header />
-
             <main className="flex-1 my-8">
               <div className="max-w-7xl mx-auto">
                 <h1 className="text-3xl font-bold text-[#1F2937] mb-6">Mesajlarım</h1>
@@ -130,7 +126,7 @@ export default function MessagesPage() {
                           {conversations.map((convo) => {
                             const other = convo.otherParticipant;
                             const isSelected = convo.id === selectedConversationId;
-                            const productImage = convo.product?.images?.[0]?.url || "/uploads/sample.jpg";
+                            const productImage = convo.product?.images?.[0]?.url || "https://via.placeholder.com/200x200?text=Görsel+Yok";
 
                             return (
                               <button

@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
 
     if (gateway === "PAYTR") {
       const merchantSalt = process.env.PAYTR_MERCHANT_SALT || "sandbox_salt";
-      isValid = verifyPaytrWebhook(
+      isValid = await verifyPaytrWebhook(
         body.hash || body.HASH,
         merchantSalt,
         body.merchant_oid || body.merchantOid,
@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
     } else if (gateway === "IYZICO") {
       const secretKey = process.env.IYZICO_SECRET_KEY || "sandbox";
       const requestBody = JSON.stringify(body);
-      isValid = verifyIyzicoWebhook(
+      isValid = await verifyIyzicoWebhook(
         request.headers.get("x-iyzico-signature") || "",
         requestBody,
         secretKey

@@ -4,7 +4,6 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 import { generateSlug, generateUniqueSlug } from "@/lib/slug";
 
 export async function createEserAction(formData: FormData) {
@@ -24,7 +23,6 @@ export async function createEserAction(formData: FormData) {
   }
 
   const title = formData.get("title") as string;
-  let slug = formData.get("slug") as string;
   const description = formData.get("description") as string | null;
   const categoryId = formData.get("categoryId") as string | null;
   const isActive = formData.get("isActive") === "on";
@@ -68,12 +66,8 @@ export async function createEserAction(formData: FormData) {
     return { error: "Geçerli bir stok adedi giriniz" };
   }
 
-  // Slug oluştur
-  if (!slug || slug.trim() === "") {
-    slug = generateSlug(title);
-  } else {
-    slug = generateSlug(slug);
-  }
+  // Slug'ı başlıktan otomatik oluştur
+  let slug = generateSlug(title);
 
   // Benzersiz slug oluştur
   slug = await generateUniqueSlug(slug, async (s) => {
@@ -124,7 +118,9 @@ export async function createEserAction(formData: FormData) {
 
     revalidatePath("/seller/products");
     revalidatePath("/eser-yukle");
-    redirect("/seller/products");
+    
+    // Başarılı - client tarafında yönlendirme yapılacak
+    return { success: true, productId: product.id };
   } catch (error: any) {
     console.error("Create eser error:", error);
     if (error.code === "P2002") {

@@ -2,19 +2,53 @@
 
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
-
-interface Category {
-  id: string;
-  name: string;
-  slug: string;
-  children?: Category[];
-}
+import { useSearchParams } from "next/navigation";
+import { Category } from "@/lib/data";
 
 interface CategoryMenuProps {
   categories: Category[];
+  pathname?: string;
 }
 
-export default function CategoryMenu({ categories }: CategoryMenuProps) {
+export default function CategoryMenu({ categories, pathname }: CategoryMenuProps) {
+  const searchParams = useSearchParams();
+  
+  // Aktif kategoriyi belirle (pathname'den category parametresini çıkar veya /kategori/[slug] kontrolü yap)
+  const getActiveCategoryId = () => {
+    if (!pathname) return null;
+    
+    // /kategori/[slug] formatı kontrolü
+    if (pathname.startsWith("/kategori/")) {
+      const slug = pathname.split("/kategori/")[1]?.split("?")[0];
+      const category = categories.find((cat) => cat.slug === slug);
+      if (category) return category.id;
+      
+      // Alt kategorilerde ara
+      for (const cat of categories) {
+        const child = cat.children?.find((c) => c.slug === slug);
+        if (child) return cat.id; // Ana kategoriyi aktif göster
+      }
+    }
+    
+    // /search?category=... formatı kontrolü
+    if (pathname.startsWith("/search")) {
+      const categorySlug = searchParams.get("category");
+      if (categorySlug) {
+        const category = categories.find((cat) => cat.slug === categorySlug);
+        if (category) return category.id;
+        
+        // Alt kategorilerde ara
+        for (const cat of categories) {
+          const child = cat.children?.find((c) => c.slug === categorySlug);
+          if (child) return cat.id; // Ana kategoriyi aktif göster
+        }
+      }
+    }
+    
+    return null;
+  };
+
+  const activeCategoryId = getActiveCategoryId();
   const [isOpen, setIsOpen] = useState(false);
   const [hoveredCategory, setHoveredCategory] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -57,27 +91,31 @@ export default function CategoryMenu({ categories }: CategoryMenuProps) {
           <div className="flex min-w-[600px]">
             {/* Ana kategoriler */}
             <div className="w-64 border-r border-gray-200 max-h-[600px] overflow-y-auto bg-gray-50">
-              {categories.map((category) => (
-                <div
-                  key={category.id}
-                  onMouseEnter={() => setHoveredCategory(category.id)}
-                  className={`${
-                    hoveredCategory === category.id ? "bg-white" : ""
-                  } transition-colors`}
-                >
-                  <Link
-                    href={`/search?category=${category.slug}`}
-                    onClick={() => setIsOpen(false)}
-                    className={`block px-4 py-3 text-sm text-[#1F2937] transition-colors font-medium ${
-                      hoveredCategory === category.id
-                        ? "text-[#D97706] bg-white"
-                        : "hover:bg-white"
-                    }`}
+              {categories.map((category) => {
+                const isActive = activeCategoryId === category.id;
+                const isHovered = hoveredCategory === category.id;
+                return (
+                  <div
+                    key={category.id}
+                    onMouseEnter={() => setHoveredCategory(category.id)}
+                    className={`${
+                      isHovered || isActive ? "bg-white" : ""
+                    } transition-colors`}
                   >
-                    {category.name}
-                  </Link>
-                </div>
-              ))}
+                    <Link
+                      href={`/search?category=${category.slug}`}
+                      onClick={() => setIsOpen(false)}
+                      className={`block px-4 py-3 text-sm text-[#1F2937] transition-colors font-medium ${
+                        isHovered || isActive
+                          ? "text-[#D97706] bg-white"
+                          : "hover:bg-white"
+                      }`}
+                    >
+                      {category.name}
+                    </Link>
+                  </div>
+                );
+              })}
             </div>
             {/* Alt kategoriler */}
             {hoveredCategory && (

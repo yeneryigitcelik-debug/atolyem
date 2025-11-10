@@ -4,6 +4,8 @@ import { db } from "@/lib/db";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import StartOrderConversationButton from "./StartOrderConversationButton";
+import ReviewOrderButton from "./ReviewOrderButton";
+import ShipmentTracking from "./ShipmentTracking";
 
 export default async function OrdersPage() {
   const session = await getServerSession(authOptions);
@@ -34,6 +36,10 @@ export default async function OrdersPage() {
             },
           },
         },
+      },
+      shipments: {
+        orderBy: { createdAt: "desc" },
+        take: 1,
       },
     },
     orderBy: { createdAt: "desc" },
@@ -181,7 +187,7 @@ export default async function OrdersPage() {
                   <img
                     alt={product.title}
                     className="w-full md:w-48 h-48 object-cover rounded-lg"
-                    src={product.images[0]?.url || "/uploads/sample.jpg"}
+                    src={product.images[0]?.url || "https://via.placeholder.com/200x200?text=Görsel+Yok"}
                   />
                   <div className="flex-1 flex flex-col justify-between">
                     <div>
@@ -216,14 +222,14 @@ export default async function OrdersPage() {
                     </div>
                     <div className="mt-6 flex items-center gap-4">
                       {order.status === "SHIPPED" && (
-                        <button className="px-6 py-2 text-sm font-medium rounded-lg text-white bg-[#ec6d13] hover:bg-opacity-90">
-                          Kargoyu Takip Et
-                        </button>
+                        <ShipmentTracking orderId={order.id} />
                       )}
                       {order.status === "COMPLETED" && (
-                        <button className="px-6 py-2 text-sm font-medium rounded-lg text-white bg-[#ec6d13] hover:bg-opacity-90">
-                          Yorum Yap & Puanla
-                        </button>
+                        <ReviewOrderButton
+                          orderId={order.id}
+                          sellerId={seller.id}
+                          sellerName={seller.displayName}
+                        />
                       )}
                       <StartOrderConversationButton orderId={order.id} sellerId={seller.id} />
                     </div>

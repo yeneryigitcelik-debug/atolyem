@@ -1,7 +1,9 @@
 import { db } from "@/lib/db";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import Header from "@/app/components/Header";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import FavoriteSellerButton from "./FavoriteSellerButton";
 
 type Props = { params: Promise<{ id: string }> };
 
@@ -38,8 +40,6 @@ export default async function ArtistProfilePage({ params }: Props) {
       <div className="layout-container flex h-full grow flex-col">
         <div className="flex flex-1 justify-center px-4 sm:px-8 md:px-12 lg:px-20 xl:px-40 py-5">
           <div className="layout-content-container flex w-full max-w-[1280px] flex-1 flex-col">
-            <Header />
-
             <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 lg:px-8">
         {/* Banner */}
         <div
@@ -66,9 +66,9 @@ export default async function ArtistProfilePage({ params }: Props) {
                 {seller.displayName}, geleneksel Türk sanatını modern tekniklerle birleştirerek özgün eserler yaratmaktadır.
               </p>
             </div>
-            <button className="mt-6 inline-flex items-center justify-center rounded-lg bg-[#D97706] px-6 py-2.5 text-sm font-bold text-white shadow-sm transition-colors hover:bg-[#92400E]">
-              Takip Et
-            </button>
+            <div className="mt-6 flex justify-center">
+              <FavoriteSellerButton sellerId={seller.id} />
+            </div>
           </div>
         </div>
 
@@ -100,7 +100,7 @@ export default async function ArtistProfilePage({ params }: Props) {
                     <img
                       alt={product.title}
                       className="h-full w-full object-cover object-center transition-transform group-hover:scale-105"
-                      src={product.images[0]?.url ?? "/uploads/sample.jpg"}
+                      src={product.images[0]?.url || "https://via.placeholder.com/400x400?text=Görsel+Yok"}
                     />
                   </div>
                   <div className="mt-2">

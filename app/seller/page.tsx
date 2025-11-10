@@ -4,7 +4,6 @@ import { db } from "@/lib/db";
 import { redirect } from "next/navigation";
 import CreateSellerForm from "./CreateSellerForm";
 import Link from "next/link";
-import Header from "@/app/components/Header";
 
 /**
  * Seller Dashboard v1
@@ -186,8 +185,6 @@ export default async function SellerPage() {
       <div className="layout-container flex h-full grow flex-col">
         <div className="flex flex-1 justify-center px-4 sm:px-8 md:px-12 lg:px-20 xl:px-40 py-5">
           <div className="layout-content-container flex w-full max-w-[1280px] flex-1 flex-col">
-            <Header />
-
             <main className="flex-1 my-8">
               <div className="max-w-7xl mx-auto px-4">
                 <div className="mb-8">
@@ -425,14 +422,43 @@ export default async function SellerPage() {
                     </p>
                   </Link>
 
-                  <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+                  <Link
+                    href="/messages"
+                    className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm hover:shadow-md transition-shadow"
+                  >
                     <h3 className="font-semibold text-[#1F2937] mb-2">
                       Mesaj Kutusu
                     </h3>
                     <p className="text-sm text-gray-600">
-                      Yakında eklenecek
+                      Müşterilerinizle iletişime geçin
                     </p>
-                  </div>
+                  </Link>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                  <Link
+                    href="/analytics"
+                    className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm hover:shadow-md transition-shadow"
+                  >
+                    <h3 className="font-semibold text-[#1F2937] mb-2">
+                      Satış Analitikleri
+                    </h3>
+                    <p className="text-sm text-gray-600">
+                      Detaylı satış raporları ve grafikler
+                    </p>
+                  </Link>
+
+                  <Link
+                    href="/feedback"
+                    className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm hover:shadow-md transition-shadow"
+                  >
+                    <h3 className="font-semibold text-[#1F2937] mb-2">
+                      Geri Bildirimler
+                    </h3>
+                    <p className="text-sm text-gray-600">
+                      Müşteri geri bildirimlerini yönetin
+                    </p>
+                  </Link>
                 </div>
               </div>
             </main>

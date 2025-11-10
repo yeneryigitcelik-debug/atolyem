@@ -1,18 +1,17 @@
-import { db } from "@/lib/db";
+"use client";
+
+import { usePathname } from "next/navigation";
 import Header from "./Header";
+import { Category } from "@/lib/data";
+import { Session } from "next-auth";
 
-export default async function HeaderWrapper() {
-  // Ana kategorileri ve alt kategorilerini çek
-  const categories = await db.category.findMany({
-    where: { parentId: null },
-    include: {
-      children: {
-        orderBy: { name: "asc" },
-      },
-    },
-    orderBy: { name: "asc" },
-  });
+interface HeaderWrapperProps {
+  categories: Category[];
+  session: Session | null;
+}
 
-  return <Header categories={categories} />;
+export default function HeaderWrapper({ categories, session }: HeaderWrapperProps) {
+  const pathname = usePathname();
+  return <Header categories={categories} session={session} pathname={pathname} />;
 }
 

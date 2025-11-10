@@ -1,9 +1,9 @@
 import { db } from "@/lib/db";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import Header from "@/app/components/Header";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import ProfileImageUploader from "./_components/ProfileImageUploader";
 
 type Props = { params: Promise<{ id: string }> };
 
@@ -40,8 +40,9 @@ export default async function UserProfilePage({ params }: Props) {
   }
 
   const userName = user.name || user.email;
-  const userImage = user.image || "https://lh3.googleusercontent.com/aida-public/AB6AXuDDoFd-5Lopq13T-VJrLgwgSt7uH3WDYxeEUTgjk2BUXy1HdMKoQ7Aftco9cHpc54mE-kkrDTu7DAjHnYauF54_iNFcTp9woSfkGwN0Dc9TRU_xslY2zqg2Vmm4qVCMnBnCKi1vu0bRR9aUoVF4mvYVeTdxifsNl49PQTKOhWb4fJJkjqZlXeWZSdinHELFarnoPT3p_jgD0JzCHE-SNsUl2cE9DP59vnhW2zncJ2ygxHzkjImID2c0-caDfiSMSn8H7rycDNSHCn0w";
-  const bannerImage = "https://lh3.googleusercontent.com/aida-public/AB6AXuCEkATcgbrdZ7_ka4gb1H3Q-j4jFyDf2LXv6dyf21znHBMnoCJn4QjlG5tB6CNphViV3ytO6cLoXTwqdhHcgN70EePty8nK-TczRS8Qg7wiN9WeaHKnNalAELi-_YxckotOK0WUytE2ZKe_pHxnqiw8vQruv2Jq757Y_p9QI3tG7fHzLy3qGF1phVew5APrYa0Tctky9EGi1IwpAqVnmze7T1M01Urgk7QBXN7r7VNiZ2a_Jyfla_C4a9Re_vSFB8MkHfZmcs_C2SpK";
+  const userImage = user.image;
+  // Önce user.bannerImage, yoksa seller.bannerImage kullan
+  const bannerImage = user.bannerImage || user.seller?.bannerImage;
   
   const products = user.seller?.products || [];
   const displayName = user.seller?.displayName || userName;
@@ -54,8 +55,6 @@ export default async function UserProfilePage({ params }: Props) {
       <div className="layout-container flex h-full grow flex-col">
         <div className="flex flex-1 justify-center px-4 sm:px-8 md:px-12 lg:px-20 xl:px-40 py-5">
           <div className="layout-content-container flex w-full max-w-[1280px] flex-1 flex-col">
-            <Header />
-
             <div className="flex flex-1 gap-6 mt-8">
               {/* Sidebar - Sadece kendi profilini görüyorsa ve seller ise */}
               {isOwnProfile && isSeller && (
@@ -111,18 +110,38 @@ export default async function UserProfilePage({ params }: Props) {
 
               <main className={`flex-1 px-4 py-8 sm:px-6 lg:px-8 ${isOwnProfile && isSeller ? '' : 'mx-auto max-w-5xl'}`}>
                 {/* Banner */}
-                <div
-                  className="h-64 w-full rounded-xl bg-cover bg-center bg-no-repeat"
-                  style={{ backgroundImage: `url("${bannerImage}")` }}
-                ></div>
+                {isOwnProfile ? (
+                  <ProfileImageUploader userId={id} currentImage={bannerImage} type="banner" />
+                ) : (
+                  <div
+                    className="h-64 w-full rounded-xl bg-cover bg-center bg-no-repeat bg-gray-200"
+                    style={{ backgroundImage: bannerImage ? `url("${bannerImage}")` : undefined }}
+                  >
+                    {!bannerImage && (
+                      <div className="flex items-center justify-center h-full text-gray-400">
+                        <span className="material-symbols-outlined text-4xl">image</span>
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {/* Profil Bilgileri */}
                 <div className="relative px-4 pb-16">
                   <div className="absolute -top-16 left-1/2 -translate-x-1/2 transform text-center">
-                    <div
-                      className="mx-auto size-32 rounded-full border-4 border-[#f6f7f8] bg-cover bg-center bg-no-repeat dark:border-[#111921]"
-                      style={{ backgroundImage: `url("${userImage}")` }}
-                    ></div>
+                    {isOwnProfile ? (
+                      <ProfileImageUploader userId={id} currentImage={userImage} type="avatar" />
+                    ) : (
+                      <div
+                        className="mx-auto size-32 rounded-full border-4 border-[#f6f7f8] bg-cover bg-center bg-no-repeat dark:border-[#111921] bg-gray-200"
+                        style={{ backgroundImage: userImage ? `url("${userImage}")` : undefined }}
+                      >
+                        {!userImage && (
+                          <div className="flex items-center justify-center h-full text-gray-400 text-2xl">
+                            <span className="material-symbols-outlined">person</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                   <div className="pt-20 text-center">
                     <h1 className="text-4xl font-bold">{displayName}</h1>
@@ -177,7 +196,7 @@ export default async function UserProfilePage({ params }: Props) {
                             <img
                               alt={product.title}
                               className="h-full w-full object-cover object-center transition-transform group-hover:scale-105"
-                              src={product.images[0]?.url ?? "/uploads/sample.jpg"}
+                              src={product.images[0]?.url || "https://via.placeholder.com/200x200?text=Görsel+Yok"}
                             />
                           </div>
                           <div className="mt-2">
