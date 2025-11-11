@@ -16,9 +16,10 @@ interface Message {
 
 interface MessageListProps {
   conversationId: string;
+  onMessageSent?: number; // Trigger value - değiştiğinde mesajları yeniden yükler
 }
 
-export default function MessageList({ conversationId }: MessageListProps) {
+export default function MessageList({ conversationId, onMessageSent }: MessageListProps) {
   const { data: session } = useSession();
   const currentUserId = (session?.user as any)?.id;
   const [messages, setMessages] = useState<Message[]>([]);
@@ -59,6 +60,17 @@ export default function MessageList({ conversationId }: MessageListProps) {
       return () => clearInterval(interval);
     }
   }, [conversationId]);
+
+  // onMessageSent trigger değiştiğinde mesajları yeniden yükle
+  useEffect(() => {
+    if (onMessageSent !== undefined && onMessageSent > 0 && conversationId) {
+      // Mesaj gönderildikten sonra kısa bir gecikme ile yeniden yükle
+      const timeout = setTimeout(() => {
+        fetchMessages();
+      }, 300);
+      return () => clearTimeout(timeout);
+    }
+  }, [onMessageSent, conversationId]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });

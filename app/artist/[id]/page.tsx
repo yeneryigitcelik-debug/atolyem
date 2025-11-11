@@ -4,11 +4,14 @@ import Link from "next/link";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import FavoriteSellerButton from "./FavoriteSellerButton";
+import StartSellerConversationButton from "@/app/components/StartSellerConversationButton";
 
 type Props = { params: Promise<{ id: string }> };
 
 export default async function ArtistProfilePage({ params }: Props) {
   const { id } = await params;
+  const session = await getServerSession(authOptions);
+  const currentUserId = (session?.user as any)?.id;
   const seller = await db.seller.findUnique({
     where: { id },
     include: {
@@ -66,8 +69,11 @@ export default async function ArtistProfilePage({ params }: Props) {
                 {seller.displayName}, geleneksel Türk sanatını modern tekniklerle birleştirerek özgün eserler yaratmaktadır.
               </p>
             </div>
-            <div className="mt-6 flex justify-center">
+            <div className="mt-6 flex justify-center gap-4">
               <FavoriteSellerButton sellerId={seller.id} />
+              {currentUserId && currentUserId !== seller.userId && (
+                <StartSellerConversationButton sellerId={seller.id} />
+              )}
             </div>
           </div>
         </div>

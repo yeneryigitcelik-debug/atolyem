@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 
+type Props = {
+  params: Promise<{ id: string }>;
+};
+
 /**
  * DELETE /api/images/[id]
  * Deletes an image from Cloudflare Images
@@ -10,7 +14,7 @@ import { authOptions } from "@/lib/auth";
  */
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: Props
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -18,7 +22,8 @@ export async function DELETE(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const imageId = params.id;
+    const { id } = await params;
+    const imageId = id;
     if (!imageId) {
       return NextResponse.json({ error: "Image ID required" }, { status: 400 });
     }
@@ -114,4 +119,3 @@ export async function DELETE(
     );
   }
 }
-

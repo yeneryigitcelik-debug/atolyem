@@ -82,6 +82,7 @@ export default function MessagesPage() {
   };
 
   const selectedConversation = conversations.find((c) => c.id === selectedConversationId);
+  const [messageSentTrigger, setMessageSentTrigger] = useState(0);
 
   if (status === "loading" || loading) {
     return (
@@ -206,13 +207,17 @@ export default function MessagesPage() {
                         </div>
 
                         {/* Mesaj Listesi */}
-                        <MessageList conversationId={selectedConversation.id} />
+                        <MessageList 
+                          conversationId={selectedConversation.id} 
+                          onMessageSent={messageSentTrigger}
+                        />
 
                         {/* Mesaj Gönderme */}
                         <ChatComposer
                           conversationId={selectedConversation.id}
                           onMessageSent={() => {
                             fetchConversations();
+                            setMessageSentTrigger(prev => prev + 1);
                           }}
                         />
                       </>

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import ProfileImageUploader from "./_components/ProfileImageUploader";
+import StartSellerConversationButton from "@/app/components/StartSellerConversationButton";
 
 type Props = { params: Promise<{ id: string }> };
 
@@ -157,6 +158,15 @@ export default async function UserProfilePage({ params }: Props) {
                         >
                           Eser Yükle
                         </Link>
+                      ) : user.seller ? (
+                        <div className="flex items-center gap-4">
+                          <button className="inline-flex items-center justify-center rounded-lg bg-[#1466b8] px-6 py-2.5 text-sm font-bold text-white shadow-sm transition-colors hover:bg-[#1466b8]/80">
+                            Takip Et
+                          </button>
+                          {currentUserId && (
+                            <StartSellerConversationButton sellerId={user.seller.id} />
+                          )}
+                        </div>
                       ) : (
                         <button className="inline-flex items-center justify-center rounded-lg bg-[#1466b8] px-6 py-2.5 text-sm font-bold text-white shadow-sm transition-colors hover:bg-[#1466b8]/80">
                           Takip Et
