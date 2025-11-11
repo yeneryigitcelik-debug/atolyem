@@ -10,6 +10,11 @@ export const db =
   new PrismaClient({
     log: process.env.NODE_ENV === "development" ? ["error", "warn"] : ["error"],
     errorFormat: "minimal",
+    datasources: {
+      db: {
+        url: process.env.DATABASE_URL,
+      },
+    },
   });
 
 // Prod dışı ortamda client'ı global cache'e koyar (tek instance garanti)
@@ -18,6 +23,13 @@ if (process.env.NODE_ENV !== "production") {
 } else {
   // Production'da da global cache kullan (Vercel serverless için)
   globalForPrisma.prisma = db;
+}
+
+// Graceful shutdown handler
+if (typeof process !== "undefined") {
+  process.on("beforeExit", async () => {
+    await db.$disconnect();
+  });
 }
 
 // Alias for other files that import `prisma` instead of `db`
