@@ -2,11 +2,11 @@
 import { cookies } from "next/headers";
 import { db } from "@/lib/db";
 import bcrypt from "bcrypt";
-import { SignJWT, jwtVerify } from "jose";
+import { SignJWT, jwtVerify, type JWTPayload } from "jose";
 
 const SECRET = new TextEncoder().encode(process.env.ADMIN_SECRET || process.env.NEXTAUTH_SECRET || "admin-secret-key");
 
-export interface AdminSession {
+export interface AdminSession extends JWTPayload {
   id: string;
   email: string;
   name: string | null;
