@@ -46,7 +46,9 @@ export default function CategoryChart({ data }: CategoryChartProps) {
           cy="50%"
           labelLine={false}
           label={(props: any) => {
-            const { name, percent } = props;
+            if (!props || typeof props !== 'object') return '';
+            const name = props.name || props.payload?.name || '';
+            const percent = props.percent || props.payload?.percent || 0;
             return `${name} ${(percent * 100).toFixed(0)}%`;
           }}
           outerRadius={100}
