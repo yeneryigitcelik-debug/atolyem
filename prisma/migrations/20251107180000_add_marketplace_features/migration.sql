@@ -173,3 +173,4 @@ ALTER TABLE "Coupon" ADD CONSTRAINT "Coupon_sellerId_fkey" FOREIGN KEY ("sellerI
 
 
 
+
