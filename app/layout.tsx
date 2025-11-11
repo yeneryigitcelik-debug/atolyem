@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
+import type { Session } from "next-auth";
 import "./globals.css";
 import SessionProviderWrapper from "./components/SessionProviderWrapper";
 import HeaderWrapper from "./components/HeaderWrapper";
 import { ToastProvider } from "./components/ui/ToastProvider";
-import { getCategories } from "@/lib/data";
+import { getCategories, type Category } from "@/lib/data";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 
@@ -20,11 +21,19 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  // Kategorileri ve session'ı sunucuda çek
-  const [categories, session] = await Promise.all([
-    getCategories(),
-    getServerSession(authOptions),
-  ]);
+  // Kategorileri ve session'ı sunucuda çek (hata durumunda fallback)
+  let categories: Category[] = [];
+  let session: Session | null = null;
+  
+  try {
+    [categories, session] = await Promise.all([
+      getCategories().catch(() => [] as Category[]),
+      getServerSession(authOptions).catch(() => null),
+    ]);
+  } catch (error) {
+    console.error("Layout initialization error:", error);
+    // Fallback değerler kullanılıyor
+  }
 
   return (
     <html className="light" lang="tr" style={{ backgroundColor: '#FFF8F1' }}>

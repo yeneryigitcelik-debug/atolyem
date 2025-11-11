@@ -1,16 +1,24 @@
 import Link from "next/link";
 import ProductImage from "./components/ProductImage";
-import { getFeaturedProducts, getNewProducts } from "@/lib/data";
+import { getFeaturedProducts, getNewProducts, type ProductListItem } from "@/lib/data";
 
 // Route-level revalidate: 300 saniye (5 dakika)
 export const revalidate = 300;
 
 export default async function Home() {
   // Öne çıkan ürünler (cache'lenmiş)
-  const featuredProducts = await getFeaturedProducts(4);
+  let featuredProducts: ProductListItem[] = [];
+  let newProducts: ProductListItem[] = [];
 
-  // Yeni gelenler (cache'lenmiş)
-  const newProducts = await getNewProducts(4, 4);
+  try {
+    [featuredProducts, newProducts] = await Promise.all([
+      getFeaturedProducts(4).catch(() => [] as ProductListItem[]),
+      getNewProducts(4, 4).catch(() => [] as ProductListItem[]),
+    ]);
+  } catch (error) {
+    console.error("Home page data fetch error:", error);
+    // Fallback değerler kullanılıyor
+  }
 
   return (
     <div className="relative flex min-h-screen w-full flex-col overflow-x-hidden" style={{ backgroundColor: '#FFF8F1' }}>
