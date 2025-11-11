@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 
+type RouteHandlerContext = {
+  params: Promise<{ id: string }>;
+};
+
 /**
  * DELETE /api/images/[id]
  * Deletes an image from Cloudflare Images
@@ -10,8 +14,8 @@ import { authOptions } from "@/lib/auth";
  */
 export async function DELETE(
   request: NextRequest,
-  props: { params: Promise<{ id: string }> }
-) {
+  context: RouteHandlerContext
+): Promise<NextResponse> {
   try {
     const session = await getServerSession(authOptions);
     if (!session) {
