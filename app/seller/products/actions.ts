@@ -124,19 +124,18 @@ export async function updateSellerProductAction(productId: string, prevState: an
 
   // Extract variant updates from formData
   const variantUpdates: Array<{ id: string; priceCents: number; stock: number }> = [];
-  const formDataKeys = Array.from(formData.keys());
-  for (const key of formDataKeys) {
+  formData.forEach((value, key) => {
     if (!key.startsWith("variant-price-")) {
-      continue;
+      return;
     }
 
     const variantId = key.replace("variant-price-", "");
-    const priceStr = formData.get(key) as string | null;
+    const priceStr = value as string;
     const stockKey = `variant-stock-${variantId}`;
     const stockStr = formData.get(stockKey) as string | null;
 
     if (!priceStr || !stockStr) {
-      continue;
+      return;
     }
 
     const price = parseFloat(priceStr);
@@ -149,7 +148,7 @@ export async function updateSellerProductAction(productId: string, prevState: an
         stock: stock,
       });
     }
-  }
+  });
 
   try {
     // Delete existing images and create new ones
