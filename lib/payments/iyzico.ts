@@ -6,6 +6,7 @@
 export interface IyzicoInitRequest {
   apiKey: string;
   secretKey: string;
+  baseUrl?: string;
   price: number; // in cents
   paidPrice: number; // in cents (can include fees)
   currency: string; // "TRY"
@@ -25,6 +26,10 @@ export interface IyzicoInitRequest {
     identityNumber?: string;
     city?: string;
     country?: string;
+    lastLoginDate?: string;
+    registrationDate?: string;
+    registrationAddress?: string;
+    ip?: string;
   };
   shippingAddress?: {
     contactName: string;
@@ -38,6 +43,13 @@ export interface IyzicoInitRequest {
     country: string;
     address: string;
   };
+  basketItems?: Array<{
+    id: string;
+    name: string;
+    category1: string;
+    itemType: string;
+    price: number;
+  }>;
   callbackUrl: string;
 }
 
