@@ -10,7 +10,7 @@ import { authOptions } from "@/lib/auth";
  */
 export async function DELETE(
   request: NextRequest,
-  context: { params: Promise<{ id: string }> }
+  props: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -18,8 +18,9 @@ export async function DELETE(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { id } = await context.params;
-    const imageId = id;
+    const params = await props.params;
+    const imageId = params.id;
+    
     if (!imageId) {
       return NextResponse.json({ error: "Image ID required" }, { status: 400 });
     }
