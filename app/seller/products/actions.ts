@@ -124,25 +124,29 @@ export async function updateSellerProductAction(productId: string, prevState: an
 
   // Extract variant updates from formData
   const variantUpdates: Array<{ id: string; priceCents: number; stock: number }> = [];
-  for (const [key, value] of formData.entries()) {
-    if (key.startsWith("variant-price-")) {
-      const variantId = key.replace("variant-price-", "");
-      const priceStr = value as string;
-      const stockKey = `variant-stock-${variantId}`;
-      const stockStr = formData.get(stockKey) as string;
+  for (const key of formData.keys()) {
+    if (!key.startsWith("variant-price-")) {
+      continue;
+    }
 
-      if (priceStr && stockStr) {
-        const price = parseFloat(priceStr);
-        const stock = parseInt(stockStr);
+    const variantId = key.replace("variant-price-", "");
+    const priceStr = formData.get(key) as string | null;
+    const stockKey = `variant-stock-${variantId}`;
+    const stockStr = formData.get(stockKey) as string | null;
 
-        if (!isNaN(price) && price >= 0 && !isNaN(stock) && stock >= 0) {
-          variantUpdates.push({
-            id: variantId,
-            priceCents: Math.round(price * 100),
-            stock: stock,
-          });
-        }
-      }
+    if (!priceStr || !stockStr) {
+      continue;
+    }
+
+    const price = parseFloat(priceStr);
+    const stock = parseInt(stockStr);
+
+    if (!isNaN(price) && price >= 0 && !isNaN(stock) && stock >= 0) {
+      variantUpdates.push({
+        id: variantId,
+        priceCents: Math.round(price * 100),
+        stock: stock,
+      });
     }
   }
 
