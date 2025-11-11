@@ -2,7 +2,6 @@
 
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
 import { Category } from "@/lib/data";
 
 interface CategoryMenuProps {
@@ -10,8 +9,16 @@ interface CategoryMenuProps {
   pathname?: string;
 }
 
-export default function CategoryMenu({ categories, pathname }: CategoryMenuProps) {
-  const searchParams = useSearchParams();
+function CategoryMenuContent({ categories, pathname }: CategoryMenuProps) {
+  const [categoryParam, setCategoryParam] = useState<string | null>(null);
+
+  // URL parametrelerini client-side'da oku
+  useEffect(() => {
+    if (typeof window !== "undefined" && pathname?.startsWith("/search")) {
+      const params = new URLSearchParams(window.location.search);
+      setCategoryParam(params.get("category"));
+    }
+  }, [pathname]);
   
   // Aktif kategoriyi belirle (pathname'den category parametresini çıkar veya /kategori/[slug] kontrolü yap)
   const getActiveCategoryId = () => {
@@ -31,17 +38,14 @@ export default function CategoryMenu({ categories, pathname }: CategoryMenuProps
     }
     
     // /search?category=... formatı kontrolü
-    if (pathname.startsWith("/search")) {
-      const categorySlug = searchParams.get("category");
-      if (categorySlug) {
-        const category = categories.find((cat) => cat.slug === categorySlug);
-        if (category) return category.id;
-        
-        // Alt kategorilerde ara
-        for (const cat of categories) {
-          const child = cat.children?.find((c) => c.slug === categorySlug);
-          if (child) return cat.id; // Ana kategoriyi aktif göster
-        }
+    if (pathname.startsWith("/search") && categoryParam) {
+      const category = categories.find((cat) => cat.slug === categoryParam);
+      if (category) return category.id;
+      
+      // Alt kategorilerde ara
+      for (const cat of categories) {
+        const child = cat.children?.find((c) => c.slug === categoryParam);
+        if (child) return cat.id; // Ana kategoriyi aktif göster
       }
     }
     
@@ -149,5 +153,9 @@ export default function CategoryMenu({ categories, pathname }: CategoryMenuProps
       )}
     </div>
   );
+}
+
+export default function CategoryMenu({ categories, pathname }: CategoryMenuProps) {
+  return <CategoryMenuContent categories={categories} pathname={pathname} />;
 }
 
