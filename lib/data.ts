@@ -31,17 +31,23 @@ export interface ProductListItem {
  * Cache süresi: 300 saniye (route-level revalidate ile birlikte)
  */
 export const getCategories = cache(async (): Promise<Category[]> => {
-  const categories = await db.category.findMany({
-    where: { parentId: null },
-    include: {
-      children: {
-        orderBy: { name: "asc" },
+  try {
+    const categories = await db.category.findMany({
+      where: { parentId: null },
+      include: {
+        children: {
+          orderBy: { name: "asc" },
+        },
       },
-    },
-    orderBy: { name: "asc" },
-  });
+      orderBy: { name: "asc" },
+    });
 
-  return categories;
+    return categories;
+  } catch (error) {
+    console.error("Error fetching categories:", error);
+    // Hata durumunda boş array döndür
+    return [];
+  }
 });
 
 /**
@@ -55,66 +61,72 @@ export const getActiveProducts = cache(
     categoryId?: string;
     orderBy?: "createdAt" | "price";
   }): Promise<ProductListItem[]> => {
-    const { limit, skip, categoryId, orderBy = "createdAt" } = options || {};
+    try {
+      const { limit, skip, categoryId, orderBy = "createdAt" } = options || {};
 
-    const where: any = { isActive: true };
-    if (categoryId) {
-      where.categoryId = categoryId;
-    }
+      const where: any = { isActive: true };
+      if (categoryId) {
+        where.categoryId = categoryId;
+      }
 
-    // Prisma'da nested orderBy sınırlı, bu yüzden sadece createdAt kullanıyoruz
-    const orderByClause = { createdAt: "desc" as const };
+      // Prisma'da nested orderBy sınırlı, bu yüzden sadece createdAt kullanıyoruz
+      const orderByClause = { createdAt: "desc" as const };
 
-    const products = await db.product.findMany({
-      where,
-      select: {
-        id: true,
-        title: true,
-        slug: true,
-        isActive: true,
-        createdAt: true,
-        images: {
-          orderBy: { sort: "asc" },
-          take: 1,
-          select: {
-            url: true,
-            alt: true,
+      const products = await db.product.findMany({
+        where,
+        select: {
+          id: true,
+          title: true,
+          slug: true,
+          isActive: true,
+          createdAt: true,
+          images: {
+            orderBy: { sort: "asc" },
+            take: 1,
+            select: {
+              url: true,
+              alt: true,
+            },
           },
-        },
-        category: {
-          select: {
-            id: true,
-            name: true,
-            slug: true,
+          category: {
+            select: {
+              id: true,
+              name: true,
+              slug: true,
+            },
           },
-        },
-        seller: {
-          select: {
-            id: true,
-            displayName: true,
-            user: {
-              select: {
-                name: true,
-                email: true,
+          seller: {
+            select: {
+              id: true,
+              displayName: true,
+              user: {
+                select: {
+                  name: true,
+                  email: true,
+                },
               },
             },
           },
-        },
-        variants: {
-          orderBy: { priceCents: "asc" },
-          take: 1,
-          select: {
-            priceCents: true,
-            stock: true,
+          variants: {
+            orderBy: { priceCents: "asc" },
+            take: 1,
+            select: {
+              priceCents: true,
+              stock: true,
+            },
           },
         },
-      },
-      orderBy: orderByClause,
-      ...(limit && { take: limit }),
-      ...(skip && { skip }),
-    });
+        orderBy: orderByClause,
+        ...(limit && { take: limit }),
+        ...(skip && { skip }),
+      });
 
-    return products as ProductListItem[];
+      return products as ProductListItem[];
+    } catch (error) {
+      console.error("Error fetching active products:", error);
+      // Hata durumunda boş array döndür
+      return [];
+    }
   }
 );
 

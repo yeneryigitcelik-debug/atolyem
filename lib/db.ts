@@ -8,11 +8,15 @@ const globalForPrisma = global as unknown as { prisma?: PrismaClient };
 export const db =
   globalForPrisma.prisma ||
   new PrismaClient({
-    log: ["error", "warn"],                                  // Gerekirse "query" ekleyebilirsin
+    log: process.env.NODE_ENV === "development" ? ["error", "warn"] : ["error"],
+    errorFormat: "minimal",
   });
 
 // Prod dışı ortamda client'ı global cache'e koyar (tek instance garanti)
 if (process.env.NODE_ENV !== "production") {
+  globalForPrisma.prisma = db;
+} else {
+  // Production'da da global cache kullan (Vercel serverless için)
   globalForPrisma.prisma = db;
 }
 
