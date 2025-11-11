@@ -2,10 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 
-type Props = {
-  params: Promise<{ id: string }>;
-};
-
 /**
  * DELETE /api/images/[id]
  * Deletes an image from Cloudflare Images
@@ -14,7 +10,7 @@ type Props = {
  */
 export async function DELETE(
   request: NextRequest,
-  { params }: Props
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
