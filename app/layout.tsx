@@ -26,13 +26,27 @@ export default async function RootLayout({
   let session: Session | null = null;
   
   try {
+    // Database bağlantısı ve environment variables kontrolü
+    if (!process.env.DATABASE_URL) {
+      console.error("DATABASE_URL environment variable is missing!");
+    }
+    if (!process.env.NEXTAUTH_SECRET) {
+      console.error("NEXTAUTH_SECRET environment variable is missing!");
+    }
+    
     [categories, session] = await Promise.all([
-      getCategories().catch(() => [] as Category[]),
-      getServerSession(authOptions).catch(() => null),
+      getCategories().catch((err) => {
+        console.error("Error fetching categories:", err);
+        return [] as Category[];
+      }),
+      getServerSession(authOptions).catch((err) => {
+        console.error("Error fetching session:", err);
+        return null;
+      }),
     ]);
   } catch (error) {
     console.error("Layout initialization error:", error);
-    // Fallback değerler kullanılıyor
+    // Fallback değerler kullanılıyor - site yine de çalışmalı
   }
 
   return (

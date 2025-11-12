@@ -2,14 +2,24 @@ import Link from "next/link";
 import ProductImage from "../components/ProductImage";
 import { getAllActiveProducts, getCategories } from "@/lib/data";
 
+// Force dynamic rendering to prevent build-time database calls
+export const dynamic = 'force-dynamic';
 // Route-level revalidate: 300 saniye (5 dakika)
 export const revalidate = 300;
 
 export default async function PazarPage() {
-  const [products, categories] = await Promise.all([
-    getAllActiveProducts(),
-    getCategories(),
-  ]);
+  let products = [];
+  let categories = [];
+  
+  try {
+    [products, categories] = await Promise.all([
+      getAllActiveProducts().catch(() => []),
+      getCategories().catch(() => []),
+    ]);
+  } catch (error) {
+    console.error("Pazar page data fetch error:", error);
+    // Fallback değerler kullanılıyor
+  }
 
   return (
     <div className="relative flex min-h-screen w-full flex-col overflow-x-hidden" style={{ backgroundColor: '#FFF8F1' }}>

@@ -4,6 +4,12 @@ import { PrismaClient } from "@prisma/client";              // Prisma client tip
 // Global cache tipi: dev ortamında hot-reload sırasında tek instance tutmak için
 const globalForPrisma = global as unknown as { prisma?: PrismaClient };
 
+// DATABASE_URL kontrolü
+if (!process.env.DATABASE_URL) {
+  console.error("⚠️ DATABASE_URL environment variable is missing!");
+  console.error("⚠️ Database operations will fail. Please set DATABASE_URL in Vercel environment variables.");
+}
+
 // Named export: db  ← ÖNEMLİ: import { db } from "@/lib/db" bu ismi bekliyor
 export const db =
   globalForPrisma.prisma ||
@@ -12,7 +18,7 @@ export const db =
     errorFormat: "minimal",
     datasources: {
       db: {
-        url: process.env.DATABASE_URL,
+        url: process.env.DATABASE_URL || "postgresql://localhost:5432/atolyem",
       },
     },
   });

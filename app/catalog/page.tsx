@@ -1,11 +1,20 @@
 import Link from "next/link";
 import { getAllActiveProducts } from "@/lib/data";
 
+// Force dynamic rendering to prevent build-time database calls
+export const dynamic = 'force-dynamic';
 // Route-level revalidate: 300 saniye (5 dakika)
 export const revalidate = 300;
 
 export default async function CatalogPage() {
-  const products = await getAllActiveProducts();
+  let products = [];
+  
+  try {
+    products = await getAllActiveProducts().catch(() => []);
+  } catch (error) {
+    console.error("Catalog page data fetch error:", error);
+    // Fallback değerler kullanılıyor
+  }
 
   return (
     <div className="min-h-screen bg-[#FFF8F1] dark:bg-gray-900">

@@ -7,7 +7,8 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
+  url      = env("DATABASE_URL")      // Connection pooling (production/Vercel için)
+  directUrl = env("DIRECT_URL")       // Direct connection (local development/Prisma Studio için)
 }
 
 /**

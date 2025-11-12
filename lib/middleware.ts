@@ -36,23 +36,36 @@ export async function middleware(req: NextRequest) {
 
   // Seller rotaları
   if (pathname.startsWith("/seller")) {
+    // NEXTAUTH_SECRET kontrolü
+    if (!process.env.NEXTAUTH_SECRET) {
+      console.error("NEXTAUTH_SECRET missing in middleware");
+      return NextResponse.redirect(new URL("/login", req.url));
+    }
+
     const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
     if (!token) {
       return NextResponse.redirect(new URL("/login", req.url));
     }
 
-    // Kullanıcı rolünü kontrol et
-    const user = await db.user.findUnique({
-      where: { id: token.sub },
-      select: { role: true },
-    });
+    // Kullanıcı rolünü kontrol et (database bağlantısı yoksa geç)
+    let user: { role: string; isPremium?: boolean } | null = null;
+    try {
+      user = await db.user.findUnique({
+        where: { id: token.sub },
+        select: { role: true, isPremium: true },
+      });
 
-    if (!user || (user.role !== "SELLER" && user.role !== "ADMIN")) {
-      return NextResponse.redirect(new URL("/", req.url));
+      if (!user || (user.role !== "SELLER" && user.role !== "ADMIN")) {
+        return NextResponse.redirect(new URL("/", req.url));
+      }
+    } catch (error) {
+      console.error("Database error in middleware:", error);
+      // Database hatası durumunda giriş sayfasına yönlendir
+      return NextResponse.redirect(new URL("/login", req.url));
     }
 
     // Premium özellikler için kontrol (örnek: gelişmiş raporlar)
-    const isPremium = (user as any)?.isPremium || false;
+    const isPremium = user?.isPremium || false;
     if (pathname.startsWith("/seller/advanced") && !isPremium) {
       return NextResponse.redirect(new URL("/premium", req.url));
     }
@@ -62,6 +75,12 @@ export async function middleware(req: NextRequest) {
 
   // Premium rotaları
   if (pathname.startsWith("/premium")) {
+    // NEXTAUTH_SECRET kontrolü
+    if (!process.env.NEXTAUTH_SECRET) {
+      console.error("NEXTAUTH_SECRET missing in middleware");
+      return NextResponse.redirect(new URL("/login", req.url));
+    }
+
     const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
     if (!token) {
       return NextResponse.redirect(new URL("/login", req.url));

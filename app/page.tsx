@@ -2,6 +2,8 @@ import Link from "next/link";
 import ProductImage from "./components/ProductImage";
 import { getFeaturedProducts, getNewProducts, type ProductListItem } from "@/lib/data";
 
+// Force dynamic rendering to prevent build-time database calls
+export const dynamic = 'force-dynamic';
 // Route-level revalidate: 300 saniye (5 dakika)
 export const revalidate = 300;
 

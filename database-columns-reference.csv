@@ -1,0 +1,216 @@
+Table Name,Column Name,Data Type,Nullable,Default Value,Description
+User,id,String (CUID),NOT NULL,auto-generated,Primary Key
+User,email,String,NOT NULL,,Unique email address
+User,name,String,YES (NULL),,Display name
+User,hashedPw,String,NOT NULL,,Bcrypt password hash
+User,role,UserRole (ENUM),NOT NULL,CUSTOMER,User role (ADMIN/SELLER/CUSTOMER)
+User,isPremium,Boolean,NOT NULL,false,Premium subscription status
+User,emailVerified,DateTime,YES (NULL),,Email verification date
+User,image,String,YES (NULL),,Avatar image URL
+User,bannerImage,String,YES (NULL),,Profile banner image URL
+User,createdAt,DateTime,NOT NULL,now(),Creation timestamp
+User,updatedAt,DateTime,NOT NULL,auto-updated,Last update timestamp
+Seller,id,String (CUID),NOT NULL,auto-generated,Primary Key
+Seller,userId,String,NOT NULL,,Foreign Key to User (unique)
+Seller,displayName,String,NOT NULL,,Seller display name
+Seller,commissionBps,Integer,NOT NULL,1500,Commission basis points (15%)
+Seller,bio,String,YES (NULL),,Store description
+Seller,bannerImage,String,YES (NULL),,Store banner image
+Seller,location,String,YES (NULL),,Location (city/country)
+Seller,website,String,YES (NULL),,Website URL
+Seller,instagram,String,YES (NULL),,Instagram username
+Seller,facebook,String,YES (NULL),,Facebook page
+Seller,twitter,String,YES (NULL),,Twitter username
+Seller,returnPolicy,String,YES (NULL),,Return policy
+Seller,shippingInfo,String,YES (NULL),,Shipping information
+Seller,shopPolicies,String,YES (NULL),,Shop policies
+Seller,totalSales,Integer,NOT NULL,0,Total sales count (cached)
+Seller,totalRevenue,Integer,NOT NULL,0,Total revenue in cents (cached)
+Seller,createdAt,DateTime,NOT NULL,now(),Creation timestamp
+Seller,updatedAt,DateTime,NOT NULL,auto-updated,Last update timestamp
+Category,id,String (CUID),NOT NULL,auto-generated,Primary Key
+Category,name,String,NOT NULL,,Category name (unique)
+Category,slug,String,NOT NULL,,Category slug (unique)
+Category,parentId,String,YES (NULL),,Parent category ID (self-reference)
+Product,id,String (CUID),NOT NULL,auto-generated,Primary Key
+Product,sellerId,String,NOT NULL,,Foreign Key to Seller
+Product,categoryId,String,YES (NULL),,Foreign Key to Category
+Product,title,String,NOT NULL,,Product title
+Product,slug,String,NOT NULL,,Product slug (unique)
+Product,description,String,YES (NULL),,Product description
+Product,isActive,Boolean,NOT NULL,true,Product active status
+Product,createdAt,DateTime,NOT NULL,now(),Creation timestamp
+Product,updatedAt,DateTime,NOT NULL,auto-updated,Last update timestamp
+ProductImage,id,String (CUID),NOT NULL,auto-generated,Primary Key
+ProductImage,productId,String,NOT NULL,,Foreign Key to Product
+ProductImage,url,String,NOT NULL,,Image URL
+ProductImage,cfImageId,String,YES (NULL),,Cloudflare Images ID
+ProductImage,alt,String,YES (NULL),,Image alt text
+ProductImage,sort,Integer,NOT NULL,0,Sort order
+Variant,id,String (CUID),NOT NULL,auto-generated,Primary Key
+Variant,productId,String,NOT NULL,,Foreign Key to Product
+Variant,sku,String,NOT NULL,,Stock Keeping Unit (unique)
+Variant,priceCents,Integer,NOT NULL,,Price in cents
+Variant,stock,Integer,NOT NULL,0,Stock quantity
+Variant,attributes,JSON,YES (NULL),,"Variant attributes (size color etc)"
+Order,id,String (CUID),NOT NULL,auto-generated,Primary Key
+Order,userId,String,NOT NULL,,Foreign Key to User
+Order,status,OrderStatus (ENUM),NOT NULL,CART,Order status
+Order,totalCents,Integer,NOT NULL,0,Total amount in cents
+Order,couponCode,String,YES (NULL),,Applied coupon code
+Order,discountCents,Integer,NOT NULL,0,Discount amount in cents
+Order,addressId,String,YES (NULL),,Foreign Key to Address
+Order,createdAt,DateTime,NOT NULL,now(),Creation timestamp
+OrderItem,id,String (CUID),NOT NULL,auto-generated,Primary Key
+OrderItem,orderId,String,NOT NULL,,Foreign Key to Order
+OrderItem,variantId,String,NOT NULL,,Foreign Key to Variant
+OrderItem,qty,Integer,NOT NULL,1,Quantity
+OrderItem,priceCents,Integer,NOT NULL,,Price at time of order (cents)
+Payout,id,String (CUID),NOT NULL,auto-generated,Primary Key
+Payout,sellerId,String,NOT NULL,,Foreign Key to Seller
+Payout,amountCents,Integer,NOT NULL,,Payout amount in cents
+Payout,note,String,YES (NULL),,Payout note
+Payout,createdAt,DateTime,NOT NULL,now(),Creation timestamp
+Conversation,id,String (CUID),NOT NULL,auto-generated,Primary Key
+Conversation,productId,String,YES (NULL),,Foreign Key to Product (optional)
+Conversation,orderId,String,YES (NULL),,Foreign Key to Order (optional)
+Conversation,createdAt,DateTime,NOT NULL,now(),Creation timestamp
+Conversation,updatedAt,DateTime,NOT NULL,auto-updated,Last update timestamp
+Participant,id,String (CUID),NOT NULL,auto-generated,Primary Key
+Participant,conversationId,String,NOT NULL,,Foreign Key to Conversation
+Participant,userId,String,NOT NULL,,Foreign Key to User
+Participant,role,ParticipantRole (ENUM),NOT NULL,,BUYER or SELLER
+Participant,joinedAt,DateTime,NOT NULL,now(),Join timestamp
+Message,id,String (CUID),NOT NULL,auto-generated,Primary Key
+Message,conversationId,String,NOT NULL,,Foreign Key to Conversation
+Message,senderId,String,NOT NULL,,Foreign Key to User
+Message,body,String,YES (NULL),,Message text
+Message,imageId,String,YES (NULL),,Cloudflare Images imageId
+Message,createdAt,DateTime,NOT NULL,now(),Creation timestamp
+Review,id,String (CUID),NOT NULL,auto-generated,Primary Key
+Review,productId,String,NOT NULL,,Foreign Key to Product
+Review,orderId,String,YES (NULL),,Foreign Key to Order (optional)
+Review,userId,String,NOT NULL,,Foreign Key to User
+Review,rating,Integer,NOT NULL,,Rating (1-5)
+Review,comment,String,YES (NULL),,Review comment text
+Review,createdAt,DateTime,NOT NULL,now(),Creation timestamp
+Review,updatedAt,DateTime,NOT NULL,auto-updated,Last update timestamp
+SellerReview,id,String (CUID),NOT NULL,auto-generated,Primary Key
+SellerReview,sellerId,String,NOT NULL,,Foreign Key to Seller
+SellerReview,orderId,String,YES (NULL),,Foreign Key to Order (optional)
+SellerReview,userId,String,NOT NULL,,Foreign Key to User
+SellerReview,rating,Integer,NOT NULL,,Rating (1-5)
+SellerReview,comment,String,YES (NULL),,Review comment text
+SellerReview,createdAt,DateTime,NOT NULL,now(),Creation timestamp
+SellerReview,updatedAt,DateTime,NOT NULL,auto-updated,Last update timestamp
+FavoriteSeller,id,String (CUID),NOT NULL,auto-generated,Primary Key
+FavoriteSeller,userId,String,NOT NULL,,Foreign Key to User
+FavoriteSeller,sellerId,String,NOT NULL,,Foreign Key to Seller
+FavoriteSeller,createdAt,DateTime,NOT NULL,now(),Creation timestamp
+FavoriteProduct,id,String (CUID),NOT NULL,auto-generated,Primary Key
+FavoriteProduct,userId,String,NOT NULL,,Foreign Key to User
+FavoriteProduct,productId,String,NOT NULL,,Foreign Key to Product
+FavoriteProduct,createdAt,DateTime,NOT NULL,now(),Creation timestamp
+Coupon,id,String (CUID),NOT NULL,auto-generated,Primary Key
+Coupon,code,String,NOT NULL,,Coupon code (unique)
+Coupon,sellerId,String,YES (NULL),,Foreign Key to Seller (optional)
+Coupon,discountType,DiscountType (ENUM),NOT NULL,,PERCENTAGE or FIXED
+Coupon,discountValue,Integer,NOT NULL,,Discount value (percentage or cents)
+Coupon,minPurchase,Integer,YES (NULL),,Minimum purchase amount (cents)
+Coupon,maxDiscount,Integer,YES (NULL),,"Maximum discount (cents percentage only)"
+Coupon,validFrom,DateTime,NOT NULL,,Valid from date
+Coupon,validUntil,DateTime,NOT NULL,,Valid until date
+Coupon,usageLimit,Integer,YES (NULL),,Total usage limit
+Coupon,usedCount,Integer,NOT NULL,0,Current usage count
+Coupon,isActive,Boolean,NOT NULL,true,Active status
+Coupon,createdAt,DateTime,NOT NULL,now(),Creation timestamp
+Coupon,updatedAt,DateTime,NOT NULL,auto-updated,Last update timestamp
+Account,id,String (CUID),NOT NULL,auto-generated,Primary Key
+Account,userId,String,NOT NULL,,Foreign Key to User
+Account,type,String,NOT NULL,,Account type
+Account,provider,String,NOT NULL,,Provider name
+Account,providerAccountId,String,NOT NULL,,Provider account ID
+Account,refresh_token,String (TEXT),YES (NULL),,Refresh token
+Account,access_token,String (TEXT),YES (NULL),,Access token
+Account,expires_at,Integer,YES (NULL),,Token expiration timestamp
+Account,token_type,String,YES (NULL),,Token type
+Account,scope,String,YES (NULL),,Token scope
+Account,id_token,String (TEXT),YES (NULL),,ID token
+Account,session_state,String,YES (NULL),,Session state
+Session,id,String (CUID),NOT NULL,auto-generated,Primary Key
+Session,sessionToken,String,NOT NULL,,Session token (unique)
+Session,userId,String,NOT NULL,,Foreign Key to User
+Session,expires,DateTime,NOT NULL,,Expiration date
+VerificationToken,identifier,String,NOT NULL,,Identifier
+VerificationToken,token,String,NOT NULL,,Verification token (unique)
+VerificationToken,expires,DateTime,NOT NULL,,Expiration date
+Address,id,String (CUID),NOT NULL,auto-generated,Primary Key
+Address,userId,String,NOT NULL,,Foreign Key to User
+Address,title,String,NOT NULL,,"Address title (Home Work etc)"
+Address,city,String,NOT NULL,,City
+Address,district,String,NOT NULL,,District
+Address,addressLine,String,NOT NULL,,Detailed address
+Address,phone,String,YES (NULL),,Phone number
+Address,isDefault,Boolean,NOT NULL,false,Default address flag
+Address,createdAt,DateTime,NOT NULL,now(),Creation timestamp
+Address,updatedAt,DateTime,NOT NULL,auto-updated,Last update timestamp
+Shipment,id,String (CUID),NOT NULL,auto-generated,Primary Key
+Shipment,orderId,String,NOT NULL,,Foreign Key to Order
+Shipment,carrier,String,NOT NULL,,"Carrier name (PTT Yurtiçi etc)"
+Shipment,trackingCode,String,YES (NULL),,Tracking code
+Shipment,status,ShipmentStatus (ENUM),NOT NULL,CREATED,Shipment status
+Shipment,createdAt,DateTime,NOT NULL,now(),Creation timestamp
+Shipment,updatedAt,DateTime,NOT NULL,auto-updated,Last update timestamp
+Payment,id,String (CUID),NOT NULL,auto-generated,Primary Key
+Payment,orderId,String,NOT NULL,,Foreign Key to Order
+Payment,gateway,PaymentGateway (ENUM),NOT NULL,,IYZICO or PAYTR
+Payment,txnId,String,YES (NULL),,Transaction ID (unique)
+Payment,status,PaymentStatus (ENUM),NOT NULL,PENDING,Payment status
+Payment,amountCents,Integer,NOT NULL,,Payment amount in cents
+Payment,rawPayload,JSON,YES (NULL),,Raw gateway response (for webhooks)
+Payment,createdAt,DateTime,NOT NULL,now(),Creation timestamp
+Payment,updatedAt,DateTime,NOT NULL,auto-updated,Last update timestamp
+SellerPayoutLedger,id,String (CUID),NOT NULL,auto-generated,Primary Key
+SellerPayoutLedger,sellerId,String,NOT NULL,,Foreign Key to Seller
+SellerPayoutLedger,orderId,String,YES (NULL),,Foreign Key to Order (optional)
+SellerPayoutLedger,type,String,NOT NULL,,debit or credit
+SellerPayoutLedger,amountCents,Integer,NOT NULL,,Amount in cents
+SellerPayoutLedger,note,String,YES (NULL),,Note
+SellerPayoutLedger,createdAt,DateTime,NOT NULL,now(),Creation timestamp
+Subscription,id,String (CUID),NOT NULL,auto-generated,Primary Key
+Subscription,userId,String,NOT NULL,,Foreign Key to User
+Subscription,plan,SubscriptionPlan (ENUM),NOT NULL,BASIC,Subscription plan
+Subscription,status,SubscriptionStatus (ENUM),NOT NULL,ACTIVE,Subscription status
+Subscription,amountCents,Integer,NOT NULL,,Monthly fee in cents
+Subscription,startedAt,DateTime,NOT NULL,now(),Start date
+Subscription,expiresAt,DateTime,YES (NULL),,Expiration date (null if auto-renewal)
+Subscription,canceledAt,DateTime,YES (NULL),,Cancellation date
+Subscription,paymentGateway,PaymentGateway (ENUM),NOT NULL,,Payment gateway
+Subscription,gatewaySubscriptionId,String,YES (NULL),,Gateway subscription ID
+Subscription,createdAt,DateTime,NOT NULL,now(),Creation timestamp
+Subscription,updatedAt,DateTime,NOT NULL,auto-updated,Last update timestamp
+SellerMetrics,id,String (CUID),NOT NULL,auto-generated,Primary Key
+SellerMetrics,sellerId,String,NOT NULL,,Foreign Key to Seller
+SellerMetrics,month,Integer,NOT NULL,,Month (1-12)
+SellerMetrics,year,Integer,NOT NULL,,Year
+SellerMetrics,totalSales,Integer,NOT NULL,0,Total sales count
+SellerMetrics,totalRevenueCents,Integer,NOT NULL,0,Total revenue in cents
+SellerMetrics,completedOrders,Integer,NOT NULL,0,Completed orders count
+SellerMetrics,canceledOrders,Integer,NOT NULL,0,Canceled orders count
+SellerMetrics,averageOrderValueCents,Integer,NOT NULL,0,Average order value in cents
+SellerMetrics,createdAt,DateTime,NOT NULL,now(),Creation timestamp
+SellerMetrics,updatedAt,DateTime,NOT NULL,auto-updated,Last update timestamp
+Feedback,id,String (CUID),NOT NULL,auto-generated,Primary Key
+Feedback,sellerId,String,NOT NULL,,Foreign Key to Seller
+Feedback,userId,String,NOT NULL,,Foreign Key to User
+Feedback,orderId,String,YES (NULL),,Foreign Key to Order (optional)
+Feedback,rating,Integer,NOT NULL,,Rating (1-5)
+Feedback,comment,String,YES (NULL),,Feedback comment text
+Feedback,category,FeedbackCategory (ENUM),NOT NULL,,Feedback category
+Feedback,status,FeedbackStatus (ENUM),NOT NULL,PENDING,Feedback status
+Feedback,adminNote,String,YES (NULL),,Admin note
+Feedback,reviewedBy,String,YES (NULL),,Reviewer admin ID
+Feedback,reviewedAt,DateTime,YES (NULL),,Review date
+Feedback,createdAt,DateTime,NOT NULL,now(),Creation timestamp
+Feedback,updatedAt,DateTime,NOT NULL,auto-updated,Last update timestamp
+

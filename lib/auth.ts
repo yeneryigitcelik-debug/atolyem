@@ -5,9 +5,16 @@ import Credentials from "next-auth/providers/credentials"; // Email+şifre provi
 import { db } from "@/lib/db";                        // Prisma client'ımız
 import bcrypt from "bcrypt";                          // Şifre karşılaştırma
 
+// NEXTAUTH_SECRET kontrolü
+if (!process.env.NEXTAUTH_SECRET) {
+  console.error("⚠️ NEXTAUTH_SECRET environment variable is missing!");
+  console.error("⚠️ Authentication will fail. Please set NEXTAUTH_SECRET in Vercel environment variables.");
+}
+
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(db) as any,                  // Session/Account tablolarını kullan
   session: { strategy: "jwt" },                       // JWT strategy (Credentials ile uyumlu)
+  secret: process.env.NEXTAUTH_SECRET,                 // Secret key (JWT imzalama için)
   providers: [
     Credentials({
       name: "Email & Password",

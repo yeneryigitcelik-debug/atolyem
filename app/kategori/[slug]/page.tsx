@@ -4,22 +4,32 @@ import { notFound } from "next/navigation";
 import ProductImage from "../../components/ProductImage";
 import { getProductsByCategory } from "@/lib/data";
 
+// Force dynamic rendering to prevent build-time database calls
+export const dynamic = 'force-dynamic';
 // Route-level revalidate: 300 saniye (5 dakika)
 export const revalidate = 300;
 
 export default async function CategoryPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   
-  const category = await db.category.findUnique({
-    where: { slug },
-  });
+  let category;
+  let products = [];
+  
+  try {
+    category = await db.category.findUnique({
+      where: { slug },
+    });
 
-  if (!category) {
+    if (!category) {
+      notFound();
+    }
+
+    // Cache'lenmiş ürün sorgusu
+    products = await getProductsByCategory(category.id).catch(() => []);
+  } catch (error) {
+    console.error("Category page data fetch error:", error);
     notFound();
   }
-
-  // Cache'lenmiş ürün sorgusu
-  const products = await getProductsByCategory(category.id);
 
   return (
     <div className="relative flex min-h-screen w-full flex-col overflow-x-hidden" style={{ backgroundColor: '#FFF8F1' }}>
