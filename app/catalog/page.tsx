@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { getAllActiveProducts } from "@/lib/data";
+import { getAllActiveProducts, type ProductListItem } from "@/lib/data";
 
 // Force dynamic rendering to prevent build-time database calls
 export const dynamic = 'force-dynamic';
@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic';
 export const revalidate = 300;
 
 export default async function CatalogPage() {
-  let products = [];
+  let products: ProductListItem[] = [];
   
   try {
     products = await getAllActiveProducts().catch(() => []);

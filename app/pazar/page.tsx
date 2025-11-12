@@ -1,6 +1,6 @@
 import Link from "next/link";
 import ProductImage from "../components/ProductImage";
-import { getAllActiveProducts, getCategories } from "@/lib/data";
+import { getAllActiveProducts, getCategories, type ProductListItem, type Category } from "@/lib/data";
 
 // Force dynamic rendering to prevent build-time database calls
 export const dynamic = 'force-dynamic';
@@ -8,8 +8,8 @@ export const dynamic = 'force-dynamic';
 export const revalidate = 300;
 
 export default async function PazarPage() {
-  let products = [];
-  let categories = [];
+  let products: ProductListItem[] = [];
+  let categories: Category[] = [];
   
   try {
     [products, categories] = await Promise.all([
