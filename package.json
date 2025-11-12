@@ -29,9 +29,9 @@
     "prisma:seed": "ts-node prisma/seed.ts",
     "db:prepare": "npm run prisma:generate && prisma db push && npm run prisma:seed",
     "db:reset": "prisma migrate reset --force && npm run prisma:seed",
-    "db:up": "docker compose up -d postgres",
+    "db:up": "powershell -ExecutionPolicy Bypass -File scripts/db-up.ps1",
     "db:down": "docker compose down",
-    "db:logs": "docker compose logs -f postgres",
+    "db:logs": "powershell -ExecutionPolicy Bypass -File scripts/db-logs.ps1",
     "check:env": "node scripts/check-env.js",
     "test:token": "node scripts/test-cloudflare-token.js"
   },
