@@ -3,6 +3,10 @@
 ## 🔴 Sorun
 Build sırasında `localhost:5432` hatası alıyorsunuz. Bu, Vercel'de `DATABASE_URL` environment variable'ının ayarlanmadığını gösterir.
 
+**⚠️ ÖNEMLİ:** Production database (Supabase, Neon, vb.) kurulmadan Vercel'de uygulama çalışmaz!
+
+Detaylı kurulum için: [SUPABASE_SETUP.md](./SUPABASE_SETUP.md)
+
 ## ✅ Yapılacaklar
 
 ### 1. Vercel'de Environment Variables Ayarlama (KRİTİK!)
@@ -16,6 +20,8 @@ Build sırasında `localhost:5432` hatası alıyorsunuz. Bu, Vercel'de `DATABASE
 DATABASE_URL
 Değer: postgresql://user:password@host:5432/database?schema=public
 ⚠️ Production database URL'inizi buraya yapıştırın (Neon, Supabase, Railway, vb.)
+
+📚 Supabase kurulumu için: SUPABASE_SETUP.md dosyasına bakın
 ```
 
 ```
