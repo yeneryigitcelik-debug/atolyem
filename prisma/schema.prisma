@@ -1,5 +1,8 @@
-// atolyem.net - Handmade Art/Craft Marketplace Backend
-// Prisma is the canonical source of truth for the database schema
+// ============================================================================
+// Atölyem Marketplace - Production-Grade Prisma Schema
+// ============================================================================
+// A creator-first, art-focused marketplace (Etsy-like, localized for Turkey)
+// ============================================================================
 
 generator client {
   provider = "prisma-client-js"
@@ -13,200 +16,829 @@ datasource db {
 // ENUMS
 // ============================================================================
 
+/// User account type - what capabilities the user has
 enum AccountType {
   BUYER
   SELLER
   BOTH
 }
 
-enum ActiveMode {
-  buyer
-  seller
-}
-
+/// Seller verification status
 enum VerificationStatus {
   PENDING
   VERIFIED
   REJECTED
+  SUSPENDED
 }
 
-enum ProductStatus {
+/// Listing creativity type (Etsy-inspired)
+enum ListingType {
+  MADE_BY_SELLER      // Physical handmade/crafted by seller
+  DESIGNED_BY_SELLER  // Digital OR produced by third-party but seller owns design
+  SOURCED_BY_SELLER   // Creative supplies enabling buyer creativity
+  VINTAGE             // Items 20+ years old
+}
+
+/// Listing status
+enum ListingStatus {
   DRAFT
   PUBLISHED
   ARCHIVED
+  REMOVED // Removed by moderation
 }
 
+/// Listing compliance/moderation status
+enum ComplianceStatus {
+  PENDING
+  APPROVED
+  FLAGGED
+  REMOVED
+}
+
+/// Processing mode for orders
+enum ProcessingMode {
+  READY_TO_SHIP
+  MADE_TO_ORDER
+}
+
+/// Digital asset delivery mode
+enum DigitalDeliveryMode {
+  INSTANT    // Immediate download after payment
+  MANUAL     // Seller uploads after purchase (for custom digital work)
+}
+
+/// Digital delivery status
+enum DigitalDeliveryStatus {
+  PENDING
+  DELIVERED
+  EXPIRED
+}
+
+/// Order status
 enum OrderStatus {
   PENDING_PAYMENT
   PAID
+  PROCESSING
+  SHIPPED
+  DELIVERED
   CANCELLED
-  FULFILLED
   REFUNDED
+  DISPUTE
+}
+
+/// Payment status
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+  PARTIALLY_REFUNDED
+}
+
+/// Return policy type
+enum ReturnPolicyType {
+  NO_RETURNS
+  RETURNS_ACCEPTED
+  EXCHANGE_ONLY
+}
+
+/// Report reason
+enum ReportReason {
+  INAPPROPRIATE_CONTENT
+  COUNTERFEIT
+  SPAM
+  HARASSMENT
+  OTHER
+}
+
+/// Report status
+enum ReportStatus {
+  PENDING
+  REVIEWED
+  RESOLVED
+  DISMISSED
 }
 
 // ============================================================================
-// MODELS
+// IDENTITY MODELS
 // ============================================================================
 
-/// Core user record linked to Supabase Auth user.id
-model AppUser {
-  id          String      @id @db.Uuid // matches Supabase auth.users.id
-  email       String      @unique
-  phone       String?
-  fullName    String?     @map("full_name")
-  accountType AccountType @default(BUYER) @map("account_type")
-  createdAt   DateTime    @default(now()) @map("created_at")
-  updatedAt   DateTime    @updatedAt @map("updated_at")
+/// Core user account - linked to Supabase Auth
+model User {
+  id           String      @id @db.Uuid
+  email        String      @unique
+  displayName  String?     @map("display_name")
+  avatarUrl    String?     @map("avatar_url")
+  phone        String?
+  accountType  AccountType @default(BUYER) @map("account_type")
+  isAdmin      Boolean     @default(false) @map("is_admin")
+  createdAt    DateTime    @default(now()) @map("created_at")
+  updatedAt    DateTime    @updatedAt @map("updated_at")
 
   // Relations
-  preferences   UserPreferences?
-  sellerProfile SellerProfile?
-  orders        Order[]
-  reviews       Review[]
+  sellerProfile    SellerProfile?
+  buyerProfile     BuyerProfile?
+  addresses        Address[]
+  cart             Cart?
+  orders           Order[]
+  favorites        FavoriteListing[]
+  followedShops    FollowShop[]
+  reviews          Review[]
+  reports          Report[]
+  privateListings  PrivateListingAccess[]
 
-  @@map("app_user")
+  @@map("user")
 }
 
-/// User preferences for UI/UX customization
-model UserPreferences {
-  userId     String     @id @map("user_id") @db.Uuid
-  activeMode ActiveMode @default(buyer) @map("active_mode")
-  locale     String     @default("tr")
-  currency   String     @default("TRY")
-  createdAt  DateTime   @default(now()) @map("created_at")
-  updatedAt  DateTime   @updatedAt @map("updated_at")
+/// Buyer-specific profile (optional extra data)
+model BuyerProfile {
+  userId               String   @id @map("user_id") @db.Uuid
+  preferredCurrency    String   @default("TRY") @map("preferred_currency")
+  preferredLocale      String   @default("tr") @map("preferred_locale")
+  marketingConsent     Boolean  @default(false) @map("marketing_consent")
+  createdAt            DateTime @default(now()) @map("created_at")
+  updatedAt            DateTime @updatedAt @map("updated_at")
 
-  // Relations
-  user AppUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@map("user_preferences")
+  @@map("buyer_profile")
 }
 
-/// Seller profile for users with SELLER or BOTH account type
+/// Seller profile with payout/sub-merchant placeholders
 model SellerProfile {
-  id                 String             @id @default(uuid()) @db.Uuid
-  userId             String             @unique @map("user_id") @db.Uuid
-  displayName        String             @map("display_name")
-  bio                String?
-  verificationStatus VerificationStatus @default(PENDING) @map("verification_status")
-  createdAt          DateTime           @default(now()) @map("created_at")
-  updatedAt          DateTime           @updatedAt @map("updated_at")
+  userId              String             @id @map("user_id") @db.Uuid
+  shopId              String?            @unique @map("shop_id") @db.Uuid
+  verificationStatus  VerificationStatus @default(PENDING) @map("verification_status")
+  
+  // Payout / Sub-merchant fields (provider-agnostic)
+  payoutAccountType   String?            @map("payout_account_type") // e.g., "bank_account", "iban"
+  payoutAccountData   Json?              @map("payout_account_data") // Encrypted/masked in practice
+  subMerchantKey      String?            @map("sub_merchant_key") // Provider's sub-merchant ID
+  subMerchantStatus   String?            @map("sub_merchant_status") // e.g., "pending", "active"
+  
+  taxId               String?            @map("tax_id") // Vergi Kimlik No
+  identityVerified    Boolean            @default(false) @map("identity_verified")
+  
+  createdAt           DateTime           @default(now()) @map("created_at")
+  updatedAt           DateTime           @updatedAt @map("updated_at")
 
-  // Relations
-  user       AppUser     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  products   Product[]
-  orderItems OrderItem[]
+  user User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  shop Shop? @relation(fields: [shopId], references: [id])
 
   @@map("seller_profile")
 }
 
-/// Product categories
-model Category {
+/// User addresses (for shipping)
+model Address {
+  id           String   @id @default(uuid()) @db.Uuid
+  userId       String   @map("user_id") @db.Uuid
+  label        String?  // e.g., "Ev", "İş"
+  fullName     String   @map("full_name")
+  phone        String?
+  addressLine1 String   @map("address_line_1")
+  addressLine2 String?  @map("address_line_2")
+  district     String   // İlçe
+  province     String   // İl
+  postalCode   String   @map("postal_code")
+  country      String   @default("TR")
+  isDefault    Boolean  @default(false) @map("is_default")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("address")
+}
+
+// ============================================================================
+// SHOP MODELS
+// ============================================================================
+
+/// Seller's shop/storefront
+model Shop {
+  id              String   @id @default(uuid()) @db.Uuid
+  ownerUserId     String   @unique @map("owner_user_id") @db.Uuid
+  shopName        String   @map("shop_name")
+  shopSlug        String   @unique @map("shop_slug")
+  tagline         String?
+  about           String?  // Artist story / shop description
+  bannerImageUrl  String?  @map("banner_image_url")
+  logoImageUrl    String?  @map("logo_image_url")
+  
+  // Social links
+  websiteUrl      String?  @map("website_url")
+  instagramHandle String?  @map("instagram_handle")
+  
+  // Policies reference
+  policiesId      String?  @unique @map("policies_id") @db.Uuid
+  
+  isActive        Boolean  @default(true) @map("is_active")
+  featuredAt      DateTime? @map("featured_at") // For editorial curation
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  sellerProfile      SellerProfile?
+  policies           ShopPolicies?      @relation(fields: [policiesId], references: [id])
+  sections           ShopSection[]
+  listings           Listing[]
+  processingProfiles ProcessingProfile[]
+  shippingProfiles   ShippingProfile[]
+  followers          FollowShop[]
+  reviews            Review[]           // Reviews rolled up to shop level
+
+  @@map("shop")
+}
+
+/// Shop policies (returns, exchanges, custom policies)
+model ShopPolicies {
+  id                    String           @id @default(uuid()) @db.Uuid
+  returnPolicyType      ReturnPolicyType @default(RETURNS_ACCEPTED) @map("return_policy_type")
+  returnWindowDays      Int              @default(14) @map("return_window_days")
+  returnPolicyText      String?          @map("return_policy_text")
+  exchangePolicyText    String?          @map("exchange_policy_text")
+  customPoliciesText    String?          @map("custom_policies_text")
+  processingTimeText    String?          @map("processing_time_text")
+  createdAt             DateTime         @default(now()) @map("created_at")
+  updatedAt             DateTime         @updatedAt @map("updated_at")
+
+  shop Shop?
+
+  @@map("shop_policies")
+}
+
+/// Shop sections (like Etsy sections - groups of listings)
+model ShopSection {
   id        String   @id @default(uuid()) @db.Uuid
-  slug      String   @unique
-  name      String
+  shopId    String   @map("shop_id") @db.Uuid
+  title     String
+  slug      String
+  sortOrder Int      @default(0) @map("sort_order")
+  isActive  Boolean  @default(true) @map("is_active")
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
+  shop     Shop      @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  listings Listing[]
+
+  @@unique([shopId, slug])
+  @@map("shop_section")
+}
+
+// ============================================================================
+// PROCESSING & SHIPPING PROFILES
+// ============================================================================
+
+/// Processing profile (made-to-order vs ready-to-ship)
+model ProcessingProfile {
+  id            String         @id @default(uuid()) @db.Uuid
+  shopId        String         @map("shop_id") @db.Uuid
+  name          String
+  mode          ProcessingMode
+  minDays       Int            @map("min_days")
+  maxDays       Int            @map("max_days")
+  isDefault     Boolean        @default(false) @map("is_default")
+  createdAt     DateTime       @default(now()) @map("created_at")
+  updatedAt     DateTime       @updatedAt @map("updated_at")
+
+  shop     Shop      @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  listings Listing[]
+
+  @@map("processing_profile")
+}
+
+/// Shipping profile with rules
+model ShippingProfile {
+  id              String   @id @default(uuid()) @db.Uuid
+  shopId          String   @map("shop_id") @db.Uuid
+  name            String
+  originProvince  String   @map("origin_province")
+  originCountry   String   @default("TR") @map("origin_country")
+  
+  // Shipping rules as JSON for flexibility
+  // Structure: { domestic: { basePriceMinor, freeAboveMinor?, additionalItemMinor? }, international?: {...} }
+  rulesJson       Json     @map("rules_json")
+  
+  isDefault       Boolean  @default(false) @map("is_default")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  shop     Shop      @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  listings Listing[]
+
+  @@map("shipping_profile")
+}
+
+// ============================================================================
+// LISTING MODELS
+// ============================================================================
+
+/// Main listing/product model
+model Listing {
+  id                  String           @id @default(uuid()) @db.Uuid
+  shopId              String           @map("shop_id") @db.Uuid
+  sellerUserId        String           @map("seller_user_id") @db.Uuid
+  sectionId           String?          @map("section_id") @db.Uuid
+  
+  // Core fields
+  listingType         ListingType      @map("listing_type")
+  title               String
+  slug                String           @unique
+  description         String?
+  
+  // Pricing (in smallest currency unit - kuruş for TRY)
+  basePriceMinor      Int              @map("base_price_minor")
+  currency            String           @default("TRY")
+  
+  // Status & visibility
+  status              ListingStatus    @default(DRAFT)
+  complianceStatus    ComplianceStatus @default(PENDING) @map("compliance_status")
+  
+  // Inventory (base stock, can be overridden by variants)
+  baseQuantity        Int              @default(1) @map("base_quantity")
+  
+  // Profiles
+  processingProfileId String?          @map("processing_profile_id") @db.Uuid
+  shippingProfileId   String?          @map("shipping_profile_id") @db.Uuid
+  
+  // Return policy override (null = use shop default)
+  returnPolicyType    ReturnPolicyType? @map("return_policy_type")
+  returnWindowDays    Int?              @map("return_window_days")
+  
+  // Vintage-specific fields
+  vintageYear         Int?             @map("vintage_year") // Required if VINTAGE
+  vintageDecade       String?          @map("vintage_decade") // e.g., "1970s"
+  vintageEvidenceNote String?          @map("vintage_evidence_note")
+  
+  // Moderation flags
+  isHandmadeClaimed   Boolean          @default(false) @map("is_handmade_claimed")
+  isAiGenerated       Boolean          @default(false) @map("is_ai_generated")
+  
+  // Private listing (for custom commissions)
+  isPrivate           Boolean          @default(false) @map("is_private")
+  
+  // SEO - slug locked after first publish
+  slugLocked          Boolean          @default(false) @map("slug_locked")
+  
+  // Timestamps
+  createdAt           DateTime         @default(now()) @map("created_at")
+  updatedAt           DateTime         @updatedAt @map("updated_at")
+  publishedAt         DateTime?        @map("published_at")
+  archivedAt          DateTime?        @map("archived_at")
+
   // Relations
-  products Product[]
+  shop               Shop                   @relation(fields: [shopId], references: [id])
+  section            ShopSection?           @relation(fields: [sectionId], references: [id])
+  processingProfile  ProcessingProfile?     @relation(fields: [processingProfileId], references: [id])
+  shippingProfile    ShippingProfile?       @relation(fields: [shippingProfileId], references: [id])
+  
+  media              ListingMedia[]
+  tags               ListingTag[]
+  attributes         ListingAttribute[]
+  variationGroups    ListingVariationGroup[]
+  variants           ListingVariant[]
+  personalizationFields PersonalizationField[]
+  digitalAsset       DigitalAsset?
+  
+  favorites          FavoriteListing[]
+  cartItems          CartItem[]
+  orderItems         OrderItem[]
+  reviews            Review[]
+  privateAccess      PrivateListingAccess[]
+
+  @@index([shopId, status])
+  @@index([status, complianceStatus])
+  @@index([listingType, status])
+  @@map("listing")
+}
+
+/// Listing media (images, videos)
+model ListingMedia {
+  id        String   @id @default(uuid()) @db.Uuid
+  listingId String   @map("listing_id") @db.Uuid
+  url       String
+  altText   String?  @map("alt_text")
+  sortOrder Int      @default(0) @map("sort_order")
+  isPrimary Boolean  @default(false) @map("is_primary")
+  mediaType String   @default("image") @map("media_type") // image, video
+  createdAt DateTime @default(now()) @map("created_at")
+
+  listing Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  @@index([listingId, sortOrder])
+  @@map("listing_media")
+}
+
+/// Listing tags (max 13 enforced at application layer)
+model ListingTag {
+  id        String   @id @default(uuid()) @db.Uuid
+  listingId String   @map("listing_id") @db.Uuid
+  tag       String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  listing Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  @@unique([listingId, tag])
+  @@index([tag])
+  @@map("listing_tag")
+}
+
+/// Listing attributes (material, color, style, etc.)
+model ListingAttribute {
+  id        String   @id @default(uuid()) @db.Uuid
+  listingId String   @map("listing_id") @db.Uuid
+  key       String   // e.g., "material", "color", "style", "room"
+  value     String   // e.g., "ceramic", "blue", "modern"
+  createdAt DateTime @default(now()) @map("created_at")
+
+  listing Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  @@unique([listingId, key, value])
+  @@index([key, value])
+  @@map("listing_attribute")
+}
+
+// ============================================================================
+// VARIATIONS & PERSONALIZATION
+// ============================================================================
+
+/// Variation group (e.g., "Size", "Color", "Frame Type")
+model ListingVariationGroup {
+  id        String   @id @default(uuid()) @db.Uuid
+  listingId String   @map("listing_id") @db.Uuid
+  name      String   // e.g., "Boyut", "Renk"
+  sortOrder Int      @default(0) @map("sort_order")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  listing Listing                  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  options ListingVariationOption[]
+
+  @@unique([listingId, name])
+  @@map("listing_variation_group")
+}
+
+/// Variation option within a group (e.g., "A3", "A4" for Size)
+model ListingVariationOption {
+  id        String   @id @default(uuid()) @db.Uuid
+  groupId   String   @map("group_id") @db.Uuid
+  value     String   // e.g., "A3", "Mavi"
+  sortOrder Int      @default(0) @map("sort_order")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  group    ListingVariationGroup      @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  variants ListingVariantSelection[]
+
+  @@unique([groupId, value])
+  @@map("listing_variation_option")
+}
+
+/// Specific variant (combination of options with price/stock overrides)
+model ListingVariant {
+  id                        String   @id @default(uuid()) @db.Uuid
+  listingId                 String   @map("listing_id") @db.Uuid
+  sku                       String?
+  priceMinorOverride        Int?     @map("price_minor_override")
+  quantityOverride          Int?     @map("quantity_override")
+  processingProfileIdOverride String? @map("processing_profile_id_override") @db.Uuid
+  isActive                  Boolean  @default(true) @map("is_active")
+  createdAt                 DateTime @default(now()) @map("created_at")
+  updatedAt                 DateTime @updatedAt @map("updated_at")
+
+  listing    Listing                   @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  selections ListingVariantSelection[]
+  cartItems  CartItem[]
+  orderItems OrderItem[]
+
+  @@map("listing_variant")
+}
+
+/// Junction table for variant -> selected options
+model ListingVariantSelection {
+  variantId String @map("variant_id") @db.Uuid
+  optionId  String @map("option_id") @db.Uuid
+
+  variant ListingVariant         @relation(fields: [variantId], references: [id], onDelete: Cascade)
+  option  ListingVariationOption @relation(fields: [optionId], references: [id], onDelete: Cascade)
+
+  @@id([variantId, optionId])
+  @@map("listing_variant_selection")
+}
+
+/// Personalization field definition
+model PersonalizationField {
+  id          String   @id @default(uuid()) @db.Uuid
+  listingId   String   @map("listing_id") @db.Uuid
+  label       String   // e.g., "İsim", "Tarih", "Özel Mesaj"
+  isRequired  Boolean  @default(false) @map("is_required")
+  minLength   Int?     @map("min_length")
+  maxLength   Int?     @map("max_length")
+  placeholder String?
+  helpText    String?  @map("help_text")
+  sortOrder   Int      @default(0) @map("sort_order")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  listing Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  @@map("personalization_field")
+}
+
+// ============================================================================
+// DIGITAL ASSETS & DELIVERY
+// ============================================================================
+
+/// Digital asset attached to a listing
+model DigitalAsset {
+  id           String              @id @default(uuid()) @db.Uuid
+  listingId    String              @unique @map("listing_id") @db.Uuid
+  fileUrl      String              @map("file_url") // Secure storage URL
+  fileName     String              @map("file_name")
+  fileSizeBytes Int                @map("file_size_bytes")
+  fileType     String              @map("file_type") // MIME type
+  deliveryMode DigitalDeliveryMode @map("delivery_mode")
+  createdAt    DateTime            @default(now()) @map("created_at")
+  updatedAt    DateTime            @updatedAt @map("updated_at")
+
+  listing    Listing           @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  deliveries DigitalDelivery[]
+
+  @@map("digital_asset")
+}
+
+/// Digital delivery record per order item
+model DigitalDelivery {
+  id                String                @id @default(uuid()) @db.Uuid
+  orderItemId       String                @unique @map("order_item_id") @db.Uuid
+  digitalAssetId    String                @map("digital_asset_id") @db.Uuid
+  status            DigitalDeliveryStatus @default(PENDING)
+  deliveredAt       DateTime?             @map("delivered_at")
+  downloadCount     Int                   @default(0) @map("download_count")
+  maxDownloads      Int                   @default(5) @map("max_downloads")
+  firstDownloadedAt DateTime?             @map("first_downloaded_at")
+  expiresAt         DateTime?             @map("expires_at")
+  createdAt         DateTime              @default(now()) @map("created_at")
+
+  orderItem    OrderItem    @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
+  digitalAsset DigitalAsset @relation(fields: [digitalAssetId], references: [id])
+
+  @@map("digital_delivery")
+}
+
+// ============================================================================
+// PRIVATE LISTING ACCESS (for custom commissions)
+// ============================================================================
+
+model PrivateListingAccess {
+  listingId String   @map("listing_id") @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+
+  listing Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([listingId, userId])
+  @@map("private_listing_access")
+}
+
+// ============================================================================
+// CART MODELS
+// ============================================================================
+
+/// User's shopping cart
+model Cart {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @unique @map("user_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user  User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items CartItem[]
+
+  @@map("cart")
+}
+
+/// Cart item
+model CartItem {
+  id                  String   @id @default(uuid()) @db.Uuid
+  cartId              String   @map("cart_id") @db.Uuid
+  listingId           String   @map("listing_id") @db.Uuid
+  variantId           String?  @map("variant_id") @db.Uuid
+  quantity            Int      @default(1)
+  personalizationJson Json?    @map("personalization_json") // { fieldId: value, ... }
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @updatedAt @map("updated_at")
+
+  cart    Cart            @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  listing Listing         @relation(fields: [listingId], references: [id])
+  variant ListingVariant? @relation(fields: [variantId], references: [id])
+
+  @@unique([cartId, listingId, variantId])
+  @@map("cart_item")
+}
+
+// ============================================================================
+// ORDER MODELS
+// ============================================================================
+
+/// Order
+model Order {
+  id                     String        @id @default(uuid()) @db.Uuid
+  orderNumber            String        @unique @map("order_number") // Human-readable order number
+  buyerUserId            String        @map("buyer_user_id") @db.Uuid
+  status                 OrderStatus   @default(PENDING_PAYMENT)
+  paymentStatus          PaymentStatus @default(PENDING) @map("payment_status")
+  
+  // Totals (in smallest currency unit)
+  subtotalMinor          Int           @map("subtotal_minor")
+  shippingTotalMinor     Int           @map("shipping_total_minor")
+  discountTotalMinor     Int           @default(0) @map("discount_total_minor")
+  grandTotalMinor        Int           @map("grand_total_minor")
+  currency               String        @default("TRY")
+  
+  // Snapshots (immutable after order creation)
+  shippingAddressSnapshot Json         @map("shipping_address_snapshot")
+  
+  // Idempotency for checkout
+  idempotencyKey         String?       @unique @map("idempotency_key")
+  
+  // Payment provider reference
+  paymentProviderRef     String?       @map("payment_provider_ref")
+  
+  // Timestamps
+  createdAt              DateTime      @default(now()) @map("created_at")
+  updatedAt              DateTime      @updatedAt @map("updated_at")
+  paidAt                 DateTime?     @map("paid_at")
+  cancelledAt            DateTime?     @map("cancelled_at")
+
+  buyer User        @relation(fields: [buyerUserId], references: [id])
+  items OrderItem[]
+
+  @@index([buyerUserId, createdAt(sort: Desc)])
+  @@index([status])
+  @@map("order")
+}
+
+/// Order item with snapshots
+model OrderItem {
+  id                       String   @id @default(uuid()) @db.Uuid
+  orderId                  String   @map("order_id") @db.Uuid
+  listingId                String   @map("listing_id") @db.Uuid
+  variantId                String?  @map("variant_id") @db.Uuid
+  sellerUserId             String   @map("seller_user_id") @db.Uuid
+  shopId                   String   @map("shop_id") @db.Uuid
+  
+  // Quantity & pricing
+  quantity                 Int
+  unitPriceMinor           Int      @map("unit_price_minor")
+  totalPriceMinor          Int      @map("total_price_minor")
+  currency                 String   @default("TRY")
+  
+  // Immutable snapshots at purchase time
+  titleSnapshot            String   @map("title_snapshot")
+  listingTypeSnapshot      String   @map("listing_type_snapshot")
+  variantSnapshot          Json?    @map("variant_snapshot") // Selected options
+  personalizationSnapshot  Json?    @map("personalization_snapshot")
+  processingTimeSnapshot   Json?    @map("processing_time_snapshot") // { mode, minDays, maxDays }
+  policySnapshot           Json?    @map("policy_snapshot") // Return policy at purchase
+  
+  // Fulfillment
+  estimatedShipByDate      DateTime? @map("estimated_ship_by_date")
+  shippedAt                DateTime? @map("shipped_at")
+  trackingNumber           String?   @map("tracking_number")
+  trackingUrl              String?   @map("tracking_url")
+  deliveredAt              DateTime? @map("delivered_at")
+  
+  createdAt                DateTime @default(now()) @map("created_at")
+  updatedAt                DateTime @updatedAt @map("updated_at")
+
+  order           Order            @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  listing         Listing          @relation(fields: [listingId], references: [id])
+  variant         ListingVariant?  @relation(fields: [variantId], references: [id])
+  digitalDelivery DigitalDelivery?
+  review          Review?
+
+  @@index([sellerUserId, createdAt(sort: Desc)])
+  @@index([shopId])
+  @@map("order_item")
+}
+
+// ============================================================================
+// SOCIAL / TRUST MODELS
+// ============================================================================
+
+/// Favorite listing
+model FavoriteListing {
+  userId    String   @map("user_id") @db.Uuid
+  listingId String   @map("listing_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  listing Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  @@id([userId, listingId])
+  @@map("favorite_listing")
+}
+
+/// Follow shop
+model FollowShop {
+  userId    String   @map("user_id") @db.Uuid
+  shopId    String   @map("shop_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  shop Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
+  @@id([userId, shopId])
+  @@map("follow_shop")
+}
+
+/// Review (tied to order item)
+model Review {
+  id           String   @id @default(uuid()) @db.Uuid
+  orderItemId  String   @unique @map("order_item_id") @db.Uuid
+  listingId    String   @map("listing_id") @db.Uuid
+  shopId       String   @map("shop_id") @db.Uuid
+  buyerUserId  String   @map("buyer_user_id") @db.Uuid
+  
+  rating       Int      // 1-5
+  reviewText   String?  @map("review_text")
+  photosJson   Json?    @map("photos_json") // Array of photo URLs
+  
+  // Seller response (future)
+  sellerResponse    String?   @map("seller_response")
+  sellerRespondedAt DateTime? @map("seller_responded_at")
+  
+  isPublic     Boolean  @default(true) @map("is_public")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  orderItem OrderItem @relation(fields: [orderItemId], references: [id])
+  listing   Listing   @relation(fields: [listingId], references: [id])
+  shop      Shop      @relation(fields: [shopId], references: [id])
+  buyer     User      @relation(fields: [buyerUserId], references: [id])
+
+  @@index([shopId, createdAt(sort: Desc)])
+  @@index([listingId])
+  @@map("review")
+}
+
+// ============================================================================
+// MODERATION / REPORTING
+// ============================================================================
+
+model Report {
+  id           String       @id @default(uuid()) @db.Uuid
+  reporterUserId String     @map("reporter_user_id") @db.Uuid
+  targetType   String       @map("target_type") // "listing", "shop", "review", "user"
+  targetId     String       @map("target_id") @db.Uuid
+  reason       ReportReason
+  details      String?
+  status       ReportStatus @default(PENDING)
+  reviewedAt   DateTime?    @map("reviewed_at")
+  reviewedBy   String?      @map("reviewed_by") @db.Uuid
+  resolution   String?
+  createdAt    DateTime     @default(now()) @map("created_at")
+
+  reporter User @relation(fields: [reporterUserId], references: [id])
+
+  @@index([targetType, targetId])
+  @@index([status])
+  @@map("report")
+}
+
+// ============================================================================
+// CATEGORY / TAXONOMY (Extensible)
+// ============================================================================
+
+model Category {
+  id           String   @id @default(uuid()) @db.Uuid
+  parentId     String?  @map("parent_id") @db.Uuid
+  slug         String   @unique
+  name         String
+  description  String?
+  iconUrl      String?  @map("icon_url")
+  sortOrder    Int      @default(0) @map("sort_order")
+  isActive     Boolean  @default(true) @map("is_active")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  parent   Category?  @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  children Category[] @relation("CategoryHierarchy")
 
   @@map("category")
 }
 
-/// Product/Listing created by sellers
-model Product {
-  id            String        @id @default(uuid()) @db.Uuid
-  sellerId      String        @map("seller_id") @db.Uuid
-  title         String
-  description   String?
-  priceAmount   Int           @map("price_amount") // Store in smallest currency unit (kuruş for TRY)
-  currency      String        @default("TRY")
-  status        ProductStatus @default(DRAFT)
-  stockQuantity Int           @default(0) @map("stock_quantity")
-  categoryId    String        @map("category_id") @db.Uuid
-  createdAt     DateTime      @default(now()) @map("created_at")
-  updatedAt     DateTime      @updatedAt @map("updated_at")
+/// Category-specific attributes (defines what attributes a category supports)
+model CategoryAttribute {
+  id         String   @id @default(uuid()) @db.Uuid
+  categoryId String   @map("category_id") @db.Uuid
+  key        String   // e.g., "material", "color"
+  label      String   // Display label
+  inputType  String   @default("select") @map("input_type") // select, multiselect, text
+  options    Json?    // Allowed values for select/multiselect
+  isRequired Boolean  @default(false) @map("is_required")
+  sortOrder  Int      @default(0) @map("sort_order")
+  createdAt  DateTime @default(now()) @map("created_at")
 
-  // Relations
-  seller     SellerProfile  @relation(fields: [sellerId], references: [id], onDelete: Cascade)
-  category   Category       @relation(fields: [categoryId], references: [id])
-  images     ProductImage[]
-  orderItems OrderItem[]
-  reviews    Review[]
-
-  @@index([sellerId, status])
-  @@index([categoryId, status])
-  @@map("product")
-}
-
-/// Product images
-model ProductImage {
-  id        String   @id @default(uuid()) @db.Uuid
-  productId String   @map("product_id") @db.Uuid
-  url       String
-  sortOrder Int      @default(0) @map("sort_order")
-  createdAt DateTime @default(now()) @map("created_at")
-
-  // Relations
-  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
-
-  @@index([productId, sortOrder])
-  @@map("product_image")
-}
-
-/// Orders placed by buyers
-model Order {
-  id          String      @id @default(uuid()) @db.Uuid
-  buyerUserId String      @map("buyer_user_id") @db.Uuid
-  status      OrderStatus @default(PENDING_PAYMENT)
-  totalAmount Int         @map("total_amount") // Store in smallest currency unit
-  currency    String      @default("TRY")
-  createdAt   DateTime    @default(now()) @map("created_at")
-  updatedAt   DateTime    @updatedAt @map("updated_at")
-
-  // Relations
-  buyer AppUser     @relation(fields: [buyerUserId], references: [id])
-  items OrderItem[]
-
-  @@index([buyerUserId, createdAt(sort: Desc)])
-  @@map("order")
-}
-
-/// Individual items within an order
-model OrderItem {
-  id              String   @id @default(uuid()) @db.Uuid
-  orderId         String   @map("order_id") @db.Uuid
-  productId       String   @map("product_id") @db.Uuid
-  sellerId        String   @map("seller_id") @db.Uuid // Denormalized for faster seller queries
-  quantity        Int
-  unitPriceAmount Int      @map("unit_price_amount")
-  currency        String   @default("TRY")
-  createdAt       DateTime @default(now()) @map("created_at")
-
-  // Relations
-  order   Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  product Product       @relation(fields: [productId], references: [id])
-  seller  SellerProfile @relation(fields: [sellerId], references: [id])
-
-  @@index([sellerId, createdAt(sort: Desc)])
-  @@map("order_item")
-}
-
-/// Product reviews by buyers
-model Review {
-  id          String   @id @default(uuid()) @db.Uuid
-  productId   String   @map("product_id") @db.Uuid
-  buyerUserId String   @map("buyer_user_id") @db.Uuid
-  rating      Int // 1-5
-  comment     String?
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
-
-  // Relations
-  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
-  buyer   AppUser @relation(fields: [buyerUserId], references: [id])
-
-  @@unique([productId, buyerUserId])
-  @@map("review")
+  @@unique([categoryId, key])
+  @@map("category_attribute")
 }

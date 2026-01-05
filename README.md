@@ -1,337 +1,263 @@
-# atolyem.net
+# Atölyem - Handmade Art Marketplace Backend
 
-A marketplace for handmade art and craft products. Built with Next.js 15, Prisma, PostgreSQL (Supabase), and TypeScript.
+A production-grade, creator-first marketplace backend for handmade art and craft products in Turkey. Built with Next.js 15, Prisma, PostgreSQL, and TypeScript.
 
-## Project Overview
+## 🎯 Project Vision
 
-atolyem.net is a platform where artisans can sell their handmade products. Users can be:
+Atölyem is a curated marketplace for art & handmade goods (paintings, ceramics, prints, sculptures, crafts, limited editions, vintage art objects, creative supplies, and digital art assets). It is designed to be:
 
-- **BUYER**: Can browse products, place orders, leave reviews
-- **SELLER**: Can list products, manage inventory, fulfill orders
-- **BOTH**: Full access to buyer and seller features
+- **Creator-first**: Focus on shops, artist identity, storytelling
+- **Trust & Integrity**: Domain rules enforced server-side
+- **Extensible**: Future features won't require schema rewrites
+- **Turkey-localized**: TRY currency, Turkish address format
 
-### Why the "Switch Button" is Frontend-Only
+## 🏗 Architecture
 
-The "active mode" (buyer vs seller) is purely a **UI preference**, not a security control:
+```
+src/
+├── app/api/               # Next.js API Routes
+├── domain/                # Domain layer
+│   ├── entities/          # Domain entities
+│   ├── value-objects/     # Value objects (Money, Slug)
+│   └── services/          # Domain services
+├── application/           # Application layer
+│   ├── use-cases/         # Use case handlers
+│   └── integrity-rules/   # Business rule enforcement
+├── infrastructure/        # Infrastructure layer
+│   ├── database/          # Database client
+│   ├── logging/           # Structured logging
+│   └── payment/           # Payment provider interfaces
+├── interface/             # Interface layer
+│   ├── middleware/        # Request context, auth
+│   └── validators/        # Zod schemas
+├── lib/                   # Shared utilities
+│   ├── api/               # Error handling, validation
+│   ├── auth/              # Auth guards
+│   ├── db/                # Prisma client
+│   └── supabase/          # Supabase clients
+└── tests/                 # Test suites
+    ├── unit/              # Unit tests
+    └── integration/       # Integration tests
+```
 
-1. **Capability** = What the user is **allowed to do** (determined by `account_type: BUYER | SELLER | BOTH`)
-2. **Mode** = What the user is **currently doing** (stored as `active_mode: buyer | seller` in preferences)
-
-The switch button changes which dashboard/UI the user sees, but:
-- A BUYER cannot perform seller actions regardless of UI mode
-- A SELLER cannot perform buyer actions regardless of UI mode
-- A BOTH user can do everything—the mode only affects which features are prominent in the UI
-
-**Security is enforced at the API layer** (capability checks) and **database layer** (RLS policies), not by the UI mode toggle.
-
-## Tech Stack
+## 📦 Tech Stack
 
 - **Framework**: Next.js 15 (App Router)
 - **Language**: TypeScript (strict mode)
-- **Database**: PostgreSQL (Supabase hosted)
-- **ORM**: Prisma
+- **Database**: PostgreSQL (Supabase)
+- **ORM**: Prisma 7
 - **Auth**: Supabase Auth
 - **Validation**: Zod
-- **Styling**: Tailwind CSS
+- **Testing**: Vitest
+- **Logging**: Structured JSON logs with requestId
 
-## Project Structure
+## 🚀 Getting Started
 
-```
-atolyem/
-├── prisma/
-│   └── schema.prisma        # Database schema (source of truth)
-├── src/
-│   ├── app/
-│   │   └── api/             # API route handlers
-│   │       ├── me/          # User profile
-│   │       ├── account/     # Account type and mode
-│   │       ├── seller/      # Seller profile and orders
-│   │       ├── products/    # Product CRUD
-│   │       ├── orders/      # Order management
-│   │       └── categories/  # Product categories
-│   └── lib/
-│       ├── supabase/        # Supabase clients
-│       │   ├── server.ts    # Server-side (cookie-based)
-│       │   ├── admin.ts     # Service role (privileged)
-│       │   └── browser.ts   # Browser client
-│       ├── auth/            # Auth utilities
-│       │   ├── types.ts     # Type definitions
-│       │   ├── requireUser.ts
-│       │   └── requireCapability.ts
-│       ├── api/             # API utilities
-│       │   ├── errors.ts    # Error handling
-│       │   └── validation.ts # Zod schemas
-│       └── db/
-│           └── prisma.ts    # Prisma client
-└── supabase/
-    └── sql/
-        ├── init.sql         # Database initialization
-        ├── rls.sql          # Row Level Security policies
-        └── seed.sql         # Seed data (categories)
-```
+### Prerequisites
 
-## Environment Variables
+- Node.js 18+
+- PostgreSQL (or Supabase account)
+- npm or pnpm
 
-Copy `.env.example` to `.env.local` and fill in your values:
-
-| Variable | Description | Required |
-|----------|-------------|----------|
-| `DATABASE_URL` | Supabase Postgres pooler connection string | Yes |
-| `DIRECT_URL` | Supabase Postgres direct connection (for migrations) | Yes |
-| `NEXT_PUBLIC_SUPABASE_URL` | Your Supabase project URL | Yes |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon/public key | Yes |
-| `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key (server-only!) | Yes |
-| `APP_BASE_URL` | Application base URL | No (default: http://localhost:3000) |
-
-## Setup Instructions
-
-### 1. Install Dependencies
+### Installation
 
 ```bash
-# Install all packages
+# Install dependencies
 npm install
-```
 
-### 2. Configure Supabase
-
-1. Create a new project at [supabase.com](https://supabase.com)
-2. Go to **Settings > Database** and copy connection strings
-3. Go to **Settings > API** and copy the keys
-4. Fill in `.env.local` with your values
-
-### 3. Initialize Database
-
-```bash
-# Generate Prisma client (creates TypeScript types)
+# Generate Prisma client
 npm run db:generate
 
-# Run migrations (creates all tables in your Supabase database)
+# Copy environment file
+copy .env.example .env.local
+# Edit .env.local with your Supabase credentials
+
+# Run database migrations
 npm run db:migrate
-# When prompted, enter a name like "init"
-```
 
-> **Note**: Prisma 7 uses `prisma.config.ts` for database connection configuration.
-> The DATABASE_URL from `.env.local` is automatically loaded via dotenv.
-
-### 4. Apply RLS Policies
-
-1. Go to Supabase Dashboard > SQL Editor
-2. Run the contents of `supabase/sql/init.sql`
-3. Run the contents of `supabase/sql/rls.sql`
-4. (Optional) Run `supabase/sql/seed.sql` to add categories
-
-### 5. Start Development Server
-
-```bash
-# Start the Next.js development server
+# Start development server
 npm run dev
 ```
 
-The API is now available at `http://localhost:3000/api`.
+### Scripts
 
-## API Endpoints
+```bash
+npm run dev          # Start development server
+npm run build        # Build for production
+npm run test         # Run tests
+npm run test:watch   # Run tests in watch mode
+npm run typecheck    # TypeScript type checking
+npm run db:studio    # Open Prisma Studio
+npm run db:migrate   # Run migrations
+```
 
-### Authentication / User
+## 🗄 Database Schema
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/me` | Get current user profile, preferences, and seller profile |
+### Core Models
 
-### Account Management
+| Model | Description |
+|-------|-------------|
+| `User` | Core user account linked to Supabase Auth |
+| `SellerProfile` | Seller-specific data, payout info |
+| `Shop` | Seller's storefront with branding |
+| `ShopSection` | Groups of listings (like Etsy sections) |
+| `Listing` | Product/listing with type, pricing, status |
+| `ListingVariant` | Variations with price/stock overrides |
+| `PersonalizationField` | Custom fields for buyer input |
+| `DigitalAsset` | Digital files for download products |
+| `Cart` / `CartItem` | Shopping cart |
+| `Order` / `OrderItem` | Orders with snapshots |
+| `Review` | Reviews tied to order items |
+| `FavoriteListing` | User favorites |
+| `FollowShop` | Shop follows |
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/account/set-type` | Change account type (BUYER/SELLER/BOTH) |
-| POST | `/api/account/set-mode` | Set active UI mode (buyer/seller) |
+### Listing Types (Etsy-inspired)
 
-### Seller
+- `MADE_BY_SELLER` - Physical handmade by seller
+- `DESIGNED_BY_SELLER` - Digital or print-on-demand
+- `SOURCED_BY_SELLER` - Creative supplies
+- `VINTAGE` - Items 20+ years old (requires evidence)
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/seller/profile` | Get seller profile |
-| POST | `/api/seller/profile` | Create seller profile |
-| PATCH | `/api/seller/profile` | Update seller profile |
-| GET | `/api/seller/orders` | List order items for seller |
+## 🔐 API Endpoints
 
-### Products
+### Authentication
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/products` | List seller's own products |
-| POST | `/api/products` | Create a new product (DRAFT) |
-| GET | `/api/products/:id` | Get product details |
-| PATCH | `/api/products/:id` | Update product |
-| POST | `/api/products/:id/publish` | Publish a product |
-| GET | `/api/products/public` | List published products (public) |
+All endpoints except public listings require Supabase Auth session.
+
+### Seller/Shop
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/seller/onboard` | POST | Create seller profile + shop |
+| `/api/seller/me` | GET | Get seller dashboard data |
+| `/api/seller/orders` | GET | List seller's order items |
+
+### Listings
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/listings` | POST | Create draft listing |
+| `/api/listings` | GET | Search public listings |
+| `/api/listings/:slug` | GET | Get listing details |
+| `/api/listings/:slug` | PATCH | Update listing |
+| `/api/listings/:slug/publish` | POST | Publish listing |
+| `/api/listings/:slug/archive` | POST | Archive listing |
+
+### Cart & Checkout
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/cart` | GET | Get cart |
+| `/api/cart` | POST | Add item to cart |
+| `/api/cart/items/:id` | PATCH | Update cart item |
+| `/api/cart/items/:id` | DELETE | Remove cart item |
+| `/api/checkout` | POST | Create order (idempotent) |
 
 ### Orders
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/orders` | List buyer's orders |
-| POST | `/api/orders` | Create a new order |
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/orders` | GET | List buyer's orders |
+| `/api/purchases/:id/download` | GET | Download digital item |
 
-### Categories
+### Social
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/categories` | List all categories |
-| POST | `/api/categories` | Create category (for testing) |
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/favorites` | GET/POST/DELETE | Manage favorites |
+| `/api/follow` | GET/POST/DELETE | Manage shop follows |
+| `/api/reviews` | POST | Create review |
 
-## Example API Requests
+## 🛡 Integrity Rules (Edge Case Guardrails)
 
-### Get Current User
+### Implemented Rules
 
-```bash
-# Requires Supabase auth cookie
-curl http://localhost:3000/api/me
-```
+| # | Rule | Status |
+|---|------|--------|
+| 1 | Self-purchase blocked (cart + checkout) | ✅ |
+| 2 | Self-favorite blocked | ✅ |
+| 3 | Self-follow blocked | ✅ |
+| 4 | Only published listings visible publicly | ✅ |
+| 5 | Draft/archived visible only to owner | ✅ |
+| 6 | Private listings visible only to seller + granted buyer | ✅ |
+| 7 | Stock decremented in transaction | ✅ |
+| 8 | Insufficient stock blocks checkout | ✅ |
+| 9 | Checkout idempotency via key | ✅ |
+| 10 | Server calculates all totals | ✅ |
+| 11 | Order items snapshot all data | ✅ |
+| 12 | Tag limit = 13 per listing | ✅ |
+| 13 | Slug unique + conflict resolution | ✅ |
+| 14 | Slug locked after first publish | ✅ |
+| 15 | Personalization validation | ✅ |
+| 16 | Required personalization enforced | ✅ |
+| 17 | Digital download count limit | ✅ |
+| 18 | Digital download expiration | ✅ |
+| 19 | Review eligibility window | ✅ |
+| 20 | One review per order item | ✅ |
+| 21 | Review only after delivery/download | ✅ |
+| 22 | Vintage requires year evidence | ✅ |
+| 23 | Listing must have stock > 0 to publish | ✅ |
+| 24 | Archived/removed cannot be published | ✅ |
+| 25 | Flagged listings not purchasable | ✅ |
 
-### Upgrade to Seller Account
-
-```bash
-curl -X POST http://localhost:3000/api/account/set-type \
-  -H "Content-Type: application/json" \
-  -d '{"accountType": "BOTH"}'
-```
-
-### Create Seller Profile
-
-```bash
-curl -X POST http://localhost:3000/api/seller/profile \
-  -H "Content-Type: application/json" \
-  -d '{"displayName": "My Art Shop", "bio": "Handmade ceramics from Istanbul"}'
-```
-
-### Create a Product
-
-```bash
-curl -X POST http://localhost:3000/api/products \
-  -H "Content-Type: application/json" \
-  -d '{
-    "title": "Handmade Ceramic Vase",
-    "description": "Beautiful blue glazed vase",
-    "priceAmount": 25000,
-    "currency": "TRY",
-    "stockQuantity": 5,
-    "categoryId": "your-category-uuid"
-  }'
-```
-
-### Publish a Product
+## 🧪 Testing
 
 ```bash
-curl -X POST http://localhost:3000/api/products/{product-id}/publish
+# Run all tests
+npm run test
+
+# Run in watch mode
+npm run test:watch
+
+# With coverage
+npm run test:coverage
 ```
 
-### Browse Public Products
+### Test Coverage
 
-```bash
-# List all published products
-curl http://localhost:3000/api/products/public
+- **Slug generation** - Turkish transliteration, uniqueness
+- **Tag validation** - Limit, format, normalization
+- **Ownership rules** - Self-purchase, self-favorite, self-follow
+- **Personalization** - Required fields, length limits
+- **Pricing** - Line items, subtotals, effective prices
 
-# Filter by category
-curl http://localhost:3000/api/products/public?category=seramik
-```
+## 🔒 Why the "Switch Button" is Frontend-Only
 
-### Create an Order
+Users can be BUYER, SELLER, or BOTH. The UI may show a "mode switch" (buyer/seller dashboard), but:
 
-```bash
-curl -X POST http://localhost:3000/api/orders \
-  -H "Content-Type: application/json" \
-  -d '{
-    "items": [
-      {"productId": "product-uuid", "quantity": 2}
-    ]
-  }'
-```
+1. **Capability** = What user is **allowed** to do (stored in `accountType`)
+2. **Mode** = What user is **currently viewing** (UI preference only)
 
-## Error Response Format
+Security is enforced at:
+- **API layer**: `requireBuyer()`, `requireSeller()` guards
+- **Database layer**: RLS policies (when applied)
 
-All API errors follow this consistent format:
+The mode switch is purely UI/UX convenience.
 
-```json
-{
-  "error": {
-    "code": "ERROR_CODE",
-    "message": "Human-readable error message",
-    "details": ["Optional array of detailed errors"]
-  }
-}
-```
+## 📋 Assumptions & Decisions
 
-Common error codes:
-- `UNAUTHORIZED` - Authentication required
-- `FORBIDDEN` - Action not permitted
-- `VALIDATION_ERROR` - Invalid request data
-- `NOT_FOUND` - Resource not found
-- `SELLER_REQUIRED` - Seller account type required
-- `BUYER_REQUIRED` - Buyer account type required
-- `SELLER_PROFILE_REQUIRED` - Must create seller profile first
+1. **Currency**: TRY default, stored as integers (kuruş)
+2. **Payment**: Mocked - designed for sub-merchant integration later
+3. **Digital delivery**: Supports instant + manual modes
+4. **Reviews**: Window-based eligibility (60 days after delivery/download)
+5. **Moderation**: `complianceStatus` field ready for admin workflows
+6. **Categories**: Extensible with `CategoryAttribute` for per-category fields
 
-## RLS Verification Checklist
+## 🚧 Future Roadmap
 
-After applying RLS policies, verify with these checks:
+- [ ] Premium seller tiers
+- [ ] Auction listings
+- [ ] Coupon/discount system
+- [ ] AI price suggestions
+- [ ] Editorial curation
+- [ ] Real payment integration (iyzico, PayTR)
+- [ ] Image upload to Supabase Storage
+- [ ] Full-text search with Postgres
 
-1. **Unauthenticated users** should only see:
-   - PUBLISHED products
-   - VERIFIED seller profiles
-   - Categories
-
-2. **BUYER users** should:
-   - See their own orders and order items
-   - NOT see other users' orders
-
-3. **SELLER users** should:
-   - See all their own products (any status)
-   - See order items for their products
-   - NOT see full order details of customers
-
-4. **Service role** (admin operations):
-   - Bypasses all RLS
-   - Used for user creation, order processing
-
-## Development
-
-### Database Commands
-
-```bash
-# Generate Prisma client after schema changes
-npx prisma generate
-
-# Create a new migration
-npx prisma migrate dev --name your_migration_name
-
-# Reset database (WARNING: deletes all data)
-npx prisma migrate reset
-
-# Open Prisma Studio (database browser)
-npx prisma studio
-```
-
-### Type Safety
-
-The project uses strict TypeScript. All API request bodies are validated with Zod schemas defined in `src/lib/api/validation.ts`.
-
-## Production Considerations
-
-Before deploying to production:
-
-1. **Security**
-   - Ensure `.env.local` is never committed
-   - Verify RLS policies are correctly applied
-   - Review service role key usage
-
-2. **Performance**
-   - Add database indexes as needed
-   - Consider connection pooling settings
-   - Implement caching where appropriate
-
-3. **Monitoring**
-   - Set up error tracking
-   - Configure logging
-   - Add health check endpoints
-
-## License
+## 📄 License
 
 Private - All rights reserved.
+
+---
+
+Built with ❤️ for Turkish artisans and makers.

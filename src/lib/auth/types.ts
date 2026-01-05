@@ -2,15 +2,14 @@
  * Auth-related types used across the application.
  */
 
-import type { AppUser, SellerProfile, UserPreferences } from "@prisma/client";
+import type { User, SellerProfile, Shop } from "@prisma/client";
 
 export type Capability = "BUYER" | "SELLER";
 
 export interface UserContext {
   supabaseUserId: string;
-  appUser: AppUser;
-  preferences: UserPreferences | null;
-  sellerProfile: SellerProfile | null;
+  user: User;
+  sellerProfile: (SellerProfile & { shop: Shop | null }) | null;
 }
 
 export interface AuthError {
@@ -46,4 +45,3 @@ export const AUTH_ERRORS = {
     status: 403,
   },
 } as const;
-
