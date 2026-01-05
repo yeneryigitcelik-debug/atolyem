@@ -1,0 +1,212 @@
+// atolyem.net - Handmade Art/Craft Marketplace Backend
+// Prisma is the canonical source of truth for the database schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ============================================================================
+// ENUMS
+// ============================================================================
+
+enum AccountType {
+  BUYER
+  SELLER
+  BOTH
+}
+
+enum ActiveMode {
+  buyer
+  seller
+}
+
+enum VerificationStatus {
+  PENDING
+  VERIFIED
+  REJECTED
+}
+
+enum ProductStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum OrderStatus {
+  PENDING_PAYMENT
+  PAID
+  CANCELLED
+  FULFILLED
+  REFUNDED
+}
+
+// ============================================================================
+// MODELS
+// ============================================================================
+
+/// Core user record linked to Supabase Auth user.id
+model AppUser {
+  id          String      @id @db.Uuid // matches Supabase auth.users.id
+  email       String      @unique
+  phone       String?
+  fullName    String?     @map("full_name")
+  accountType AccountType @default(BUYER) @map("account_type")
+  createdAt   DateTime    @default(now()) @map("created_at")
+  updatedAt   DateTime    @updatedAt @map("updated_at")
+
+  // Relations
+  preferences   UserPreferences?
+  sellerProfile SellerProfile?
+  orders        Order[]
+  reviews       Review[]
+
+  @@map("app_user")
+}
+
+/// User preferences for UI/UX customization
+model UserPreferences {
+  userId     String     @id @map("user_id") @db.Uuid
+  activeMode ActiveMode @default(buyer) @map("active_mode")
+  locale     String     @default("tr")
+  currency   String     @default("TRY")
+  createdAt  DateTime   @default(now()) @map("created_at")
+  updatedAt  DateTime   @updatedAt @map("updated_at")
+
+  // Relations
+  user AppUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_preferences")
+}
+
+/// Seller profile for users with SELLER or BOTH account type
+model SellerProfile {
+  id                 String             @id @default(uuid()) @db.Uuid
+  userId             String             @unique @map("user_id") @db.Uuid
+  displayName        String             @map("display_name")
+  bio                String?
+  verificationStatus VerificationStatus @default(PENDING) @map("verification_status")
+  createdAt          DateTime           @default(now()) @map("created_at")
+  updatedAt          DateTime           @updatedAt @map("updated_at")
+
+  // Relations
+  user       AppUser     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  products   Product[]
+  orderItems OrderItem[]
+
+  @@map("seller_profile")
+}
+
+/// Product categories
+model Category {
+  id        String   @id @default(uuid()) @db.Uuid
+  slug      String   @unique
+  name      String
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  products Product[]
+
+  @@map("category")
+}
+
+/// Product/Listing created by sellers
+model Product {
+  id            String        @id @default(uuid()) @db.Uuid
+  sellerId      String        @map("seller_id") @db.Uuid
+  title         String
+  description   String?
+  priceAmount   Int           @map("price_amount") // Store in smallest currency unit (kuruş for TRY)
+  currency      String        @default("TRY")
+  status        ProductStatus @default(DRAFT)
+  stockQuantity Int           @default(0) @map("stock_quantity")
+  categoryId    String        @map("category_id") @db.Uuid
+  createdAt     DateTime      @default(now()) @map("created_at")
+  updatedAt     DateTime      @updatedAt @map("updated_at")
+
+  // Relations
+  seller     SellerProfile  @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  category   Category       @relation(fields: [categoryId], references: [id])
+  images     ProductImage[]
+  orderItems OrderItem[]
+  reviews    Review[]
+
+  @@index([sellerId, status])
+  @@index([categoryId, status])
+  @@map("product")
+}
+
+/// Product images
+model ProductImage {
+  id        String   @id @default(uuid()) @db.Uuid
+  productId String   @map("product_id") @db.Uuid
+  url       String
+  sortOrder Int      @default(0) @map("sort_order")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relations
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId, sortOrder])
+  @@map("product_image")
+}
+
+/// Orders placed by buyers
+model Order {
+  id          String      @id @default(uuid()) @db.Uuid
+  buyerUserId String      @map("buyer_user_id") @db.Uuid
+  status      OrderStatus @default(PENDING_PAYMENT)
+  totalAmount Int         @map("total_amount") // Store in smallest currency unit
+  currency    String      @default("TRY")
+  createdAt   DateTime    @default(now()) @map("created_at")
+  updatedAt   DateTime    @updatedAt @map("updated_at")
+
+  // Relations
+  buyer AppUser     @relation(fields: [buyerUserId], references: [id])
+  items OrderItem[]
+
+  @@index([buyerUserId, createdAt(sort: Desc)])
+  @@map("order")
+}
+
+/// Individual items within an order
+model OrderItem {
+  id              String   @id @default(uuid()) @db.Uuid
+  orderId         String   @map("order_id") @db.Uuid
+  productId       String   @map("product_id") @db.Uuid
+  sellerId        String   @map("seller_id") @db.Uuid // Denormalized for faster seller queries
+  quantity        Int
+  unitPriceAmount Int      @map("unit_price_amount")
+  currency        String   @default("TRY")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  // Relations
+  order   Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product Product       @relation(fields: [productId], references: [id])
+  seller  SellerProfile @relation(fields: [sellerId], references: [id])
+
+  @@index([sellerId, createdAt(sort: Desc)])
+  @@map("order_item")
+}
+
+/// Product reviews by buyers
+model Review {
+  id          String   @id @default(uuid()) @db.Uuid
+  productId   String   @map("product_id") @db.Uuid
+  buyerUserId String   @map("buyer_user_id") @db.Uuid
+  rating      Int // 1-5
+  comment     String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  buyer   AppUser @relation(fields: [buyerUserId], references: [id])
+
+  @@unique([productId, buyerUserId])
+  @@map("review")
+}
