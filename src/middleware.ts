@@ -7,6 +7,12 @@
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
+// Routes that require authentication
+const protectedRoutes = ["/satici-paneli"];
+
+// Routes that should redirect to home if already logged in
+const authRoutes = ["/hesap"];
+
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({
     request: {
@@ -63,7 +69,18 @@ export async function middleware(request: NextRequest) {
   );
 
   // Refresh session if expired - required for Server Components
-  await supabase.auth.getUser();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  const pathname = request.nextUrl.pathname;
+
+  // Check if trying to access protected route without auth
+  if (protectedRoutes.some(route => pathname.startsWith(route))) {
+    if (!user) {
+      const redirectUrl = new URL("/hesap", request.url);
+      redirectUrl.searchParams.set("redirect", pathname);
+      return NextResponse.redirect(redirectUrl);
+    }
+  }
 
   return response;
 }

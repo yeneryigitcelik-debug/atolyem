@@ -1,0 +1,290 @@
+"use client";
+
+import { useState } from "react";
+import { useAuth } from "@/contexts/AuthContext";
+import PageHeader from "@/components/ui/PageHeader";
+import Link from "next/link";
+
+interface CartItem {
+  id: string;
+  title: string;
+  artist: string;
+  artistSlug: string;
+  price: number;
+  quantity: number;
+  image: string;
+  slug: string;
+}
+
+const initialCartItems: CartItem[] = [
+  { 
+    id: "1",
+    title: "Soyut Kompozisyon", 
+    artist: "Ayşe Demir", 
+    artistSlug: "ayse-demir",
+    price: 3500, 
+    quantity: 1, 
+    image: "https://images.unsplash.com/photo-1579783902614-a3fb3927b6a5?w=200&h=200&fit=crop",
+    slug: "soyut-kompozisyon"
+  },
+  { 
+    id: "2",
+    title: "El Yapımı Seramik Vazo", 
+    artist: "Mehmet Demir", 
+    artistSlug: "mehmet-demir",
+    price: 850, 
+    quantity: 2, 
+    image: "https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=200&h=200&fit=crop",
+    slug: "el-yapimi-seramik-vazo"
+  },
+];
+
+export default function SepetPage() {
+  const { user, isLoading } = useAuth();
+  const [cartItems, setCartItems] = useState<CartItem[]>(initialCartItems);
+  const [removingId, setRemovingId] = useState<string | null>(null);
+
+  const handleQuantityChange = (id: string, delta: number) => {
+    setCartItems(prev => prev.map(item => {
+      if (item.id === id) {
+        const newQuantity = Math.max(1, item.quantity + delta);
+        return { ...item, quantity: newQuantity };
+      }
+      return item;
+    }));
+  };
+
+  const handleRemoveItem = async (id: string) => {
+    setRemovingId(id);
+    // Simulate API call
+    await new Promise(resolve => setTimeout(resolve, 300));
+    setCartItems(prev => prev.filter(item => item.id !== id));
+    setRemovingId(null);
+  };
+
+  const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const shipping = subtotal >= 500 ? 0 : 50;
+  const total = subtotal + shipping;
+
+  // Show login prompt if not authenticated
+  if (!isLoading && !user) {
+    return (
+      <>
+        <PageHeader title="Sepetim" />
+        <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-12">
+          <div className="text-center py-16">
+            <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
+              <span className="material-symbols-outlined text-primary text-4xl">login</span>
+            </div>
+            <h2 className="text-xl font-bold text-text-charcoal mb-2">Giriş Yapın</h2>
+            <p className="text-text-secondary mb-8 max-w-md mx-auto">
+              Sepetinizi görmek ve alışverişe devam etmek için hesabınıza giriş yapmanız gerekmektedir.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-3 justify-center">
+              <Link 
+                href="/hesap" 
+                className="inline-flex items-center justify-center px-8 py-3 bg-primary hover:bg-primary-dark text-white font-semibold rounded-md transition-colors"
+              >
+                Giriş Yap
+              </Link>
+              <Link 
+                href="/kesfet" 
+                className="inline-flex items-center justify-center px-8 py-3 border border-border-subtle text-text-charcoal hover:border-primary hover:text-primary font-semibold rounded-md transition-colors"
+              >
+                Keşfetmeye Başla
+              </Link>
+            </div>
+          </div>
+        </div>
+      </>
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <>
+        <PageHeader title="Sepetim" />
+        <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-12">
+          <div className="text-center py-16">
+            <div className="animate-spin w-8 h-8 border-2 border-primary border-t-transparent rounded-full mx-auto"></div>
+            <p className="text-text-secondary mt-4">Yükleniyor...</p>
+          </div>
+        </div>
+      </>
+    );
+  }
+
+  const hasItems = cartItems.length > 0;
+
+  return (
+    <>
+      <PageHeader title="Sepetim" />
+
+      <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        {hasItems ? (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
+            {/* Cart Items */}
+            <div className="lg:col-span-2 space-y-4">
+              <div className="flex items-center justify-between mb-4">
+                <p className="text-text-secondary">{cartItems.length} ürün</p>
+                <button 
+                  onClick={() => setCartItems([])}
+                  className="text-sm text-red-500 hover:text-red-600 font-medium flex items-center gap-1"
+                >
+                  <span className="material-symbols-outlined text-[18px]">delete_sweep</span>
+                  Sepeti Boşalt
+                </button>
+              </div>
+
+              {cartItems.map((item) => (
+                <div 
+                  key={item.id} 
+                  className={`bg-surface-white rounded-lg border border-border-subtle p-6 transition-all ${
+                    removingId === item.id ? 'opacity-50 scale-98' : ''
+                  }`}
+                >
+                  <div className="flex gap-4 sm:gap-6">
+                    {/* Product Image */}
+                    <Link href={`/urun/${item.slug}`} className="shrink-0">
+                      <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-lg overflow-hidden">
+                        <div 
+                          className="w-full h-full bg-cover bg-center hover:scale-105 transition-transform" 
+                          style={{ backgroundImage: `url('${item.image}')` }} 
+                        />
+                      </div>
+                    </Link>
+                    
+                    {/* Product Info */}
+                    <div className="flex-grow min-w-0">
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="min-w-0">
+                          <Link href={`/urun/${item.slug}`}>
+                            <h3 className="font-semibold text-text-charcoal hover:text-primary transition-colors line-clamp-1">
+                              {item.title}
+                            </h3>
+                          </Link>
+                          <Link 
+                            href={`/sanatci/${item.artistSlug}`}
+                            className="text-sm text-text-secondary hover:text-primary transition-colors"
+                          >
+                            {item.artist}
+                          </Link>
+                        </div>
+                        
+                        {/* Remove Button */}
+                        <button 
+                          onClick={() => handleRemoveItem(item.id)}
+                          disabled={removingId === item.id}
+                          className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors flex items-center gap-1 shrink-0"
+                          title="Sepetten Kaldır"
+                        >
+                          <span className="material-symbols-outlined">delete</span>
+                          <span className="hidden sm:inline text-sm font-medium">Kaldır</span>
+                        </button>
+                      </div>
+                      
+                      <div className="flex items-center justify-between mt-4">
+                        {/* Quantity Controls */}
+                        <div className="flex items-center gap-2">
+                          <button 
+                            onClick={() => handleQuantityChange(item.id, -1)}
+                            disabled={item.quantity <= 1}
+                            className="w-8 h-8 border border-border-subtle rounded-lg flex items-center justify-center hover:border-primary hover:text-primary disabled:opacity-50 disabled:hover:border-border-subtle disabled:hover:text-text-charcoal transition-colors"
+                          >
+                            <span className="material-symbols-outlined text-[18px]">remove</span>
+                          </button>
+                          <span className="w-10 text-center font-medium">{item.quantity}</span>
+                          <button 
+                            onClick={() => handleQuantityChange(item.id, 1)}
+                            className="w-8 h-8 border border-border-subtle rounded-lg flex items-center justify-center hover:border-primary hover:text-primary transition-colors"
+                          >
+                            <span className="material-symbols-outlined text-[18px]">add</span>
+                          </button>
+                        </div>
+                        
+                        {/* Price */}
+                        <div className="text-right">
+                          <p className="font-bold text-text-charcoal">
+                            {(item.price * item.quantity).toLocaleString("tr-TR")} ₺
+                          </p>
+                          {item.quantity > 1 && (
+                            <p className="text-xs text-text-secondary">
+                              Birim: {item.price.toLocaleString("tr-TR")} ₺
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Summary */}
+            <div>
+              <div className="bg-surface-white rounded-lg border border-border-subtle p-6 sticky top-24">
+                <h3 className="font-bold text-text-charcoal mb-6">Sipariş Özeti</h3>
+                <div className="space-y-4 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-text-secondary">Ara Toplam ({cartItems.reduce((sum, item) => sum + item.quantity, 0)} ürün)</span>
+                    <span className="text-text-charcoal">{subtotal.toLocaleString("tr-TR")} ₺</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-text-secondary">Kargo</span>
+                    <span className="text-text-charcoal">{shipping === 0 ? "Ücretsiz" : `${shipping} ₺`}</span>
+                  </div>
+                  {shipping > 0 && (
+                    <div className="flex items-center gap-2 p-3 bg-primary/5 rounded-lg">
+                      <span className="material-symbols-outlined text-primary text-[18px]">local_shipping</span>
+                      <p className="text-xs text-primary">
+                        <strong>{(500 - subtotal).toLocaleString("tr-TR")} ₺</strong> daha ekleyin, kargo ücretsiz!
+                      </p>
+                    </div>
+                  )}
+                  <hr className="border-border-subtle" />
+                  <div className="flex justify-between text-lg font-bold">
+                    <span className="text-text-charcoal">Toplam</span>
+                    <span className="text-text-charcoal">{total.toLocaleString("tr-TR")} ₺</span>
+                  </div>
+                </div>
+                
+                <button className="w-full mt-6 py-4 bg-primary hover:bg-primary-dark text-white font-semibold rounded-lg transition-colors flex items-center justify-center gap-2">
+                  <span className="material-symbols-outlined">lock</span>
+                  Güvenli Ödemeye Geç
+                </button>
+                
+                <Link href="/kesfet" className="flex items-center justify-center gap-1 mt-4 text-sm text-primary hover:text-primary-dark transition-colors">
+                  <span className="material-symbols-outlined text-[18px]">arrow_back</span>
+                  Alışverişe Devam Et
+                </Link>
+
+                {/* Trust Badges */}
+                <div className="mt-6 pt-6 border-t border-border-subtle">
+                  <div className="flex items-center justify-center gap-6 text-text-secondary">
+                    <div className="flex items-center gap-1 text-xs">
+                      <span className="material-symbols-outlined text-[16px]">verified_user</span>
+                      Güvenli Ödeme
+                    </div>
+                    <div className="flex items-center gap-1 text-xs">
+                      <span className="material-symbols-outlined text-[16px]">autorenew</span>
+                      Kolay İade
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="text-center py-16">
+            <span className="material-symbols-outlined text-6xl text-border-subtle mb-4">shopping_bag</span>
+            <h2 className="text-xl font-bold text-text-charcoal mb-2">Sepetiniz boş</h2>
+            <p className="text-text-secondary mb-8">Harika eserleri keşfetmeye başlayın.</p>
+            <Link href="/kesfet" className="inline-flex px-8 py-3 bg-primary hover:bg-primary-dark text-white font-semibold rounded-md transition-colors">
+              Keşfetmeye Başla
+            </Link>
+          </div>
+        )}
+      </div>
+    </>
+  );
+}
