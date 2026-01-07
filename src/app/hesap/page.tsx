@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
 import PageHeader from "@/components/ui/PageHeader";
@@ -9,18 +9,62 @@ import Link from "next/link";
 
 type AuthMode = "login" | "register" | "forgot";
 
+// Username validation regex
+const USERNAME_REGEX = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+
 export default function HesapPage() {
-  const { user, profile, isLoading, signIn, signUp, signInWithGoogle, resetPassword } = useAuth();
+  const { user, profile, isLoading, signIn, signInWithGoogle, resetPassword } = useAuth();
   const router = useRouter();
   
   const [mode, setMode] = useState<AuthMode>("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
+  const [username, setUsername] = useState("");
+  const [usernameStatus, setUsernameStatus] = useState<"idle" | "checking" | "available" | "taken" | "invalid">("idle");
   const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  // Debounced username availability check
+  const checkUsernameAvailability = useCallback(async (value: string) => {
+    if (value.length < 3) {
+      setUsernameStatus("invalid");
+      return;
+    }
+    
+    if (!USERNAME_REGEX.test(value)) {
+      setUsernameStatus("invalid");
+      return;
+    }
+
+    setUsernameStatus("checking");
+    
+    try {
+      const res = await fetch(`/api/profiles/check-username?username=${encodeURIComponent(value)}`);
+      const data = await res.json();
+      
+      if (data.available) {
+        setUsernameStatus("available");
+      } else {
+        setUsernameStatus("taken");
+      }
+    } catch {
+      setUsernameStatus("idle");
+    }
+  }, []);
+
+  // Debounce username check
+  useEffect(() => {
+    if (!username || mode !== "register") return;
+    
+    const timer = setTimeout(() => {
+      checkUsernameAvailability(username.toLowerCase());
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [username, mode, checkUsernameAvailability]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -45,45 +89,82 @@ export default function HesapPage() {
     setError(null);
     setSubmitting(true);
 
+    // Validate password
     if (password.length < 6) {
       setError("Şifre en az 6 karakter olmalıdır");
       setSubmitting(false);
       return;
     }
 
-    const { error } = await signUp(email, password, { full_name: fullName });
-    
-    if (error) {
-      console.error("Registration error:", error);
-      
-      if (error.message.includes("already registered") || error.message.includes("already exists")) {
-        setError("Bu e-posta adresi zaten kayıtlı");
-      } else if (error.message.includes("Failed to fetch") || error.message.includes("NetworkError")) {
-        setError(
-          "❌ Supabase'e bağlanılamıyor!\n\n" +
-          "Lütfen şunları kontrol edin:\n" +
-          "1. .env.local dosyasında NEXT_PUBLIC_SUPABASE_URL ve NEXT_PUBLIC_SUPABASE_ANON_KEY değerlerini gerçek Supabase bilgilerinizle değiştirin\n" +
-          "2. SUPABASE_SETUP.md dosyasındaki adımları takip edin\n" +
-          "3. Development server'ı yeniden başlatın (Ctrl+C sonra npm run dev)"
-        );
-      } else if (error.message.includes("Invalid API key") || error.message.includes("Missing") || error.message.includes("yapılandırması eksik")) {
-        setError(
-          "❌ Supabase yapılandırması eksik!\n\n" +
-          "Lütfen .env.local dosyanızı açın ve placeholder değerleri gerçek Supabase bilgilerinizle değiştirin.\n\n" +
-          "Detaylı bilgi için SUPABASE_SETUP.md dosyasına bakın."
-        );
-      } else {
-        setError(error.message || "Kayıt işlemi başarısız oldu. Lütfen tekrar deneyin.");
+    // Validate username
+    const normalizedUsername = username.toLowerCase();
+    if (normalizedUsername.length < 3) {
+      setError("Kullanıcı adı en az 3 karakter olmalıdır");
+      setSubmitting(false);
+      return;
+    }
+
+    if (!USERNAME_REGEX.test(normalizedUsername)) {
+      setError("Kullanıcı adı sadece küçük harf, rakam ve tire içerebilir");
+      setSubmitting(false);
+      return;
+    }
+
+    if (usernameStatus === "taken") {
+      setError("Bu kullanıcı adı zaten alınmış");
+      setSubmitting(false);
+      return;
+    }
+
+    try {
+      const res = await fetch("/api/auth/signup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email,
+          password,
+          fullName,
+          username: normalizedUsername,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        if (data.code === "USERNAME_TAKEN") {
+          setError("Bu kullanıcı adı zaten alınmış");
+          setUsernameStatus("taken");
+        } else if (data.code === "EMAIL_EXISTS") {
+          setError("Bu e-posta adresi zaten kayıtlı");
+        } else if (data.code === "VALIDATION_ERROR" && data.details) {
+          const messages = data.details.map((d: { message: string }) => d.message).join(", ");
+          setError(messages);
+        } else {
+          setError(data.error || "Kayıt işlemi başarısız oldu. Lütfen tekrar deneyin.");
+        }
+        return;
       }
-    } else {
+
       setSuccess("Kayıt başarılı! Lütfen e-posta adresinizi doğrulayın.");
       setMode("login");
       setEmail("");
       setPassword("");
       setFullName("");
+      setUsername("");
+      setUsernameStatus("idle");
+    } catch (err) {
+      console.error("Registration error:", err);
+      if (err instanceof TypeError && (err.message.includes("Failed to fetch") || err.message.includes("NetworkError"))) {
+        setError(
+          "❌ Sunucuya bağlanılamıyor!\n\n" +
+          "Lütfen internet bağlantınızı kontrol edin ve tekrar deneyin."
+        );
+      } else {
+        setError("Kayıt işlemi sırasında bir hata oluştu. Lütfen tekrar deneyin.");
+      }
+    } finally {
+      setSubmitting(false);
     }
-    
-    setSubmitting(false);
   };
 
   const handleForgotPassword = async (e: React.FormEvent) => {
@@ -344,6 +425,63 @@ export default function HesapPage() {
                 />
               </div>
               <div>
+                <label className="block text-sm font-medium text-text-charcoal mb-2">
+                  Kullanıcı Adı
+                  <span className="text-red-500 ml-1">*</span>
+                </label>
+                <div className="relative">
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-text-secondary">@</span>
+                  <input 
+                    type="text" 
+                    value={username}
+                    onChange={(e) => {
+                      const value = e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "");
+                      setUsername(value);
+                      setUsernameStatus("idle");
+                    }}
+                    required
+                    minLength={3}
+                    maxLength={30}
+                    placeholder="kullanici-adi"
+                    className={`w-full pl-9 pr-10 py-3 border rounded-md focus:outline-none transition-colors ${
+                      usernameStatus === "available" 
+                        ? "border-green-500 focus:border-green-500" 
+                        : usernameStatus === "taken" || usernameStatus === "invalid"
+                        ? "border-red-500 focus:border-red-500"
+                        : "border-border-subtle focus:border-primary"
+                    }`}
+                  />
+                  <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                    {usernameStatus === "checking" && (
+                      <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                    )}
+                    {usernameStatus === "available" && (
+                      <span className="material-symbols-outlined text-green-500 text-xl">check_circle</span>
+                    )}
+                    {(usernameStatus === "taken" || usernameStatus === "invalid") && (
+                      <span className="material-symbols-outlined text-red-500 text-xl">cancel</span>
+                    )}
+                  </div>
+                </div>
+                <p className="text-xs text-text-secondary mt-1">
+                  {usernameStatus === "available" && (
+                    <span className="text-green-600">✓ Bu kullanıcı adı müsait</span>
+                  )}
+                  {usernameStatus === "taken" && (
+                    <span className="text-red-600">✗ Bu kullanıcı adı zaten alınmış</span>
+                  )}
+                  {usernameStatus === "invalid" && username.length > 0 && (
+                    <span className="text-red-600">✗ Geçersiz format (sadece küçük harf, rakam ve tire)</span>
+                  )}
+                  {usernameStatus === "idle" && username.length === 0 && (
+                    <span>Profilinizin URL&apos;si: atolyem.net/sanatsever/<strong>{username || "kullanici-adi"}</strong></span>
+                  )}
+                  {usernameStatus === "idle" && username.length > 0 && username.length < 3 && (
+                    <span className="text-amber-600">En az 3 karakter olmalı</span>
+                  )}
+                </p>
+              </div>
+              <div>
                 <label className="block text-sm font-medium text-text-charcoal mb-2">E-posta</label>
                 <input 
                   type="email" 
@@ -367,7 +505,7 @@ export default function HesapPage() {
               </div>
               <button 
                 type="submit" 
-                disabled={submitting}
+                disabled={submitting || usernameStatus === "taken" || usernameStatus === "invalid" || usernameStatus === "checking"}
                 className="w-full py-3 bg-primary hover:bg-primary-dark disabled:bg-primary/50 text-white font-semibold rounded-md transition-colors"
               >
                 {submitting ? "Kayıt yapılıyor..." : "Kayıt Ol"}

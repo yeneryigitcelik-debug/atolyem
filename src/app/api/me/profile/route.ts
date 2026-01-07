@@ -7,19 +7,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { withRequestContext } from "@/interface/middleware/with-request-context";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { prisma } from "@/lib/db/prisma";
-import { z } from "zod";
-
-const updateProfileSchema = z.object({
-  displayName: z.string().min(2).max(100).optional(),
-  username: z.string().min(3).max(50).regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, "Invalid username format").optional(),
-  bio: z.string().max(500).optional().nullable(),
-  avatarUrl: z.string().url().optional().nullable(),
-  bannerUrl: z.string().url().optional().nullable(),
-  location: z.string().max(100).optional().nullable(),
-  websiteUrl: z.string().url().max(200).optional().nullable().or(z.literal("")),
-  instagramHandle: z.string().max(30).optional().nullable(),
-  isPublic: z.boolean().optional(),
-});
+import { updateProfileSettingsSchema } from "@/lib/api/validation";
 
 export const GET = withRequestContext(async (request: NextRequest, { requestId }) => {
   const { user, publicProfile, sellerProfile } = await requireAuth();
@@ -57,6 +45,7 @@ export const GET = withRequestContext(async (request: NextRequest, { requestId }
         websiteUrl: publicProfile.websiteUrl,
         instagramHandle: publicProfile.instagramHandle,
         isPublic: publicProfile.isPublic,
+        showFavorites: publicProfile.showFavorites,
         memberSince: user.createdAt,
         accountType: user.accountType,
         isArtist: user.accountType === "SELLER" || user.accountType === "BOTH",
@@ -92,16 +81,24 @@ export const PATCH = withRequestContext(async (request: NextRequest, { requestId
   }
 
   const body = await request.json();
-  const data = updateProfileSchema.parse(body);
+  const data = updateProfileSettingsSchema.parse(body);
 
-  // Check username uniqueness if changed
-  if (data.username && data.username !== publicProfile.username) {
-    const existingProfile = await prisma.publicProfile.findUnique({
-      where: { username: data.username },
+  // Normalize username to lowercase if provided
+  const normalizedUsername = data.username?.toLowerCase();
+
+  // Check username uniqueness if changed (case-insensitive)
+  if (normalizedUsername && normalizedUsername !== publicProfile.username.toLowerCase()) {
+    const existingProfile = await prisma.publicProfile.findFirst({
+      where: {
+        username: {
+          equals: normalizedUsername,
+          mode: "insensitive",
+        },
+      },
     });
     if (existingProfile) {
       return NextResponse.json(
-        { error: "This username is already taken" },
+        { error: "Bu kullanıcı adı zaten alınmış", code: "USERNAME_TAKEN" },
         { status: 409, headers: { "x-request-id": requestId } }
       );
     }
@@ -111,7 +108,7 @@ export const PATCH = withRequestContext(async (request: NextRequest, { requestId
     where: { userId: user.id },
     data: {
       displayName: data.displayName,
-      username: data.username,
+      username: normalizedUsername,
       bio: data.bio,
       avatarUrl: data.avatarUrl,
       bannerUrl: data.bannerUrl,
@@ -119,14 +116,18 @@ export const PATCH = withRequestContext(async (request: NextRequest, { requestId
       websiteUrl: data.websiteUrl || null,
       instagramHandle: data.instagramHandle,
       isPublic: data.isPublic,
+      showFavorites: data.showFavorites,
     },
   });
 
-  // Also update user's avatarUrl if avatar changed
-  if (data.avatarUrl !== undefined) {
+  // Also update user's avatarUrl and displayName if changed
+  if (data.avatarUrl !== undefined || data.displayName !== undefined) {
     await prisma.user.update({
       where: { id: user.id },
-      data: { avatarUrl: data.avatarUrl },
+      data: {
+        ...(data.avatarUrl !== undefined && { avatarUrl: data.avatarUrl }),
+        ...(data.displayName !== undefined && { displayName: data.displayName }),
+      },
     });
   }
 
@@ -134,7 +135,7 @@ export const PATCH = withRequestContext(async (request: NextRequest, { requestId
 
   return NextResponse.json(
     {
-      message: "Profile updated successfully",
+      message: "Profil başarıyla güncellendi",
       profile: {
         username: updatedProfile.username,
         displayName: updatedProfile.displayName,
@@ -145,6 +146,7 @@ export const PATCH = withRequestContext(async (request: NextRequest, { requestId
         websiteUrl: updatedProfile.websiteUrl,
         instagramHandle: updatedProfile.instagramHandle,
         isPublic: updatedProfile.isPublic,
+        showFavorites: updatedProfile.showFavorites,
       },
     },
     { headers: { "x-request-id": requestId } }

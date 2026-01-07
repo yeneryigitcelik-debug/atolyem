@@ -148,7 +148,8 @@ model User {
   reports          Report[]
   privateListings  PrivateListingAccess[]
   badges           UserBadge[]
-  blogComments     BlogComment[]
+  blogComments     BlogComment[] @relation("BlogCommentAuthor")
+  blogPosts        BlogPost[]    @relation("BlogPostAuthor")
   
   // Messaging relations
   sentMessages         Message[]           @relation("SentMessages")
@@ -159,6 +160,10 @@ model User {
   // User following system
   following      UserFollow[] @relation("Following")
   followers      UserFollow[] @relation("Followers")
+  
+  // Profile comments
+  profileCommentsWritten  ProfileComment[] @relation("CommentAuthor")
+  profileCommentsReceived ProfileComment[] @relation("ProfileOwner")
 
   @@map("user")
 }
@@ -189,12 +194,14 @@ model PublicProfile {
   websiteUrl      String?  @map("website_url")
   instagramHandle String?  @map("instagram_handle")
   isPublic        Boolean  @default(true) @map("is_public")
+  showFavorites   Boolean  @default(true) @map("show_favorites") // Show favorites on public profile
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @updatedAt @map("updated_at")
 
   user   User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   badges UserBadge[]
 
+  // Case-insensitive unique username index is handled by DB migration
   @@map("public_profile")
 }
 
@@ -997,42 +1004,70 @@ model UserFollow {
 // BLOG COMMENTS (Blog Yorumları)
 // ============================================================================
 
-/// Blog post (for admin-created content)
-model BlogPost {
-  id          String   @id @default(uuid()) @db.Uuid
-  slug        String   @unique
-  title       String
-  content     String
-  excerpt     String?
-  coverImage  String?  @map("cover_image")
-  category    String?
-  authorName  String   @map("author_name")
-  isPublished Boolean  @default(false) @map("is_published")
-  publishedAt DateTime? @map("published_at")
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+// ============================================================================
+// PROFILE COMMENTS (Profil Yorumları)
+// ============================================================================
 
+/// Profile comment - Users can leave comments on other users' profiles
+model ProfileComment {
+  id            String   @id @default(uuid()) @db.Uuid
+  profileUserId String   @map("profile_user_id") @db.Uuid // The user whose profile is being commented on
+  authorUserId  String   @map("author_user_id") @db.Uuid // The user who wrote the comment
+  body          String
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  profileOwner User @relation("ProfileOwner", fields: [profileUserId], references: [id], onDelete: Cascade)
+  author       User @relation("CommentAuthor", fields: [authorUserId], references: [id], onDelete: Cascade)
+
+  @@index([profileUserId, createdAt(sort: Desc)])
+  @@map("profile_comment")
+}
+
+/// Blog post status
+enum BlogPostStatus {
+  DRAFT
+  PUBLISHED
+}
+
+/// Blog post (user-created content)
+model BlogPost {
+  id            String         @id @default(uuid()) @db.Uuid
+  authorUserId  String         @map("author_user_id") @db.Uuid
+  slug          String         @unique
+  title         String
+  content       String         // Markdown content
+  excerpt       String?
+  coverImageUrl String?        @map("cover_image_url")
+  category      String?
+  status        BlogPostStatus @default(DRAFT)
+  publishedAt   DateTime?      @map("published_at")
+  createdAt     DateTime       @default(now()) @map("created_at")
+  updatedAt     DateTime       @updatedAt @map("updated_at")
+
+  author   User          @relation("BlogPostAuthor", fields: [authorUserId], references: [id], onDelete: Cascade)
   comments BlogComment[]
 
-  @@index([isPublished, publishedAt(sort: Desc)])
+  @@index([authorUserId, status, publishedAt(sort: Desc)])
+  @@index([status, publishedAt(sort: Desc)])
   @@map("blog_post")
 }
 
 /// Blog comment
 model BlogComment {
-  id        String   @id @default(uuid()) @db.Uuid
-  postId    String   @map("post_id") @db.Uuid
-  userId    String   @map("user_id") @db.Uuid
-  parentId  String?  @map("parent_id") @db.Uuid // For replies
-  content   String
-  isApproved Boolean @default(true) @map("is_approved")
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  id           String   @id @default(uuid()) @db.Uuid
+  postId       String   @map("post_id") @db.Uuid
+  authorUserId String   @map("author_user_id") @db.Uuid
+  parentId     String?  @map("parent_id") @db.Uuid // For replies
+  body         String
+  isApproved   Boolean  @default(true) @map("is_approved")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
 
-  post     BlogPost      @relation(fields: [postId], references: [id], onDelete: Cascade)
-  user     User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  parent   BlogComment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
-  replies  BlogComment[] @relation("CommentReplies")
+  post    BlogPost      @relation(fields: [postId], references: [id], onDelete: Cascade)
+  author  User          @relation("BlogCommentAuthor", fields: [authorUserId], references: [id], onDelete: Cascade)
+  parent  BlogComment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies BlogComment[] @relation("CommentReplies")
 
   @@index([postId, createdAt(sort: Desc)])
   @@map("blog_comment")

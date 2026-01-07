@@ -22,9 +22,14 @@ export const POST = withRequestContext<RouteParams>(async (request, { requestId,
       sellerUserId: true,
       status: true,
       title: true,
+      description: true,
       basePriceMinor: true,
       baseQuantity: true,
       slugLocked: true,
+      media: {
+        select: { id: true },
+        take: 1,
+      },
     },
   });
 
@@ -33,7 +38,11 @@ export const POST = withRequestContext<RouteParams>(async (request, { requestId,
   }
 
   assertCanEditListing(listing.sellerUserId, user.id, user.isAdmin);
-  assertCanPublish(listing);
+  assertCanPublish({
+    ...listing,
+    description: listing.description ?? "",
+    mediaCount: listing.media.length,
+  });
 
   const updatedListing = await prisma.listing.update({
     where: { id: listing.id },

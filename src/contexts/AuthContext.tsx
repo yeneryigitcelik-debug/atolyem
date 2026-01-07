@@ -14,6 +14,7 @@ interface UserProfile {
   websiteUrl: string | null;
   instagramHandle: string | null;
   isPublic: boolean;
+  showFavorites: boolean;
   isArtist: boolean;
   shopSlug: string | null;
 }
@@ -73,6 +74,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           websiteUrl: data.profile.websiteUrl,
           instagramHandle: data.profile.instagramHandle,
           isPublic: data.profile.isPublic,
+          showFavorites: data.profile.showFavorites ?? true,
           isArtist: data.profile.isArtist,
           shopSlug: data.profile.shopSlug,
         });
@@ -185,12 +187,40 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signIn = useCallback(async (email: string, password: string) => {
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
       
       if (error) {
+        // Handle email not confirmed error
+        if (error.message.includes("Email not confirmed") || error.message.includes("email_not_confirmed")) {
+          // Try to auto-confirm email via API
+          try {
+            const confirmRes = await fetch("/api/auth/confirm-email", {
+              method: "POST",
+            });
+            
+            if (confirmRes.ok) {
+              // Retry sign in after confirmation
+              const { error: retryError } = await supabase.auth.signInWithPassword({
+                email,
+                password,
+              });
+              
+              if (retryError) {
+                console.error("Sign in error after confirmation:", retryError);
+                return { error: retryError as Error };
+              }
+              
+              return { error: null };
+            }
+          } catch (confirmError) {
+            console.error("Auto-confirm error:", confirmError);
+            // Fall through to return original error
+          }
+        }
+        
         console.error("Sign in error:", error);
         return { error: error as Error };
       }

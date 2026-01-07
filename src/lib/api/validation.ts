@@ -286,6 +286,72 @@ export const followShopSchema = z.object({
   shopId: uuidSchema,
 });
 
+export const followUserSchema = z.object({
+  userId: uuidSchema,
+});
+
+// ============================================================================
+// Username Validation
+// ============================================================================
+
+// Reserved usernames that cannot be used
+const RESERVED_USERNAMES = [
+  "admin", "administrator", "root", "system", "atolyem", "support", "help",
+  "api", "app", "www", "mail", "email", "ftp", "blog", "shop", "store",
+  "sanatci", "sanatcilar", "sanatsever", "hesap", "ayarlar", "profil",
+  "siparislerim", "favorilerim", "mesajlar", "sepet", "kesfet", "test",
+  "user", "users", "moderator", "mod", "staff", "team", "official",
+] as const;
+
+export const usernameSchema = z
+  .string()
+  .min(3, "Kullanıcı adı en az 3 karakter olmalıdır")
+  .max(30, "Kullanıcı adı en fazla 30 karakter olabilir")
+  .regex(
+    /^[a-z0-9]+(?:-[a-z0-9]+)*$/,
+    "Kullanıcı adı sadece küçük harf, rakam ve tire içerebilir"
+  )
+  .refine(
+    (username) => !RESERVED_USERNAMES.includes(username.toLowerCase() as typeof RESERVED_USERNAMES[number]),
+    "Bu kullanıcı adı kullanılamaz"
+  );
+
+export const signupWithUsernameSchema = z.object({
+  email: z.string().email("Geçerli bir e-posta adresi girin"),
+  password: z.string().min(6, "Şifre en az 6 karakter olmalıdır"),
+  fullName: z.string().min(2, "Ad soyad en az 2 karakter olmalıdır").max(100),
+  username: usernameSchema,
+});
+
+export const updateProfileSettingsSchema = z.object({
+  username: usernameSchema.optional(),
+  displayName: z.string().min(2).max(100).optional(),
+  bio: z.string().max(500).optional().nullable(),
+  avatarUrl: z.string().url().optional().nullable(),
+  bannerUrl: z.string().url().optional().nullable(),
+  location: z.string().max(100).optional().nullable(),
+  websiteUrl: z.string().url().max(200).optional().nullable().or(z.literal("")),
+  instagramHandle: z.string().max(30).optional().nullable(),
+  isPublic: z.boolean().optional(),
+  showFavorites: z.boolean().optional(),
+});
+
+// ============================================================================
+// Profile Comment Schemas
+// ============================================================================
+
+export const createProfileCommentSchema = z.object({
+  body: z
+    .string()
+    .min(2, "Yorum en az 2 karakter olmalıdır")
+    .max(1000, "Yorum en fazla 1000 karakter olabilir"),
+});
+
+export const profileCommentsQuerySchema = z.object({
+  cursor: z.string().optional(),
+  limit: z.coerce.number().int().min(1).max(50).default(20),
+});
+
 // ============================================================================
 // Review Schemas
 // ============================================================================
@@ -333,6 +399,69 @@ export const listingSearchSchema = z.object({
 });
 
 // ============================================================================
+// Blog Post Schemas
+// ============================================================================
+
+export const blogPostStatusSchema = z.enum(["DRAFT", "PUBLISHED"]);
+
+export const createBlogPostSchema = z.object({
+  title: z
+    .string()
+    .min(3, "Başlık en az 3 karakter olmalıdır")
+    .max(200, "Başlık en fazla 200 karakter olabilir"),
+  content: z
+    .string()
+    .min(10, "İçerik en az 10 karakter olmalıdır")
+    .max(100000, "İçerik çok uzun"),
+  excerpt: z.string().max(500, "Özet en fazla 500 karakter olabilir").optional().nullable(),
+  coverImageUrl: z.string().url("Geçerli bir URL giriniz").optional().nullable(),
+  category: z.string().max(50).optional().nullable(),
+  status: blogPostStatusSchema.default("DRAFT"),
+});
+
+export const updateBlogPostSchema = z.object({
+  title: z
+    .string()
+    .min(3, "Başlık en az 3 karakter olmalıdır")
+    .max(200, "Başlık en fazla 200 karakter olabilir")
+    .optional(),
+  content: z
+    .string()
+    .min(10, "İçerik en az 10 karakter olmalıdır")
+    .max(100000, "İçerik çok uzun")
+    .optional(),
+  excerpt: z.string().max(500).optional().nullable(),
+  coverImageUrl: z.string().url().optional().nullable(),
+  category: z.string().max(50).optional().nullable(),
+  status: blogPostStatusSchema.optional(),
+});
+
+export const blogPostQuerySchema = z.object({
+  page: z.coerce.number().int().positive().default(1),
+  limit: z.coerce.number().int().min(1).max(50).default(10),
+  category: z.string().max(50).optional(),
+  authorId: z.string().uuid().optional(),
+  status: blogPostStatusSchema.optional(), // Only for author viewing their own drafts
+});
+
+// ============================================================================
+// Blog Comment Schemas
+// ============================================================================
+
+export const createBlogCommentSchema = z.object({
+  body: z
+    .string()
+    .min(2, "Yorum en az 2 karakter olmalıdır")
+    .max(2000, "Yorum en fazla 2000 karakter olabilir"),
+  parentId: z.string().uuid().optional().nullable(),
+});
+
+export const blogCommentsQuerySchema = z.object({
+  page: z.coerce.number().int().positive().default(1),
+  limit: z.coerce.number().int().min(1).max(50).default(20),
+});
+
+// ============================================================================
 // Type Exports
 // ============================================================================
 
@@ -349,3 +478,13 @@ export type UpdateCartItemInput = z.infer<typeof updateCartItemSchema>;
 export type CheckoutInput = z.infer<typeof checkoutSchema>;
 export type CreateReviewInput = z.infer<typeof createReviewSchema>;
 export type ListingSearchInput = z.infer<typeof listingSearchSchema>;
+export type FollowUserInput = z.infer<typeof followUserSchema>;
+export type SignupWithUsernameInput = z.infer<typeof signupWithUsernameSchema>;
+export type UpdateProfileSettingsInput = z.infer<typeof updateProfileSettingsSchema>;
+export type CreateProfileCommentInput = z.infer<typeof createProfileCommentSchema>;
+export type ProfileCommentsQueryInput = z.infer<typeof profileCommentsQuerySchema>;
+export type CreateBlogPostInput = z.infer<typeof createBlogPostSchema>;
+export type UpdateBlogPostInput = z.infer<typeof updateBlogPostSchema>;
+export type BlogPostQueryInput = z.infer<typeof blogPostQuerySchema>;
+export type CreateBlogCommentInput = z.infer<typeof createBlogCommentSchema>;
+export type BlogCommentsQueryInput = z.infer<typeof blogCommentsQuerySchema>;

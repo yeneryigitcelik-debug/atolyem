@@ -1,13 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import PageHeader from "@/components/ui/PageHeader";
 import AccountSidebar from "@/components/layout/AccountSidebar";
 import Link from "next/link";
 
+// Username validation regex
+const USERNAME_REGEX = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+
 export default function AyarlarPage() {
-  const { user, isLoading } = useAuth();
+  const { user, profile, isLoading, refreshProfile } = useAuth();
   
   const [notifications, setNotifications] = useState({
     email: true,
@@ -19,17 +22,151 @@ export default function AyarlarPage() {
   const [privacy, setPrivacy] = useState({
     profilePublic: true,
     showActivity: true,
-    showFavorites: false,
+    showFavorites: true,
   });
+
+  // Username state
+  const [username, setUsername] = useState("");
+  const [originalUsername, setOriginalUsername] = useState("");
+  const [usernameStatus, setUsernameStatus] = useState<"idle" | "checking" | "available" | "taken" | "invalid" | "unchanged">("unchanged");
+  const [isEditingUsername, setIsEditingUsername] = useState(false);
 
   const [isSaving, setIsSaving] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  // Load initial values from profile
+  useEffect(() => {
+    if (profile) {
+      setUsername(profile.username);
+      setOriginalUsername(profile.username);
+      setPrivacy({
+        profilePublic: profile.isPublic,
+        showActivity: true, // TODO: Add to profile model if needed
+        showFavorites: true, // Will be updated when we add showFavorites to AuthContext
+      });
+    }
+  }, [profile]);
+
+  // Fetch current showFavorites from API (profile might not have it in AuthContext yet)
+  useEffect(() => {
+    if (user) {
+      fetch("/api/me/profile")
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.profile) {
+            setPrivacy((prev) => ({
+              ...prev,
+              profilePublic: data.profile.isPublic,
+              showFavorites: data.profile.showFavorites ?? true,
+            }));
+          }
+        })
+        .catch(console.error);
+    }
+  }, [user]);
+
+  // Debounced username availability check
+  const checkUsernameAvailability = useCallback(async (value: string) => {
+    if (value === originalUsername.toLowerCase()) {
+      setUsernameStatus("unchanged");
+      return;
+    }
+
+    if (value.length < 3) {
+      setUsernameStatus("invalid");
+      return;
+    }
+    
+    if (!USERNAME_REGEX.test(value)) {
+      setUsernameStatus("invalid");
+      return;
+    }
+
+    setUsernameStatus("checking");
+    
+    try {
+      const res = await fetch(`/api/profiles/check-username?username=${encodeURIComponent(value)}`);
+      const data = await res.json();
+      
+      if (data.available) {
+        setUsernameStatus("available");
+      } else {
+        setUsernameStatus("taken");
+      }
+    } catch {
+      setUsernameStatus("idle");
+    }
+  }, [originalUsername]);
+
+  // Debounce username check
+  useEffect(() => {
+    if (!isEditingUsername || !username) return;
+    
+    const timer = setTimeout(() => {
+      checkUsernameAvailability(username.toLowerCase());
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [username, isEditingUsername, checkUsernameAvailability]);
 
   const handleSaveSettings = async () => {
     setIsSaving(true);
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    setIsSaving(false);
+    setErrorMessage(null);
+    setSuccessMessage(null);
+
+    try {
+      // Prepare the update payload
+      const updateData: Record<string, unknown> = {
+        isPublic: privacy.profilePublic,
+        showFavorites: privacy.showFavorites,
+      };
+
+      // Include username if it changed
+      if (username !== originalUsername && usernameStatus === "available") {
+        updateData.username = username.toLowerCase();
+      }
+
+      const res = await fetch("/api/me/profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updateData),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        if (data.code === "USERNAME_TAKEN") {
+          setUsernameStatus("taken");
+          setErrorMessage("Bu kullanıcı adı zaten alınmış");
+        } else {
+          setErrorMessage(data.error || "Ayarlar kaydedilirken bir hata oluştu");
+        }
+        return;
+      }
+
+      // Update local state on success
+      if (data.profile?.username) {
+        setOriginalUsername(data.profile.username);
+        setUsername(data.profile.username);
+        setIsEditingUsername(false);
+        setUsernameStatus("unchanged");
+      }
+
+      setSuccessMessage("Ayarlar başarıyla kaydedildi");
+      
+      // Refresh the profile in auth context
+      await refreshProfile();
+
+      // Clear success message after 3 seconds
+      setTimeout(() => setSuccessMessage(null), 3000);
+    } catch (error) {
+      console.error("Save settings error:", error);
+      setErrorMessage("Ayarlar kaydedilirken bir hata oluştu");
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   if (!isLoading && !user) {
@@ -80,6 +217,122 @@ export default function AyarlarPage() {
 
           {/* Content */}
           <div className="lg:col-span-3 space-y-6">
+            {/* Success/Error Messages */}
+            {successMessage && (
+              <div className="p-4 bg-green-50 border border-green-200 rounded-lg text-green-700 flex items-center gap-2">
+                <span className="material-symbols-outlined">check_circle</span>
+                {successMessage}
+              </div>
+            )}
+            {errorMessage && (
+              <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 flex items-center gap-2">
+                <span className="material-symbols-outlined">error</span>
+                {errorMessage}
+              </div>
+            )}
+
+            {/* Username Settings */}
+            <div className="bg-surface-white rounded-lg border border-border-subtle p-6">
+              <h2 className="text-lg font-bold text-text-charcoal mb-6 flex items-center gap-2">
+                <span className="material-symbols-outlined text-primary">alternate_email</span>
+                Kullanıcı Adı
+              </h2>
+              
+              <div className="space-y-4">
+                {!isEditingUsername ? (
+                  <div className="flex items-center justify-between p-4 bg-background-ivory rounded-lg">
+                    <div>
+                      <p className="font-medium text-text-charcoal">@{originalUsername}</p>
+                      <p className="text-sm text-text-secondary">atolyem.net/sanatsever/{originalUsername}</p>
+                    </div>
+                    <button 
+                      onClick={() => setIsEditingUsername(true)}
+                      className="px-4 py-2 border border-border-subtle text-text-charcoal hover:border-primary hover:text-primary rounded-md transition-colors"
+                    >
+                      Değiştir
+                    </button>
+                  </div>
+                ) : (
+                  <div className="p-4 bg-background-ivory rounded-lg space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-text-charcoal mb-2">
+                        Yeni Kullanıcı Adı
+                      </label>
+                      <div className="relative">
+                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-text-secondary">@</span>
+                        <input 
+                          type="text" 
+                          value={username}
+                          onChange={(e) => {
+                            const value = e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "");
+                            setUsername(value);
+                            if (value === originalUsername) {
+                              setUsernameStatus("unchanged");
+                            } else {
+                              setUsernameStatus("idle");
+                            }
+                          }}
+                          minLength={3}
+                          maxLength={30}
+                          placeholder="kullanici-adi"
+                          className={`w-full pl-9 pr-10 py-3 border rounded-md focus:outline-none transition-colors ${
+                            usernameStatus === "available" 
+                              ? "border-green-500 focus:border-green-500" 
+                              : usernameStatus === "taken" || usernameStatus === "invalid"
+                              ? "border-red-500 focus:border-red-500"
+                              : "border-border-subtle focus:border-primary"
+                          }`}
+                        />
+                        <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                          {usernameStatus === "checking" && (
+                            <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                          )}
+                          {usernameStatus === "available" && (
+                            <span className="material-symbols-outlined text-green-500 text-xl">check_circle</span>
+                          )}
+                          {(usernameStatus === "taken" || usernameStatus === "invalid") && (
+                            <span className="material-symbols-outlined text-red-500 text-xl">cancel</span>
+                          )}
+                        </div>
+                      </div>
+                      <p className="text-xs text-text-secondary mt-2">
+                        {usernameStatus === "unchanged" && (
+                          <span>Mevcut kullanıcı adınız</span>
+                        )}
+                        {usernameStatus === "available" && (
+                          <span className="text-green-600">✓ Bu kullanıcı adı müsait</span>
+                        )}
+                        {usernameStatus === "taken" && (
+                          <span className="text-red-600">✗ Bu kullanıcı adı zaten alınmış</span>
+                        )}
+                        {usernameStatus === "invalid" && username.length > 0 && (
+                          <span className="text-red-600">✗ Geçersiz format (sadece küçük harf, rakam ve tire)</span>
+                        )}
+                        {usernameStatus === "idle" && username.length > 0 && username.length < 3 && (
+                          <span className="text-amber-600">En az 3 karakter olmalı</span>
+                        )}
+                      </p>
+                    </div>
+                    <div className="flex gap-3">
+                      <button 
+                        onClick={() => {
+                          setIsEditingUsername(false);
+                          setUsername(originalUsername);
+                          setUsernameStatus("unchanged");
+                        }}
+                        className="px-4 py-2 border border-border-subtle text-text-charcoal hover:border-red-500 hover:text-red-500 rounded-md transition-colors"
+                      >
+                        İptal
+                      </button>
+                    </div>
+                  </div>
+                )}
+                <p className="text-xs text-text-secondary">
+                  Kullanıcı adınız profilinizin URL&apos;sinde kullanılır. Değiştirdiğinizde eski bağlantılar çalışmaz.
+                </p>
+              </div>
+            </div>
+
             {/* Notifications */}
             <div className="bg-surface-white rounded-lg border border-border-subtle p-6">
               <h2 className="text-lg font-bold text-text-charcoal mb-6 flex items-center gap-2">
@@ -179,7 +432,7 @@ export default function AyarlarPage() {
                 <label className="flex items-center justify-between p-4 bg-background-ivory rounded-lg cursor-pointer">
                   <div>
                     <p className="font-medium text-text-charcoal">Favorileri Göster</p>
-                    <p className="text-sm text-text-secondary">Favori listeni profilinde göster</p>
+                    <p className="text-sm text-text-secondary">Favori listeni profilinde herkese göster</p>
                   </div>
                   <input
                     type="checkbox"
@@ -188,6 +441,9 @@ export default function AyarlarPage() {
                     className="w-5 h-5 accent-primary"
                   />
                 </label>
+                <p className="text-xs text-text-secondary px-4">
+                  Bu ayar açıksa, profilinizi ziyaret edenler favori listelerinizi görebilir.
+                </p>
               </div>
             </div>
 

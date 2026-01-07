@@ -1,5 +1,6 @@
 import PageHeader from "@/components/ui/PageHeader";
 import Link from "next/link";
+import { optionalAuth } from "@/lib/auth/require-auth";
 
 const featuredPost = {
   title: "Sanatçının Atölyesine Yolculuk: Sinem Demirtaş ile Söyleşi",
@@ -19,13 +20,42 @@ const posts = [
   { title: "Sanat Eseri Nasıl Çerçevelenir?", excerpt: "Eserlerinizi profesyonelce çerçevelemek için adım adım kılavuz.", slug: "sanat-eseri-cerceleme", image: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=600&h=400&fit=crop", date: "28 Aralık 2025", category: "Rehber" },
 ];
 
-export default function BlogPage() {
+export default async function BlogPage() {
+  const authContext = await optionalAuth();
+  const isLoggedIn = !!authContext;
+
   return (
     <>
       <PageHeader 
         title="Atölye Günlüğü" 
         description="Sanat dünyasından haberler, sanatçı röportajları ve ilham verici hikayeler."
       />
+
+      {/* Auth Actions - Top Right */}
+      {isLoggedIn && (
+        <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 -mt-8 mb-4">
+          <div className="flex justify-end gap-2">
+            <Link
+              href="/dashboard/blog/new"
+              className="px-4 py-2 bg-primary hover:bg-primary-dark text-white text-sm font-medium rounded-full transition-colors whitespace-nowrap"
+            >
+              Yazı Oluştur
+            </Link>
+            <Link
+              href="/dashboard/blog?status=DRAFT"
+              className="px-4 py-2 bg-surface-white border border-border-subtle text-text-charcoal hover:border-primary hover:text-primary text-sm font-medium rounded-full transition-colors whitespace-nowrap"
+            >
+              Taslaklarım
+            </Link>
+            <Link
+              href="/dashboard/blog"
+              className="px-4 py-2 bg-surface-white border border-border-subtle text-text-charcoal hover:border-primary hover:text-primary text-sm font-medium rounded-full transition-colors whitespace-nowrap"
+            >
+              Yazılarım
+            </Link>
+          </div>
+        </div>
+      )}
 
       {/* Featured Post */}
       <section className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -97,5 +127,3 @@ export default function BlogPage() {
     </>
   );
 }
-
-

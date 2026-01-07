@@ -15,6 +15,7 @@ export async function GET(
     const profile = await prisma.publicProfile.findUnique({
       where: { username },
       select: {
+        userId: true,
         username: true,
         displayName: true,
         bio: true,
@@ -24,6 +25,7 @@ export async function GET(
         websiteUrl: true,
         instagramHandle: true,
         isPublic: true,
+        showFavorites: true,
         user: {
           select: {
             accountType: true,
@@ -61,6 +63,7 @@ export async function GET(
 
     // Format the response
     const formattedProfile = {
+      userId: profile.userId,
       username: profile.username,
       displayName: profile.displayName,
       bio: profile.bio,
@@ -71,6 +74,7 @@ export async function GET(
       instagramHandle: profile.instagramHandle,
       isArtist: profile.user.accountType === "SELLER" || profile.user.accountType === "BOTH",
       memberSince: profile.user.createdAt,
+      showFavorites: profile.showFavorites ?? true,
       stats: {
         favorites: profile.user._count.favorites,
         following: profile.user._count.followedShops + profile.user._count.following,

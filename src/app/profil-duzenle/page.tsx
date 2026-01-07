@@ -19,6 +19,7 @@ export default function ProfilDuzenlePage() {
   const [websiteUrl, setWebsiteUrl] = useState("");
   const [instagramHandle, setInstagramHandle] = useState("");
   const [isPublic, setIsPublic] = useState(true);
+  const [showFavorites, setShowFavorites] = useState(true);
   
   // Image state
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
@@ -46,6 +47,7 @@ export default function ProfilDuzenlePage() {
       setWebsiteUrl(profile.websiteUrl || "");
       setInstagramHandle(profile.instagramHandle || "");
       setIsPublic(profile.isPublic !== false);
+      setShowFavorites(profile.showFavorites !== false);
       setAvatarPreview(profile.avatarUrl || null);
       setBannerPreview(profile.bannerUrl || null);
     }
@@ -148,6 +150,7 @@ export default function ProfilDuzenlePage() {
           websiteUrl: websiteUrl || null,
           instagramHandle: instagramHandle || null,
           isPublic,
+          showFavorites,
           avatarUrl: newAvatarUrl,
           bannerUrl: newBannerUrl,
         }),
@@ -401,27 +404,57 @@ export default function ProfilDuzenlePage() {
                     </div>
 
                     {/* Privacy */}
-                    <div className="p-4 bg-background-ivory rounded-lg">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="font-medium text-text-charcoal">Herkese Açık Profil</p>
-                          <p className="text-sm text-text-secondary mt-1">
-                            Profiliniz diğer kullanıcılar tarafından görülebilir
-                          </p>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => setIsPublic(!isPublic)}
-                          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                            isPublic ? "bg-primary" : "bg-gray-300"
-                          }`}
-                        >
-                          <span
-                            className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                              isPublic ? "translate-x-6" : "translate-x-1"
+                    <div className="space-y-4">
+                      <h3 className="font-semibold text-text-charcoal">Gizlilik Ayarları</h3>
+                      
+                      {/* Public Profile Toggle */}
+                      <div className="p-4 bg-background-ivory rounded-lg">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="font-medium text-text-charcoal">Herkese Açık Profil</p>
+                            <p className="text-sm text-text-secondary mt-1">
+                              Profiliniz diğer kullanıcılar tarafından görülebilir
+                            </p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setIsPublic(!isPublic)}
+                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                              isPublic ? "bg-primary" : "bg-gray-300"
                             }`}
-                          />
-                        </button>
+                          >
+                            <span
+                              className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                                isPublic ? "translate-x-6" : "translate-x-1"
+                              }`}
+                            />
+                          </button>
+                        </div>
+                      </div>
+                      
+                      {/* Show Favorites Toggle */}
+                      <div className="p-4 bg-background-ivory rounded-lg">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="font-medium text-text-charcoal">Favorileri Göster</p>
+                            <p className="text-sm text-text-secondary mt-1">
+                              Favori listeniz profilinizde herkese açık görünsün
+                            </p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setShowFavorites(!showFavorites)}
+                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                              showFavorites ? "bg-primary" : "bg-gray-300"
+                            }`}
+                          >
+                            <span
+                              className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                                showFavorites ? "translate-x-6" : "translate-x-1"
+                              }`}
+                            />
+                          </button>
+                        </div>
                       </div>
                     </div>
 

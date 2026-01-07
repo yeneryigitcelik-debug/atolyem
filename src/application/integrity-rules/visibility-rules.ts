@@ -116,8 +116,10 @@ export function assertCanEditListing(
 export function assertCanPublish(listing: {
   status: ListingStatus;
   title: string;
+  description?: string | null;
   basePriceMinor: number;
   baseQuantity: number;
+  mediaCount?: number;
 }): void {
   if (listing.status === "PUBLISHED") {
     throw new AppError(ErrorCodes.CONFLICT, "Listing is already published", 400);
@@ -152,6 +154,24 @@ export function assertCanPublish(listing: {
     throw new AppError(
       ErrorCodes.VALIDATION_ERROR,
       "Listing must have at least 1 item in stock",
+      400
+    );
+  }
+
+  // Require at least 1 image
+  if (!listing.mediaCount || listing.mediaCount < 1) {
+    throw new AppError(
+      ErrorCodes.VALIDATION_ERROR,
+      "Listing must have at least 1 image to be published",
+      400
+    );
+  }
+
+  // Require description (minimum length)
+  if (!listing.description || listing.description.trim().length < 10) {
+    throw new AppError(
+      ErrorCodes.VALIDATION_ERROR,
+      "Listing description must be at least 10 characters",
       400
     );
   }

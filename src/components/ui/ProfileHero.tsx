@@ -53,6 +53,7 @@ export interface ProfileHeroProps {
   onMessage?: () => void;
   onShare?: () => void;
   isFollowing?: boolean;
+  isFollowLoading?: boolean;
   isOwnProfile?: boolean;
 }
 
@@ -84,11 +85,11 @@ export default function ProfileHero({
   instagramHandle,
   websiteUrl,
   stats,
-  announcement,
   onFollow,
   onMessage,
   onShare,
   isFollowing = false,
+  isFollowLoading = false,
   isOwnProfile = false,
 }: ProfileHeroProps) {
   const isArtist = profileType === "artist";
@@ -229,16 +230,23 @@ export default function ProfileHero({
                   <div className="hidden md:flex items-center gap-3 shrink-0">
                     <button 
                       onClick={onFollow}
-                      className={`px-5 py-2.5 font-medium rounded-lg transition-colors flex items-center gap-2 ${
+                      disabled={isFollowLoading}
+                      className={`px-5 py-2.5 font-medium rounded-lg transition-colors flex items-center gap-2 disabled:opacity-50 ${
                         isFollowing 
                           ? "bg-surface-white border border-primary text-primary hover:bg-primary/5"
                           : "bg-primary hover:bg-primary-dark text-white shadow-sm"
                       }`}
                     >
-                      <span className="material-symbols-outlined text-[20px]">
-                        {isFollowing ? "person_remove" : "person_add"}
-                      </span>
-                      {isFollowing ? "Takipten Çık" : "Takip Et"}
+                      {isFollowLoading ? (
+                        <div className="w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                      ) : (
+                        <>
+                          <span className="material-symbols-outlined text-[20px]">
+                            {isFollowing ? "person_remove" : "person_add"}
+                          </span>
+                          {isFollowing ? "Takipten Çık" : "Takip Et"}
+                        </>
+                      )}
                     </button>
                     <button 
                       onClick={onMessage}
@@ -282,16 +290,23 @@ export default function ProfileHero({
                   <>
                     <button 
                       onClick={onFollow}
-                      className={`flex-1 px-4 py-2.5 font-medium rounded-lg transition-colors flex items-center justify-center gap-2 ${
+                      disabled={isFollowLoading}
+                      className={`flex-1 px-4 py-2.5 font-medium rounded-lg transition-colors flex items-center justify-center gap-2 disabled:opacity-50 ${
                         isFollowing 
                           ? "bg-surface-white border border-primary text-primary"
                           : "bg-primary hover:bg-primary-dark text-white"
                       }`}
                     >
-                      <span className="material-symbols-outlined text-[20px]">
-                        {isFollowing ? "person_remove" : "person_add"}
-                      </span>
-                      {isFollowing ? "Çık" : "Takip Et"}
+                      {isFollowLoading ? (
+                        <div className="w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                      ) : (
+                        <>
+                          <span className="material-symbols-outlined text-[20px]">
+                            {isFollowing ? "person_remove" : "person_add"}
+                          </span>
+                          {isFollowing ? "Çık" : "Takip Et"}
+                        </>
+                      )}
                     </button>
                     <button 
                       onClick={onMessage}

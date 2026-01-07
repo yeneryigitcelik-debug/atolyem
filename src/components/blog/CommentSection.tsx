@@ -1,140 +1,97 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import Link from "next/link";
+import { formatDistanceToNow } from "date-fns";
+import { tr } from "date-fns/locale";
+
+interface Author {
+  id: string;
+  displayName: string;
+  username: string | null;
+  avatarUrl: string | null;
+}
 
 interface Comment {
   id: string;
-  userId: string;
-  userName: string;
-  userAvatar: string;
-  userUsername: string;
-  content: string;
+  body: string;
   createdAt: string;
-  likes: number;
-  isLiked: boolean;
+  author: Author;
+  isOwner: boolean;
   replies: Comment[];
 }
 
 interface CommentSectionProps {
   postSlug: string;
-  initialComments?: Comment[];
 }
-
-// Mock data - replace with actual API calls
-const mockComments: Comment[] = [
-  {
-    id: "1",
-    userId: "u1",
-    userName: "Elif Yıldız",
-    userAvatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&h=100&fit=crop",
-    userUsername: "elif-yildiz",
-    content: "Harika bir yazı olmuş! Sinem Demirtaş'ın eserlerini her zaman çok beğeniyorum. Atölyesini görmek ne güzel bir deneyim olmuş.",
-    createdAt: "2 saat önce",
-    likes: 12,
-    isLiked: false,
-    replies: [
-      {
-        id: "1-1",
-        userId: "u2",
-        userName: "Ahmet Kara",
-        userAvatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop",
-        userUsername: "ahmet-kara",
-        content: "Kesinlikle katılıyorum! Ben de yakında atölyesini ziyaret etmeyi planlıyorum.",
-        createdAt: "1 saat önce",
-        likes: 3,
-        isLiked: false,
-        replies: [],
-      },
-    ],
-  },
-  {
-    id: "2",
-    userId: "u3",
-    userName: "Selin Demir",
-    userAvatar: "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=100&h=100&fit=crop",
-    userUsername: "selin-demir",
-    content: '"Doğanın düzensizliğindeki mükemmelliği arıyorum" sözü çok etkileyici. Sanatta bu tür bir felsefik yaklaşım her zaman ilham verici oluyor.',
-    createdAt: "5 saat önce",
-    likes: 8,
-    isLiked: true,
-    replies: [],
-  },
-  {
-    id: "3",
-    userId: "u4",
-    userName: "Mert Yılmaz",
-    userAvatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&h=100&fit=crop",
-    userUsername: "mert-yilmaz",
-    content: "Bu tarz röportajları çok seviyorum. Sanatçıların düşünce dünyasına açılan bir pencere gibi. Daha fazla içerik bekliyoruz! 🎨",
-    createdAt: "1 gün önce",
-    likes: 15,
-    isLiked: false,
-    replies: [],
-  },
-];
 
 function SingleComment({
   comment,
   isReply = false,
   onReply,
+  onDelete,
+  isPostAuthor,
 }: {
   comment: Comment;
   isReply?: boolean;
   onReply: (commentId: string) => void;
+  onDelete: (commentId: string) => void;
+  isPostAuthor: boolean;
 }) {
-  const [liked, setLiked] = useState(comment.isLiked);
-  const [likeCount, setLikeCount] = useState(comment.likes);
-
-  const handleLike = () => {
-    if (liked) {
-      setLikeCount((prev) => prev - 1);
-    } else {
-      setLikeCount((prev) => prev + 1);
-    }
-    setLiked(!liked);
-  };
+  const { user } = useAuth();
+  const canDelete = comment.isOwner || isPostAuthor;
 
   return (
     <div className={`flex gap-3 ${isReply ? "ml-12 mt-4" : ""}`}>
-      <Link
-        href={`/sanatsever/${comment.userUsername}`}
-        className="shrink-0"
-      >
-        <div className="w-10 h-10 rounded-full overflow-hidden hover:ring-2 hover:ring-primary transition-all">
-          <div
-            className="w-full h-full bg-cover bg-center"
-            style={{ backgroundImage: `url('${comment.userAvatar}')` }}
-          />
+      {comment.author.username ? (
+        <Link
+          href={`/sanatsever/${comment.author.username}`}
+          className="shrink-0"
+        >
+          <div className="w-10 h-10 rounded-full overflow-hidden hover:ring-2 hover:ring-primary transition-all bg-primary/10 flex items-center justify-center">
+            {comment.author.avatarUrl ? (
+              <div
+                className="w-full h-full bg-cover bg-center"
+                style={{ backgroundImage: `url('${comment.author.avatarUrl}')` }}
+              />
+            ) : (
+              <span className="text-primary font-semibold">
+                {comment.author.displayName[0]?.toUpperCase()}
+              </span>
+            )}
+          </div>
+        </Link>
+      ) : (
+        <div className="w-10 h-10 rounded-full overflow-hidden bg-primary/10 flex items-center justify-center shrink-0">
+          <span className="text-primary font-semibold">
+            {comment.author.displayName[0]?.toUpperCase()}
+          </span>
         </div>
-      </Link>
+      )}
       <div className="flex-grow">
         <div className="bg-background-ivory rounded-2xl px-4 py-3">
           <div className="flex items-center gap-2 mb-1">
-            <Link
-              href={`/sanatsever/${comment.userUsername}`}
-              className="font-semibold text-text-charcoal hover:text-primary transition-colors"
-            >
-              {comment.userName}
-            </Link>
-            <span className="text-xs text-text-secondary">{comment.createdAt}</span>
+            {comment.author.username ? (
+              <Link
+                href={`/sanatsever/${comment.author.username}`}
+                className="font-semibold text-text-charcoal hover:text-primary transition-colors"
+              >
+                {comment.author.displayName}
+              </Link>
+            ) : (
+              <span className="font-semibold text-text-charcoal">
+                {comment.author.displayName}
+              </span>
+            )}
+            <span className="text-xs text-text-secondary">
+              {formatDistanceToNow(new Date(comment.createdAt), { addSuffix: true, locale: tr })}
+            </span>
           </div>
-          <p className="text-text-secondary">{comment.content}</p>
+          <p className="text-text-secondary">{comment.body}</p>
         </div>
         <div className="flex items-center gap-4 mt-2 ml-2">
-          <button
-            onClick={handleLike}
-            className={`flex items-center gap-1 text-sm transition-colors ${
-              liked ? "text-red-500" : "text-text-secondary hover:text-red-500"
-            }`}
-          >
-            <span className="material-symbols-outlined text-[18px]" style={{ fontVariationSettings: liked ? "'FILL' 1" : "'FILL' 0" }}>
-              favorite
-            </span>
-            {likeCount > 0 && <span>{likeCount}</span>}
-          </button>
-          {!isReply && (
+          {!isReply && user && (
             <button
               onClick={() => onReply(comment.id)}
               className="flex items-center gap-1 text-sm text-text-secondary hover:text-primary transition-colors"
@@ -143,9 +100,18 @@ function SingleComment({
               Yanıtla
             </button>
           )}
+          {canDelete && (
+            <button
+              onClick={() => onDelete(comment.id)}
+              className="flex items-center gap-1 text-sm text-text-secondary hover:text-red-500 transition-colors"
+            >
+              <span className="material-symbols-outlined text-[18px]">delete</span>
+              Sil
+            </button>
+          )}
         </div>
         {/* Replies */}
-        {comment.replies.length > 0 && (
+        {comment.replies && comment.replies.length > 0 && (
           <div className="mt-2">
             {comment.replies.map((reply) => (
               <SingleComment
@@ -153,6 +119,8 @@ function SingleComment({
                 comment={reply}
                 isReply
                 onReply={onReply}
+                onDelete={onDelete}
+                isPostAuthor={isPostAuthor}
               />
             ))}
           </div>
@@ -162,77 +130,179 @@ function SingleComment({
   );
 }
 
-export default function CommentSection({ postSlug, initialComments }: CommentSectionProps) {
+export default function CommentSection({ postSlug }: CommentSectionProps) {
   const { user } = useAuth();
-  const [comments, setComments] = useState<Comment[]>(initialComments || mockComments);
+  const [comments, setComments] = useState<Comment[]>([]);
   const [newComment, setNewComment] = useState("");
   const [replyingTo, setReplyingTo] = useState<string | null>(null);
   const [replyContent, setReplyContent] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [pagination, setPagination] = useState<{ page: number; totalPages: number } | null>(null);
+  const [isPostAuthor, setIsPostAuthor] = useState(false);
+
+  const fetchComments = useCallback(async (page = 1) => {
+    setLoading(page === 1);
+    setError(null);
+
+    try {
+      const response = await fetch(`/api/blog/${postSlug}/comments?page=${page}&limit=20`);
+      if (!response.ok) {
+        throw new Error("Yorumlar yüklenemedi");
+      }
+
+      const data = await response.json();
+      
+      if (page === 1) {
+        setComments(data.comments);
+      } else {
+        setComments((prev) => [...prev, ...data.comments]);
+      }
+      
+      setPagination({
+        page: data.pagination.page,
+        totalPages: data.pagination.totalPages,
+      });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Bir hata oluştu");
+    } finally {
+      setLoading(false);
+    }
+  }, [postSlug]);
+
+  // Check if current user is the post author
+  const checkPostAuthor = useCallback(async () => {
+    if (!user) {
+      setIsPostAuthor(false);
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/blog/${postSlug}`);
+      if (response.ok) {
+        const data = await response.json();
+        setIsPostAuthor(data.post.isOwner);
+      }
+    } catch {
+      // Ignore errors
+    }
+  }, [postSlug, user]);
+
+  useEffect(() => {
+    fetchComments();
+    checkPostAuthor();
+  }, [fetchComments, checkPostAuthor]);
 
   const handleSubmitComment = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newComment.trim() || !user) return;
 
     setSubmitting(true);
-    
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 500));
+    setError(null);
 
-    const comment: Comment = {
-      id: `new-${Date.now()}`,
-      userId: user.id,
-      userName: user.user_metadata?.full_name || "Kullanıcı",
-      userAvatar: user.user_metadata?.avatar_url || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&h=100&fit=crop",
-      userUsername: user.email?.split("@")[0] || "user",
-      content: newComment,
-      createdAt: "Az önce",
-      likes: 0,
-      isLiked: false,
-      replies: [],
-    };
+    try {
+      const response = await fetch(`/api/blog/${postSlug}/comments`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          body: newComment.trim(),
+        }),
+      });
 
-    setComments((prev) => [comment, ...prev]);
-    setNewComment("");
-    setSubmitting(false);
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || "Yorum gönderilemedi");
+      }
+
+      const data = await response.json();
+      setComments((prev) => [data.comment, ...prev]);
+      setNewComment("");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Bir hata oluştu");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const handleSubmitReply = async (parentId: string) => {
     if (!replyContent.trim() || !user) return;
 
     setSubmitting(true);
-    
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 500));
+    setError(null);
 
-    const reply: Comment = {
-      id: `reply-${Date.now()}`,
-      userId: user.id,
-      userName: user.user_metadata?.full_name || "Kullanıcı",
-      userAvatar: user.user_metadata?.avatar_url || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&h=100&fit=crop",
-      userUsername: user.email?.split("@")[0] || "user",
-      content: replyContent,
-      createdAt: "Az önce",
-      likes: 0,
-      isLiked: false,
-      replies: [],
-    };
+    try {
+      const response = await fetch(`/api/blog/${postSlug}/comments`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          body: replyContent.trim(),
+          parentId,
+        }),
+      });
 
-    setComments((prev) =>
-      prev.map((comment) =>
-        comment.id === parentId
-          ? { ...comment, replies: [...comment.replies, reply] }
-          : comment
-      )
-    );
-    setReplyContent("");
-    setReplyingTo(null);
-    setSubmitting(false);
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || "Yanıt gönderilemedi");
+      }
+
+      const data = await response.json();
+      
+      setComments((prev) =>
+        prev.map((comment) =>
+          comment.id === parentId
+            ? { ...comment, replies: [...comment.replies, data.comment] }
+            : comment
+        )
+      );
+      setReplyContent("");
+      setReplyingTo(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Bir hata oluştu");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleDelete = async (commentId: string) => {
+    if (!confirm("Bu yorumu silmek istediğinizden emin misiniz?")) return;
+
+    try {
+      const response = await fetch(`/api/blog/${postSlug}/comments/${commentId}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        throw new Error("Yorum silinemedi");
+      }
+
+      // Remove from state (check both top-level and replies)
+      setComments((prev) =>
+        prev
+          .filter((c) => c.id !== commentId)
+          .map((c) => ({
+            ...c,
+            replies: c.replies.filter((r) => r.id !== commentId),
+          }))
+      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Bir hata oluştu");
+    }
   };
 
   const handleReply = (commentId: string) => {
     setReplyingTo(commentId);
     setReplyContent("");
+  };
+
+  const loadMore = () => {
+    if (pagination && pagination.page < pagination.totalPages) {
+      fetchComments(pagination.page + 1);
+    }
   };
 
   return (
@@ -246,25 +316,28 @@ export default function CommentSection({ postSlug, initialComments }: CommentSec
           </h2>
         </div>
 
+        {/* Error */}
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+            <p className="text-red-700">{error}</p>
+          </div>
+        )}
+
         {/* Comment Input */}
         {user ? (
           <form onSubmit={handleSubmitComment} className="mb-8">
             <div className="flex gap-3">
-              <div className="w-10 h-10 rounded-full overflow-hidden shrink-0">
-                <div
-                  className="w-full h-full bg-cover bg-center bg-primary/10 flex items-center justify-center"
-                  style={
-                    user.user_metadata?.avatar_url
-                      ? { backgroundImage: `url('${user.user_metadata.avatar_url}')` }
-                      : {}
-                  }
-                >
-                  {!user.user_metadata?.avatar_url && (
-                    <span className="text-primary font-semibold">
-                      {user.user_metadata?.full_name?.[0]?.toUpperCase() || user.email?.[0]?.toUpperCase()}
-                    </span>
-                  )}
-                </div>
+              <div className="w-10 h-10 rounded-full overflow-hidden shrink-0 bg-primary/10 flex items-center justify-center">
+                {user.user_metadata?.avatar_url ? (
+                  <div
+                    className="w-full h-full bg-cover bg-center"
+                    style={{ backgroundImage: `url('${user.user_metadata.avatar_url}')` }}
+                  />
+                ) : (
+                  <span className="text-primary font-semibold">
+                    {user.user_metadata?.full_name?.[0]?.toUpperCase() || user.email?.[0]?.toUpperCase()}
+                  </span>
+                )}
               </div>
               <div className="flex-grow">
                 <textarea
@@ -312,63 +385,74 @@ export default function CommentSection({ postSlug, initialComments }: CommentSec
           </div>
         )}
 
+        {/* Loading */}
+        {loading && (
+          <div className="flex items-center justify-center py-12">
+            <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+          </div>
+        )}
+
         {/* Comments List */}
-        <div className="space-y-6">
-          {comments.map((comment) => (
-            <div key={comment.id}>
-              <SingleComment comment={comment} onReply={handleReply} />
-              
-              {/* Reply Input */}
-              {replyingTo === comment.id && user && (
-                <div className="ml-12 mt-4 flex gap-3">
-                  <div className="w-8 h-8 rounded-full overflow-hidden shrink-0">
-                    <div
-                      className="w-full h-full bg-cover bg-center bg-primary/10 flex items-center justify-center"
-                      style={
-                        user.user_metadata?.avatar_url
-                          ? { backgroundImage: `url('${user.user_metadata.avatar_url}')` }
-                          : {}
-                      }
-                    >
-                      {!user.user_metadata?.avatar_url && (
+        {!loading && (
+          <div className="space-y-6">
+            {comments.map((comment) => (
+              <div key={comment.id}>
+                <SingleComment
+                  comment={comment}
+                  onReply={handleReply}
+                  onDelete={handleDelete}
+                  isPostAuthor={isPostAuthor}
+                />
+                
+                {/* Reply Input */}
+                {replyingTo === comment.id && user && (
+                  <div className="ml-12 mt-4 flex gap-3">
+                    <div className="w-8 h-8 rounded-full overflow-hidden shrink-0 bg-primary/10 flex items-center justify-center">
+                      {user.user_metadata?.avatar_url ? (
+                        <div
+                          className="w-full h-full bg-cover bg-center"
+                          style={{ backgroundImage: `url('${user.user_metadata.avatar_url}')` }}
+                        />
+                      ) : (
                         <span className="text-primary font-semibold text-sm">
                           {user.user_metadata?.full_name?.[0]?.toUpperCase() || user.email?.[0]?.toUpperCase()}
                         </span>
                       )}
                     </div>
-                  </div>
-                  <div className="flex-grow">
-                    <textarea
-                      value={replyContent}
-                      onChange={(e) => setReplyContent(e.target.value)}
-                      placeholder="Yanıtınızı yazın..."
-                      rows={2}
-                      autoFocus
-                      className="w-full px-4 py-2 border border-border-subtle rounded-xl focus:outline-none focus:border-primary resize-none text-sm transition-colors"
-                    />
-                    <div className="flex justify-end gap-2 mt-2">
-                      <button
-                        onClick={() => setReplyingTo(null)}
-                        className="px-4 py-1.5 text-text-secondary hover:text-text-charcoal font-medium rounded-lg transition-colors text-sm"
-                      >
-                        İptal
-                      </button>
-                      <button
-                        onClick={() => handleSubmitReply(comment.id)}
-                        disabled={!replyContent.trim() || submitting}
-                        className="px-4 py-1.5 bg-primary hover:bg-primary-dark disabled:bg-primary/50 text-white font-medium rounded-lg transition-colors text-sm"
-                      >
-                        Yanıtla
-                      </button>
+                    <div className="flex-grow">
+                      <textarea
+                        value={replyContent}
+                        onChange={(e) => setReplyContent(e.target.value)}
+                        placeholder="Yanıtınızı yazın..."
+                        rows={2}
+                        autoFocus
+                        className="w-full px-4 py-2 border border-border-subtle rounded-xl focus:outline-none focus:border-primary resize-none text-sm transition-colors"
+                      />
+                      <div className="flex justify-end gap-2 mt-2">
+                        <button
+                          onClick={() => setReplyingTo(null)}
+                          className="px-4 py-1.5 text-text-secondary hover:text-text-charcoal font-medium rounded-lg transition-colors text-sm"
+                        >
+                          İptal
+                        </button>
+                        <button
+                          onClick={() => handleSubmitReply(comment.id)}
+                          disabled={!replyContent.trim() || submitting}
+                          className="px-4 py-1.5 bg-primary hover:bg-primary-dark disabled:bg-primary/50 text-white font-medium rounded-lg transition-colors text-sm"
+                        >
+                          {submitting ? "Gönderiliyor..." : "Yanıtla"}
+                        </button>
+                      </div>
                     </div>
                   </div>
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
 
-        {comments.length === 0 && (
+        {/* Empty State */}
+        {!loading && comments.length === 0 && (
           <div className="text-center py-12">
             <span className="material-symbols-outlined text-5xl text-border-subtle mb-4">
               chat
@@ -376,8 +460,19 @@ export default function CommentSection({ postSlug, initialComments }: CommentSec
             <p className="text-text-secondary">Henüz yorum yok. İlk yorumu siz yapın!</p>
           </div>
         )}
+
+        {/* Load More */}
+        {!loading && pagination && pagination.page < pagination.totalPages && (
+          <div className="text-center mt-8">
+            <button
+              onClick={loadMore}
+              className="px-6 py-2.5 border border-border-subtle text-text-charcoal hover:border-primary rounded-lg font-medium transition-colors"
+            >
+              Daha Fazla Yükle
+            </button>
+          </div>
+        )}
       </div>
     </section>
   );
 }
-

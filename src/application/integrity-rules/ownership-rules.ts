@@ -75,3 +75,16 @@ export function assertNotSelfFollow(
   }
 }
 
+/**
+ * Check if a user is trying to follow themselves
+ * @throws ForbiddenError if self-following
+ */
+export function assertNotSelfUserFollow(
+  targetUserId: string,
+  currentUserId: string
+): void {
+  if (targetUserId === currentUserId) {
+    throw new ForbiddenError("Kendini takip edemezsin");
+  }
+}
+
