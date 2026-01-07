@@ -75,3 +75,4 @@ Kayıt olduktan sonra:
 - Yeni kullanıcıyı görmelisiniz
 - E-posta doğrulama linki gönderilir (eğer etkinse)
 
+

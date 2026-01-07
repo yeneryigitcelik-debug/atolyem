@@ -1,17 +1,18 @@
 import Link from "next/link";
+import CommentSection from "@/components/blog/CommentSection";
 
 const posts: Record<string, { title: string; content: string; date: string; category: string; author: string }> = {
   "sanatcinin-atolyesine-yolculuk": {
-    title: "Sanatçının Atölyesine Yolculuk: Zeynep Kaya ile Söyleşi",
-    content: `Soyut resmin ustası Zeynep Kaya'nın atölyesini ziyaret ettik. İstanbul'un kalbindeki bu küçük ama büyülü mekanda, sanatçının üretim sürecine tanıklık ettik.
+    title: "Sanatçının Atölyesine Yolculuk: Sinem Demirtaş ile Söyleşi",
+    content: `Resmin ustası Sinem Demirtaş'ın atölyesini ziyaret ettik. İstanbul'un kalbindeki bu küçük ama büyülü mekanda, sanatçının üretim sürecine tanıklık ettik.
 
-"Doğanın düzensizliğindeki mükemmelliği arıyorum," diyor Zeynep Kaya, elindeki fırçayı tuvale yaklaştırırken. "Her sabah uyandığımda, o günün renklerini hissediyorum. Bazen mavi, bazen toprak tonları..."
+"Renklerin ve fırça darbelerinin dansı, ruhun özgürlüğüdür," diyor Sinem Demirtaş, elindeki fırçayı tuvale yaklaştırırken. "Her sabah uyandığımda, o günün renklerini hissediyorum. Bazen mavi, bazen toprak tonları..."
 
 Atölyesinin her köşesi ilham verici detaylarla dolu. Duvarlarda asılı yarım kalmış çalışmalar, yerde birikmiş boya lekeleri, masanın üzerinde düzensiz dizilmiş fırçalar... Her şey tam olması gerektiği gibi.
 
 "Modern şehir hayatının kaosuna karşı bir sığınak yaratmak istiyorum," diye ekliyor. "Eserlerim, izleyiciye bir nefes alma alanı sunmalı."
 
-Zeynep Kaya'nın eserleri Atölyem.net'te satışta. Koleksiyonuna göz atmak için sayfasını ziyaret edebilirsiniz.`,
+Sinem Demirtaş'ın eserleri Atölyem.net'te satışta. Koleksiyonuna göz atmak için sayfasını ziyaret edebilirsiniz.`,
     date: "15 Ocak 2026",
     category: "Sanatçı Röportajları",
     author: "Editöryel Ekip",
@@ -141,22 +142,25 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
         </div>
       </article>
 
+      {/* Comments Section */}
+      <CommentSection postSlug={slug} />
+
       {/* Related Posts */}
       <section className="bg-surface-warm border-t border-border-subtle py-12">
         <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8">
           <h2 className="text-2xl font-bold text-text-charcoal mb-8">İlgili Yazılar</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {relatedPosts.map((post) => (
-              <Link key={post.slug} href={`/blog/${post.slug}`} className="group">
+            {relatedPosts.map((relatedPost) => (
+              <Link key={relatedPost.slug} href={`/blog/${relatedPost.slug}`} className="group">
                 <article className="bg-surface-white rounded-lg border border-border-subtle overflow-hidden hover:border-primary transition-all duration-300">
                   <div className="aspect-video overflow-hidden">
                     <div
                       className="w-full h-full bg-cover bg-center group-hover:scale-105 transition-transform duration-500"
-                      style={{ backgroundImage: `url('${post.image}')` }}
+                      style={{ backgroundImage: `url('${relatedPost.image}')` }}
                     />
                   </div>
                   <div className="p-4">
-                    <h3 className="font-semibold text-text-charcoal group-hover:text-primary transition-colors">{post.title}</h3>
+                    <h3 className="font-semibold text-text-charcoal group-hover:text-primary transition-colors">{relatedPost.title}</h3>
                   </div>
                 </article>
               </Link>
@@ -167,4 +171,5 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
     </>
   );
 }
+
 

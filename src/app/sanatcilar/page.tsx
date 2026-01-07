@@ -2,7 +2,7 @@ import PageHeader from "@/components/ui/PageHeader";
 import Link from "next/link";
 
 const artists = [
-  { name: "Zeynep Kaya", specialty: "Soyut Resim", slug: "zeynep-kaya", image: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&h=400&fit=crop", works: 24, featured: true },
+  { name: "Sinem Demirtaş", specialty: "Ressam", slug: "sinem-demirtas", image: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&h=400&fit=crop", works: 24, featured: true },
   { name: "Mehmet Demir", specialty: "Seramik", slug: "mehmet-demir", image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop", works: 18, featured: true },
   { name: "Ayşe Yılmaz", specialty: "Heykel", slug: "ayse-yilmaz", image: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=400&h=400&fit=crop", works: 12, featured: false },
   { name: "Ali Öztürk", specialty: "Fotoğraf", slug: "ali-ozturk", image: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400&h=400&fit=crop", works: 36, featured: false },
@@ -102,4 +102,5 @@ export default function SanatcilarPage() {
     </>
   );
 }
+
 

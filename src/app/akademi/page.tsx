@@ -10,8 +10,8 @@ const workshops = [
   {
     id: 1,
     title: "Yağlı Boya Resim Başlangıç",
-    instructor: "Zeynep Kaya",
-    instructorSlug: "zeynep-kaya",
+    instructor: "Sinem Demirtaş",
+    instructorSlug: "sinem-demirtas",
     type: "online",
     level: "Başlangıç",
     duration: "8 Hafta",
@@ -648,4 +648,5 @@ export default function AkademiPage() {
     </>
   );
 }
+
 

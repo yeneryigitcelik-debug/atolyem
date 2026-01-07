@@ -22,7 +22,7 @@ const giftIdeas = [
   },
   {
     title: "Soyut Tablo 'Umut'",
-    artist: "Zeynep Kaya",
+    artist: "Sinem Demirtaş",
     price: 2800,
     slug: "soyut-tablo-umut",
     image: "https://images.unsplash.com/photo-1579783902614-a3fb3927b6a5?w=400&h=400&fit=crop",
@@ -62,7 +62,7 @@ const giftIdeas = [
   },
   {
     title: "Kişiselleştirilmiş Portre",
-    artist: "Zeynep Kaya",
+    artist: "Sinem Demirtaş",
     price: 1500,
     slug: "kisisellestirilmis-portre",
     image: "https://images.unsplash.com/photo-1460661419201-fd4cecdf8a8b?w=400&h=400&fit=crop",
@@ -297,4 +297,5 @@ export default function HediyelikPage() {
     </>
   );
 }
+
 

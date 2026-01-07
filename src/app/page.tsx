@@ -242,9 +242,9 @@ export default function Home() {
             {/* Content */}
             <div className="w-full lg:w-1/2 p-8 lg:p-12 flex flex-col justify-center">
               <span className="text-primary font-semibold tracking-wide text-sm uppercase mb-2">Ayın Sanatçısı</span>
-              <h3 className="text-3xl font-bold text-text-charcoal mb-4">Zeynep Kaya</h3>
+              <h3 className="text-3xl font-bold text-text-charcoal mb-4">Sinem Demirtaş</h3>
               <p className="text-text-secondary text-lg leading-relaxed mb-8">
-                &quot;Doğanın düzensizliğindeki mükemmelliği arıyorum. Eserlerim, modern şehir hayatının kaosuna karşı bir sığınak niteliğinde.&quot;
+                &quot;Renklerin ve fırça darbelerinin dansı, ruhun özgürlüğüdür. Tuvallerimde doğanın ve insanın iç dünyasının buluştuğu anları yakalıyorum.&quot;
               </p>
               {/* Mini Gallery */}
               <div className="grid grid-cols-3 gap-4 mb-8">
@@ -258,7 +258,7 @@ export default function Home() {
                   <div className="w-full h-full bg-cover bg-center" style={{ backgroundImage: "url('https://images.unsplash.com/photo-1578749556568-bc2c40e68b61?w=200&h=200&fit=crop')" }} />
                 </div>
               </div>
-              <Link href="/sanatci/zeynep-kaya" className="self-start px-6 py-3 bg-primary hover:bg-primary-dark text-white font-medium rounded-md transition-colors shadow-sm">
+              <Link href="/sanatci/sinem-demirtas" className="self-start px-6 py-3 bg-primary hover:bg-primary-dark text-white font-medium rounded-md transition-colors shadow-sm">
                 Sanatçıyı İncele
               </Link>
             </div>

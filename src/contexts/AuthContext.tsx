@@ -4,15 +4,31 @@ import { createContext, useContext, useEffect, useState, useCallback } from "rea
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import type { User, Session } from "@supabase/supabase-js";
 
+interface UserProfile {
+  username: string;
+  displayName: string;
+  avatarUrl: string | null;
+  bannerUrl: string | null;
+  bio: string | null;
+  location: string | null;
+  websiteUrl: string | null;
+  instagramHandle: string | null;
+  isPublic: boolean;
+  isArtist: boolean;
+  shopSlug: string | null;
+}
+
 interface AuthContextType {
   user: User | null;
   session: Session | null;
+  profile: UserProfile | null;
   isLoading: boolean;
   signUp: (email: string, password: string, metadata?: { full_name?: string }) => Promise<{ error: Error | null }>;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signInWithGoogle: () => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<{ error: Error | null }>;
+  refreshProfile: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -20,6 +36,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   
   // Check environment variables on mount
@@ -40,6 +57,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   
   const supabase = createSupabaseBrowserClient();
 
+  // Fetch user profile from API
+  const fetchProfile = useCallback(async () => {
+    try {
+      const response = await fetch("/api/me/profile");
+      if (response.ok) {
+        const data = await response.json();
+        setProfile({
+          username: data.profile.username,
+          displayName: data.profile.displayName,
+          avatarUrl: data.profile.avatarUrl,
+          bannerUrl: data.profile.bannerUrl,
+          bio: data.profile.bio,
+          location: data.profile.location,
+          websiteUrl: data.profile.websiteUrl,
+          instagramHandle: data.profile.instagramHandle,
+          isPublic: data.profile.isPublic,
+          isArtist: data.profile.isArtist,
+          shopSlug: data.profile.shopSlug,
+        });
+      } else {
+        setProfile(null);
+      }
+    } catch (error) {
+      console.error("Error fetching profile:", error);
+      setProfile(null);
+    }
+  }, []);
+
+  const refreshProfile = useCallback(async () => {
+    await fetchProfile();
+  }, [fetchProfile]);
+
   useEffect(() => {
     // Get initial session
     const getSession = async () => {
@@ -47,6 +96,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setSession(session);
       setUser(session?.user ?? null);
       setIsLoading(false);
+      
+      // Fetch profile if user is logged in
+      if (session?.user) {
+        fetchProfile();
+      }
     };
 
     getSession();
@@ -57,13 +111,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setSession(session);
         setUser(session?.user ?? null);
         setIsLoading(false);
+        
+        // Fetch or clear profile based on auth state
+        if (session?.user) {
+          fetchProfile();
+        } else {
+          setProfile(null);
+        }
       }
     );
 
     return () => {
       subscription.unsubscribe();
     };
-  }, [supabase.auth]);
+  }, [supabase.auth, fetchProfile]);
 
   const signUp = useCallback(async (
     email: string, 
@@ -177,12 +238,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const value = {
     user,
     session,
+    profile,
     isLoading,
     signUp,
     signIn,
     signInWithGoogle,
     signOut,
     resetPassword,
+    refreshProfile,
   };
 
   return (

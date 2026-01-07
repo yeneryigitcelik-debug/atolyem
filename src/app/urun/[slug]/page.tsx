@@ -151,3 +151,4 @@ export default async function UrunPage({ params }: { params: Promise<{ slug: str
   );
 }
 
+

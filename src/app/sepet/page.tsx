@@ -11,7 +11,6 @@ interface CartItem {
   artist: string;
   artistSlug: string;
   price: number;
-  quantity: number;
   image: string;
   slug: string;
 }
@@ -23,7 +22,6 @@ const initialCartItems: CartItem[] = [
     artist: "Ayşe Demir", 
     artistSlug: "ayse-demir",
     price: 3500, 
-    quantity: 1, 
     image: "https://images.unsplash.com/photo-1579783902614-a3fb3927b6a5?w=200&h=200&fit=crop",
     slug: "soyut-kompozisyon"
   },
@@ -33,7 +31,6 @@ const initialCartItems: CartItem[] = [
     artist: "Mehmet Demir", 
     artistSlug: "mehmet-demir",
     price: 850, 
-    quantity: 2, 
     image: "https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=200&h=200&fit=crop",
     slug: "el-yapimi-seramik-vazo"
   },
@@ -44,16 +41,6 @@ export default function SepetPage() {
   const [cartItems, setCartItems] = useState<CartItem[]>(initialCartItems);
   const [removingId, setRemovingId] = useState<string | null>(null);
 
-  const handleQuantityChange = (id: string, delta: number) => {
-    setCartItems(prev => prev.map(item => {
-      if (item.id === id) {
-        const newQuantity = Math.max(1, item.quantity + delta);
-        return { ...item, quantity: newQuantity };
-      }
-      return item;
-    }));
-  };
-
   const handleRemoveItem = async (id: string) => {
     setRemovingId(id);
     // Simulate API call
@@ -62,7 +49,7 @@ export default function SepetPage() {
     setRemovingId(null);
   };
 
-  const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const subtotal = cartItems.reduce((sum, item) => sum + item.price, 0);
   const shipping = subtotal >= 500 ? 0 : 50;
   const total = subtotal + shipping;
 
@@ -183,36 +170,11 @@ export default function SepetPage() {
                         </button>
                       </div>
                       
-                      <div className="flex items-center justify-between mt-4">
-                        {/* Quantity Controls */}
-                        <div className="flex items-center gap-2">
-                          <button 
-                            onClick={() => handleQuantityChange(item.id, -1)}
-                            disabled={item.quantity <= 1}
-                            className="w-8 h-8 border border-border-subtle rounded-lg flex items-center justify-center hover:border-primary hover:text-primary disabled:opacity-50 disabled:hover:border-border-subtle disabled:hover:text-text-charcoal transition-colors"
-                          >
-                            <span className="material-symbols-outlined text-[18px]">remove</span>
-                          </button>
-                          <span className="w-10 text-center font-medium">{item.quantity}</span>
-                          <button 
-                            onClick={() => handleQuantityChange(item.id, 1)}
-                            className="w-8 h-8 border border-border-subtle rounded-lg flex items-center justify-center hover:border-primary hover:text-primary transition-colors"
-                          >
-                            <span className="material-symbols-outlined text-[18px]">add</span>
-                          </button>
-                        </div>
-                        
-                        {/* Price */}
-                        <div className="text-right">
-                          <p className="font-bold text-text-charcoal">
-                            {(item.price * item.quantity).toLocaleString("tr-TR")} ₺
-                          </p>
-                          {item.quantity > 1 && (
-                            <p className="text-xs text-text-secondary">
-                              Birim: {item.price.toLocaleString("tr-TR")} ₺
-                            </p>
-                          )}
-                        </div>
+                      {/* Price */}
+                      <div className="mt-4 text-right">
+                        <p className="font-bold text-lg text-text-charcoal">
+                          {item.price.toLocaleString("tr-TR")} ₺
+                        </p>
                       </div>
                     </div>
                   </div>
@@ -226,7 +188,7 @@ export default function SepetPage() {
                 <h3 className="font-bold text-text-charcoal mb-6">Sipariş Özeti</h3>
                 <div className="space-y-4 text-sm">
                   <div className="flex justify-between">
-                    <span className="text-text-secondary">Ara Toplam ({cartItems.reduce((sum, item) => sum + item.quantity, 0)} ürün)</span>
+                    <span className="text-text-secondary">Ara Toplam ({cartItems.length} ürün)</span>
                     <span className="text-text-charcoal">{subtotal.toLocaleString("tr-TR")} ₺</span>
                   </div>
                   <div className="flex justify-between">

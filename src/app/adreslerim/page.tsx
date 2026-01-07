@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { useRouter } from "next/navigation";
 import PageHeader from "@/components/ui/PageHeader";
+import AccountSidebar from "@/components/layout/AccountSidebar";
 import Link from "next/link";
 
 interface Address {
@@ -53,8 +53,7 @@ const provinces = [
 ];
 
 export default function AdreslerimPage() {
-  const { user, isLoading, signOut } = useAuth();
-  const router = useRouter();
+  const { user, isLoading } = useAuth();
   const [addresses, setAddresses] = useState<Address[]>(initialAddresses);
   const [isAddingNew, setIsAddingNew] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -70,11 +69,6 @@ export default function AdreslerimPage() {
     province: "",
     postalCode: "",
   });
-
-  const handleSignOut = async () => {
-    await signOut();
-    router.push("/");
-  };
 
   const resetForm = () => {
     setFormData({
@@ -185,45 +179,7 @@ export default function AdreslerimPage() {
       <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
           {/* Sidebar */}
-          <div className="bg-surface-white rounded-lg border border-border-subtle p-6 h-fit">
-            <div className="flex items-center gap-4 mb-6 pb-6 border-b border-border-subtle">
-              <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-                <span className="text-primary font-bold text-lg">
-                  {user?.user_metadata?.full_name?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || "U"}
-                </span>
-              </div>
-              <div>
-                <p className="font-semibold text-text-charcoal">
-                  {user?.user_metadata?.full_name || "Kullanıcı"}
-                </p>
-                <p className="text-sm text-text-secondary truncate max-w-[150px]">{user?.email}</p>
-              </div>
-            </div>
-            <nav className="space-y-2">
-              <Link href="/hesap" className="block px-4 py-2 text-text-charcoal hover:bg-background-ivory rounded-md transition-colors">
-                Profilim
-              </Link>
-              <Link href="/siparislerim" className="block px-4 py-2 text-text-charcoal hover:bg-background-ivory rounded-md transition-colors">
-                Siparişlerim
-              </Link>
-              <Link href="/adreslerim" className="block px-4 py-2 bg-primary/10 text-primary rounded-md font-medium">
-                Adreslerim
-              </Link>
-              <Link href="/favoriler" className="block px-4 py-2 text-text-charcoal hover:bg-background-ivory rounded-md transition-colors">
-                Favorilerim
-              </Link>
-              <Link href="/ayarlar" className="block px-4 py-2 text-text-charcoal hover:bg-background-ivory rounded-md transition-colors">
-                Ayarlar
-              </Link>
-              <hr className="border-border-subtle my-2" />
-              <button 
-                onClick={handleSignOut}
-                className="w-full text-left px-4 py-2 text-red-600 hover:bg-red-50 rounded-md transition-colors"
-              >
-                Çıkış Yap
-              </button>
-            </nav>
-          </div>
+          <AccountSidebar activePage="adreslerim" />
 
           {/* Content */}
           <div className="lg:col-span-3">
@@ -446,4 +402,3 @@ export default function AdreslerimPage() {
     </>
   );
 }
-

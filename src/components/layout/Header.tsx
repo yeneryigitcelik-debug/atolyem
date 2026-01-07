@@ -18,7 +18,7 @@ const categories = [
 ];
 
 export default function Header() {
-  const { user, isLoading, signOut } = useAuth();
+  const { user, profile, isLoading, signOut } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [userMenuOpen, setUserMenuOpen] = useState(false);
@@ -150,11 +150,18 @@ export default function Header() {
                     onClick={() => setUserMenuOpen(!userMenuOpen)}
                     className="flex items-center gap-2 p-2 text-text-charcoal hover:text-primary transition-colors rounded-full hover:bg-background-ivory"
                   >
-                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-                      <span className="text-primary font-semibold text-sm">
-                        {user.user_metadata?.full_name?.[0]?.toUpperCase() || user.email?.[0]?.toUpperCase() || "U"}
-                      </span>
-                    </div>
+                    {profile?.avatarUrl ? (
+                      <div 
+                        className="w-8 h-8 rounded-full bg-cover bg-center border border-border-subtle"
+                        style={{ backgroundImage: `url('${profile.avatarUrl}')` }}
+                      />
+                    ) : (
+                      <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                        <span className="text-primary font-semibold text-sm">
+                          {profile?.displayName?.[0]?.toUpperCase() || user.user_metadata?.full_name?.[0]?.toUpperCase() || user.email?.[0]?.toUpperCase() || "U"}
+                        </span>
+                      </div>
+                    )}
                   </button>
                   
                   {userMenuOpen && (
@@ -166,18 +173,64 @@ export default function Header() {
                       <div className="absolute right-0 mt-2 w-56 bg-surface-white rounded-lg border border-border-subtle shadow-lg z-20 py-2">
                         <div className="px-4 py-3 border-b border-border-subtle">
                           <p className="font-medium text-text-charcoal truncate">
-                            {user.user_metadata?.full_name || "Kullanıcı"}
+                            {profile?.displayName || user.user_metadata?.full_name || "Kullanıcı"}
                           </p>
                           <p className="text-sm text-text-secondary truncate">{user.email}</p>
+                          {profile?.isArtist && (
+                            <span className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
+                              <span className="material-symbols-outlined text-[12px]">palette</span>
+                              Sanatçı
+                            </span>
+                          )}
                         </div>
-                        <Link 
-                          href="/hesap" 
-                          onClick={() => setUserMenuOpen(false)}
-                          className="flex items-center gap-2 px-4 py-2 text-text-charcoal hover:bg-background-ivory transition-colors"
-                        >
-                          <span className="material-symbols-outlined text-[20px]">person</span>
-                          Profilim
-                        </Link>
+                        {profile?.username ? (
+                          <Link 
+                            href={`/sanatsever/${profile.username}`} 
+                            onClick={() => setUserMenuOpen(false)}
+                            className="flex items-center gap-2 px-4 py-2 text-text-charcoal hover:bg-background-ivory transition-colors"
+                          >
+                            <span className="material-symbols-outlined text-[20px]">person</span>
+                            Profilim
+                          </Link>
+                        ) : (
+                          <button
+                            onClick={async () => {
+                              setUserMenuOpen(false);
+                              // Force profile creation and redirect
+                              const res = await fetch("/api/me/profile");
+                              if (res.ok) {
+                                const data = await res.json();
+                                if (data.profile?.username) {
+                                  window.location.href = `/sanatsever/${data.profile.username}`;
+                                }
+                              }
+                            }}
+                            className="flex items-center gap-2 px-4 py-2 text-text-charcoal hover:bg-background-ivory transition-colors w-full text-left"
+                          >
+                            <span className="material-symbols-outlined text-[20px]">person</span>
+                            Profilim
+                          </button>
+                        )}
+                        {profile?.isArtist && profile?.shopSlug && (
+                          <>
+                            <Link 
+                              href={`/sanatci/${profile.shopSlug}`}
+                              onClick={() => setUserMenuOpen(false)}
+                              className="flex items-center gap-2 px-4 py-2 text-text-charcoal hover:bg-background-ivory transition-colors"
+                            >
+                              <span className="material-symbols-outlined text-[20px]">storefront</span>
+                              Dükkanım
+                            </Link>
+                            <Link 
+                              href="/satici-paneli"
+                              onClick={() => setUserMenuOpen(false)}
+                              className="flex items-center gap-2 px-4 py-2 text-text-charcoal hover:bg-background-ivory transition-colors"
+                            >
+                              <span className="material-symbols-outlined text-[20px]">dashboard</span>
+                              Satıcı Paneli
+                            </Link>
+                          </>
+                        )}
                         <Link 
                           href="/siparislerim"
                           onClick={() => setUserMenuOpen(false)}
@@ -185,6 +238,14 @@ export default function Header() {
                         >
                           <span className="material-symbols-outlined text-[20px]">shopping_bag</span>
                           Siparişlerim
+                        </Link>
+                        <Link 
+                          href="/mesajlar"
+                          onClick={() => setUserMenuOpen(false)}
+                          className="flex items-center gap-2 px-4 py-2 text-text-charcoal hover:bg-background-ivory transition-colors"
+                        >
+                          <span className="material-symbols-outlined text-[20px]">mail</span>
+                          Mesajlarım
                         </Link>
                         <Link 
                           href="/favoriler"
@@ -201,6 +262,14 @@ export default function Header() {
                         >
                           <span className="material-symbols-outlined text-[20px]">location_on</span>
                           Adreslerim
+                        </Link>
+                        <Link 
+                          href="/hesap"
+                          onClick={() => setUserMenuOpen(false)}
+                          className="flex items-center gap-2 px-4 py-2 text-text-charcoal hover:bg-background-ivory transition-colors"
+                        >
+                          <span className="material-symbols-outlined text-[20px]">account_circle</span>
+                          Hesap
                         </Link>
                         <Link 
                           href="/ayarlar"
@@ -322,13 +391,53 @@ export default function Header() {
               {user && (
                 <>
                   <hr className="border-border-subtle my-2" />
-                  <Link href="/hesap" className="px-4 py-2 text-text-charcoal hover:text-primary hover:bg-background-ivory rounded-md transition-colors">
-                    Hesabım
-                  </Link>
-                  <Link href="/siparislerim" className="px-4 py-2 text-text-charcoal hover:text-primary hover:bg-background-ivory rounded-md transition-colors">
+                  {profile?.username ? (
+                    <Link 
+                      href={`/sanatsever/${profile.username}`} 
+                      className="px-4 py-2 text-text-charcoal hover:text-primary hover:bg-background-ivory rounded-md transition-colors flex items-center gap-2"
+                    >
+                      <span className="material-symbols-outlined text-[18px]">person</span>
+                      Profilim
+                    </Link>
+                  ) : (
+                    <button
+                      onClick={async () => {
+                        const res = await fetch("/api/me/profile");
+                        if (res.ok) {
+                          const data = await res.json();
+                          if (data.profile?.username) {
+                            window.location.href = `/sanatsever/${data.profile.username}`;
+                          }
+                        }
+                      }}
+                      className="px-4 py-2 text-text-charcoal hover:text-primary hover:bg-background-ivory rounded-md transition-colors flex items-center gap-2 w-full text-left"
+                    >
+                      <span className="material-symbols-outlined text-[18px]">person</span>
+                      Profilim
+                    </button>
+                  )}
+                  {profile?.isArtist && profile?.shopSlug && (
+                    <>
+                      <Link href={`/sanatci/${profile.shopSlug}`} className="px-4 py-2 text-text-charcoal hover:text-primary hover:bg-background-ivory rounded-md transition-colors flex items-center gap-2">
+                        <span className="material-symbols-outlined text-[18px]">storefront</span>
+                        Dükkanım
+                      </Link>
+                      <Link href="/satici-paneli" className="px-4 py-2 text-text-charcoal hover:text-primary hover:bg-background-ivory rounded-md transition-colors flex items-center gap-2">
+                        <span className="material-symbols-outlined text-[18px]">dashboard</span>
+                        Satıcı Paneli
+                      </Link>
+                    </>
+                  )}
+                  <Link href="/siparislerim" className="px-4 py-2 text-text-charcoal hover:text-primary hover:bg-background-ivory rounded-md transition-colors flex items-center gap-2">
+                    <span className="material-symbols-outlined text-[18px]">shopping_bag</span>
                     Siparişlerim
                   </Link>
-                  <Link href="/ayarlar" className="px-4 py-2 text-text-charcoal hover:text-primary hover:bg-background-ivory rounded-md transition-colors">
+                  <Link href="/hesap" className="px-4 py-2 text-text-charcoal hover:text-primary hover:bg-background-ivory rounded-md transition-colors flex items-center gap-2">
+                    <span className="material-symbols-outlined text-[18px]">account_circle</span>
+                    Hesap
+                  </Link>
+                  <Link href="/ayarlar" className="px-4 py-2 text-text-charcoal hover:text-primary hover:bg-background-ivory rounded-md transition-colors flex items-center gap-2">
+                    <span className="material-symbols-outlined text-[18px]">settings</span>
                     Ayarlar
                   </Link>
                 </>

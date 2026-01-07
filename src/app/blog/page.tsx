@@ -2,8 +2,8 @@ import PageHeader from "@/components/ui/PageHeader";
 import Link from "next/link";
 
 const featuredPost = {
-  title: "Sanatçının Atölyesine Yolculuk: Zeynep Kaya ile Söyleşi",
-  excerpt: "Soyut resmin ustası Zeynep Kaya'nın atölyesini ziyaret ettik. Üretim sürecinin perde arkasındaki ilham kaynaklarını ve tekniklerini keşfettik.",
+  title: "Sanatçının Atölyesine Yolculuk: Sinem Demirtaş ile Söyleşi",
+  excerpt: "Resmin ustası Sinem Demirtaş'ın atölyesini ziyaret ettik. Üretim sürecinin perde arkasındaki ilham kaynaklarını ve tekniklerini keşfettik.",
   slug: "sanatcinin-atolyesine-yolculuk",
   image: "https://images.unsplash.com/photo-1460661419201-fd4cecdf8a8b?w=1200&h=600&fit=crop",
   date: "15 Ocak 2026",
@@ -97,4 +97,5 @@ export default function BlogPage() {
     </>
   );
 }
+
 

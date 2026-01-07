@@ -125,7 +125,7 @@ export default function SanatciOlPage() {
                     value={shopName}
                     onChange={(e) => setShopName(e.target.value)}
                     required
-                    placeholder="Örn: Zeynep Kaya Atölyesi"
+                    placeholder="Örn: Sinem Demirtaş Atölyesi"
                     className="w-full px-4 py-3 border border-border-subtle rounded-md focus:outline-none focus:border-primary" 
                   />
                   <p className="text-xs text-text-secondary mt-1">Bu isim profilinizde ve eserlerinizde görünecek.</p>

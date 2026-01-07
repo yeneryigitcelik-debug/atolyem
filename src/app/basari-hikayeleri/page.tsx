@@ -3,11 +3,11 @@ import Link from "next/link";
 
 const stories = [
   {
-    name: "Zeynep Kaya",
-    specialty: "Soyut Resim",
+    name: "Sinem Demirtaş",
+    specialty: "Ressam",
     quote: "Atölyem.net sayesinde eserlerim Türkiye'nin dört bir yanındaki sanat severlere ulaştı. İlk yılımda 50'den fazla eser sattım.",
     image: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&h=400&fit=crop",
-    slug: "zeynep-kaya",
+    slug: "sinem-demirtas",
   },
   {
     name: "Mehmet Demir",
@@ -71,4 +71,5 @@ export default function BasariHikayeleriPage() {
     </>
   );
 }
+
 

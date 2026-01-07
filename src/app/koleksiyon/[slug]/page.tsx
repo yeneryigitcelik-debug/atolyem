@@ -84,3 +84,4 @@ export default async function KoleksiyonPage({ params }: { params: Promise<{ slu
   );
 }
 
+

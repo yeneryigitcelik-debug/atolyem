@@ -28,7 +28,7 @@ export default function KariyerPage() {
           <div className="bg-surface-white rounded-lg border border-border-subtle p-6 text-center">
             <span className="material-symbols-outlined text-primary text-3xl mb-4">trending_up</span>
             <h3 className="font-bold text-text-charcoal mb-2">Büyüme Fırsatı</h3>
-            <p className="text-text-secondary text-sm">Hızla büyüyen bir startup'ta kariyer gelişimi.</p>
+            <p className="text-text-secondary text-sm">Hızla büyüyen bir startup&apos;ta kariyer gelişimi.</p>
           </div>
           <div className="bg-surface-white rounded-lg border border-border-subtle p-6 text-center">
             <span className="material-symbols-outlined text-primary text-3xl mb-4">work_history</span>
@@ -84,4 +84,5 @@ export default function KariyerPage() {
     </>
   );
 }
+
 

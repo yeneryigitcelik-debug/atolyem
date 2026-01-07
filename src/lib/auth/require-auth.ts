@@ -6,12 +6,32 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/db/prisma";
 import { UnauthorizedError, ForbiddenError, AppError, ErrorCodes } from "@/lib/api/errors";
-import type { User, SellerProfile, Shop, AccountType } from "@prisma/client";
+import type { User, SellerProfile, Shop, PublicProfile } from "@prisma/client";
 
 export interface AuthContext {
   supabaseUserId: string;
   user: User;
+  publicProfile: PublicProfile | null;
   sellerProfile: (SellerProfile & { shop: Shop | null }) | null;
+}
+
+/**
+ * Generate a unique username from email or name
+ */
+function generateUsername(email: string, fullName?: string | null): string {
+  // Try to use name first, fallback to email prefix
+  let base = fullName 
+    ? fullName.toLowerCase().replace(/[^a-z0-9]/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "")
+    : email.split("@")[0].toLowerCase().replace(/[^a-z0-9]/g, "-");
+  
+  // Ensure minimum length
+  if (base.length < 3) {
+    base = `user-${base}`;
+  }
+  
+  // Add random suffix for uniqueness
+  const suffix = Math.random().toString(36).substring(2, 6);
+  return `${base}-${suffix}`;
 }
 
 /**
@@ -47,6 +67,37 @@ export async function requireAuth(): Promise<AuthContext> {
     });
   }
 
+  // Get or create public profile
+  let publicProfile = await prisma.publicProfile.findUnique({
+    where: { userId: user.id },
+  });
+
+  if (!publicProfile) {
+    // Generate unique username
+    let username = generateUsername(user.email, user.displayName);
+    
+    // Ensure username is unique
+    let attempts = 0;
+    while (attempts < 5) {
+      const existing = await prisma.publicProfile.findUnique({
+        where: { username },
+      });
+      if (!existing) break;
+      username = generateUsername(user.email, user.displayName);
+      attempts++;
+    }
+
+    // Create public profile for all users
+    publicProfile = await prisma.publicProfile.create({
+      data: {
+        userId: user.id,
+        username,
+        displayName: user.displayName || user.email.split("@")[0],
+        isPublic: true,
+      },
+    });
+  }
+
   // Get seller profile if exists
   const sellerProfile = await prisma.sellerProfile.findUnique({
     where: { userId: user.id },
@@ -56,6 +107,7 @@ export async function requireAuth(): Promise<AuthContext> {
   return {
     supabaseUserId: supabaseUser.id,
     user,
+    publicProfile,
     sellerProfile,
   };
 }

@@ -4,12 +4,13 @@ import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
 import PageHeader from "@/components/ui/PageHeader";
+import AccountSidebar from "@/components/layout/AccountSidebar";
 import Link from "next/link";
 
 type AuthMode = "login" | "register" | "forgot";
 
 export default function HesapPage() {
-  const { user, isLoading, signIn, signUp, signOut, signInWithGoogle, resetPassword } = useAuth();
+  const { user, profile, isLoading, signIn, signUp, signInWithGoogle, resetPassword } = useAuth();
   const router = useRouter();
   
   const [mode, setMode] = useState<AuthMode>("login");
@@ -109,11 +110,6 @@ export default function HesapPage() {
     }
   };
 
-  const handleSignOut = async () => {
-    await signOut();
-    router.refresh();
-  };
-
   if (isLoading) {
     return (
       <>
@@ -137,45 +133,7 @@ export default function HesapPage() {
         <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-12">
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
             {/* Sidebar */}
-            <div className="bg-surface-white rounded-lg border border-border-subtle p-6 h-fit">
-              <div className="flex items-center gap-4 mb-6 pb-6 border-b border-border-subtle">
-                <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-                  <span className="text-primary font-bold text-lg">
-                    {user.user_metadata?.full_name?.[0]?.toUpperCase() || user.email?.[0]?.toUpperCase() || "U"}
-                  </span>
-                </div>
-                <div>
-                  <p className="font-semibold text-text-charcoal">
-                    {user.user_metadata?.full_name || "Kullanıcı"}
-                  </p>
-                  <p className="text-sm text-text-secondary truncate max-w-[150px]">{user.email}</p>
-                </div>
-              </div>
-              <nav className="space-y-2">
-                <Link href="/hesap" className="block px-4 py-2 bg-primary/10 text-primary rounded-md font-medium">
-                  Profilim
-                </Link>
-                <Link href="/siparislerim" className="block px-4 py-2 text-text-charcoal hover:bg-background-ivory rounded-md transition-colors">
-                  Siparişlerim
-                </Link>
-                <Link href="/adreslerim" className="block px-4 py-2 text-text-charcoal hover:bg-background-ivory rounded-md transition-colors">
-                  Adreslerim
-                </Link>
-                <Link href="/favoriler" className="block px-4 py-2 text-text-charcoal hover:bg-background-ivory rounded-md transition-colors">
-                  Favorilerim
-                </Link>
-                <Link href="/ayarlar" className="block px-4 py-2 text-text-charcoal hover:bg-background-ivory rounded-md transition-colors">
-                  Ayarlar
-                </Link>
-                <hr className="border-border-subtle my-2" />
-                <button 
-                  onClick={handleSignOut}
-                  className="w-full text-left px-4 py-2 text-red-600 hover:bg-red-50 rounded-md transition-colors"
-                >
-                  Çıkış Yap
-                </button>
-              </nav>
-            </div>
+            <AccountSidebar activePage="hesap" />
 
             {/* Content */}
             <div className="lg:col-span-3">
@@ -232,29 +190,32 @@ export default function HesapPage() {
                   </button>
                 </div>
 
-                <hr className="border-border-subtle my-8" />
-
-                {/* Become Artist CTA */}
-                <div className="bg-primary/5 rounded-lg p-6">
-                  <div className="flex items-start gap-4">
-                    <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                      <span className="material-symbols-outlined text-primary text-2xl">palette</span>
+                {/* Become Artist CTA - only show if user is not an artist */}
+                {!profile?.isArtist && (
+                  <>
+                    <hr className="border-border-subtle my-8" />
+                    <div className="bg-primary/5 rounded-lg p-6">
+                      <div className="flex items-start gap-4">
+                        <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                          <span className="material-symbols-outlined text-primary text-2xl">palette</span>
+                        </div>
+                        <div className="flex-grow">
+                          <h3 className="font-bold text-text-charcoal mb-1">Sanatçı Ol</h3>
+                          <p className="text-sm text-text-secondary mb-4">
+                            Eserlerinizi binlerce sanat severle buluşturun. Hemen sanatçı profilinizi oluşturun!
+                          </p>
+                          <Link
+                            href="/sanatci-ol"
+                            className="inline-flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary-dark text-white font-medium rounded-md transition-colors"
+                          >
+                            <span className="material-symbols-outlined text-[18px]">add_circle</span>
+                            Sanatçı Profili Oluştur
+                          </Link>
+                        </div>
+                      </div>
                     </div>
-                    <div className="flex-grow">
-                      <h3 className="font-bold text-text-charcoal mb-1">Sanatçı Ol</h3>
-                      <p className="text-sm text-text-secondary mb-4">
-                        Eserlerinizi binlerce sanat severle buluşturun. Hemen sanatçı profilinizi oluşturun!
-                      </p>
-                      <Link
-                        href="/sanatci-ol"
-                        className="inline-flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary-dark text-white font-medium rounded-md transition-colors"
-                      >
-                        <span className="material-symbols-outlined text-[18px]">add_circle</span>
-                        Sanatçı Profili Oluştur
-                      </Link>
-                    </div>
-                  </div>
-                </div>
+                  </>
+                )}
               </div>
             </div>
           </div>
