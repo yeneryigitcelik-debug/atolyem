@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useCart } from "@/contexts/CartContext";
 
 const categories = [
   { name: "Resim", slug: "resim", icon: "brush" },
@@ -19,6 +20,7 @@ const categories = [
 
 export default function Header() {
   const { user, profile, isLoading, signOut } = useAuth();
+  const { cartCount } = useCart();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [userMenuOpen, setUserMenuOpen] = useState(false);
@@ -148,7 +150,11 @@ export default function Header() {
               </Link>
               <Link href="/sepet" className="p-2 text-text-charcoal hover:text-primary transition-colors rounded-full hover:bg-background-ivory relative">
                 <span className="material-symbols-outlined">shopping_bag</span>
-                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-primary rounded-full"></span>
+                {cartCount > 0 && (
+                  <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] bg-primary text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1">
+                    {cartCount > 99 ? "99+" : cartCount}
+                  </span>
+                )}
               </Link>
               
               {/* User Menu */}
@@ -223,25 +229,15 @@ export default function Header() {
                             Profilim
                           </button>
                         )}
-                        {profile?.isArtist && profile?.username && (
-                          <>
-                            <Link 
-                              href={`/sanatsever/${profile.username}`}
-                              onClick={() => setUserMenuOpen(false)}
-                              className="flex items-center gap-2 px-4 py-2 text-text-charcoal hover:bg-background-ivory transition-colors"
-                            >
-                              <span className="material-symbols-outlined text-[20px]">storefront</span>
-                              Profilim
-                            </Link>
-                            <Link 
-                              href="/satici-paneli"
-                              onClick={() => setUserMenuOpen(false)}
-                              className="flex items-center gap-2 px-4 py-2 text-text-charcoal hover:bg-background-ivory transition-colors"
-                            >
-                              <span className="material-symbols-outlined text-[20px]">dashboard</span>
-                              Satıcı Paneli
-                            </Link>
-                          </>
+                        {profile?.isArtist && (
+                          <Link 
+                            href="/satici-paneli"
+                            onClick={() => setUserMenuOpen(false)}
+                            className="flex items-center gap-2 px-4 py-2 text-text-charcoal hover:bg-background-ivory transition-colors"
+                          >
+                            <span className="material-symbols-outlined text-[20px]">dashboard</span>
+                            Satıcı Paneli
+                          </Link>
                         )}
                         <Link 
                           href="/siparislerim"
@@ -428,17 +424,11 @@ export default function Header() {
                       Profilim
                     </button>
                   )}
-                  {profile?.isArtist && profile?.username && (
-                    <>
-                      <Link href={`/sanatsever/${profile.username}`} className="px-4 py-2 text-text-charcoal hover:text-primary hover:bg-background-ivory rounded-md transition-colors flex items-center gap-2">
-                        <span className="material-symbols-outlined text-[18px]">storefront</span>
-                        Profilim
-                      </Link>
-                      <Link href="/satici-paneli" className="px-4 py-2 text-text-charcoal hover:text-primary hover:bg-background-ivory rounded-md transition-colors flex items-center gap-2">
-                        <span className="material-symbols-outlined text-[18px]">dashboard</span>
-                        Satıcı Paneli
-                      </Link>
-                    </>
+                  {profile?.isArtist && (
+                    <Link href="/satici-paneli" className="px-4 py-2 text-text-charcoal hover:text-primary hover:bg-background-ivory rounded-md transition-colors flex items-center gap-2">
+                      <span className="material-symbols-outlined text-[18px]">dashboard</span>
+                      Satıcı Paneli
+                    </Link>
                   )}
                   <Link href="/siparislerim" className="px-4 py-2 text-text-charcoal hover:text-primary hover:bg-background-ivory rounded-md transition-colors flex items-center gap-2">
                     <span className="material-symbols-outlined text-[18px]">shopping_bag</span>

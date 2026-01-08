@@ -796,8 +796,16 @@ export default function SanatseverPage() {
             {/* Comments Tab */}
             {activeTab === "comments" && (
               <div className="space-y-4">
-                {/* Comment Form - Only show if not own profile */}
-                {user && !isOwnProfile ? (
+                {/* Comment Form - Show based on user state */}
+                {isOwnProfile ? (
+                  // Own profile - show info message
+                  <div className="bg-primary/5 rounded-xl border border-primary/20 p-4 text-center">
+                    <span className="material-symbols-outlined text-2xl text-primary mb-2">person</span>
+                    <p className="text-text-charcoal font-medium">Bu sizin profiliniz</p>
+                    <p className="text-text-secondary text-sm mt-1">Diğer kullanıcılar burada size yorum bırakabilir.</p>
+                  </div>
+                ) : user ? (
+                  // Logged in and viewing other's profile - show comment form
                   <div className="bg-surface-white rounded-xl border border-border-subtle p-4">
                     <form onSubmit={handleCommentSubmit}>
                       <div className="flex gap-3">
@@ -850,6 +858,7 @@ export default function SanatseverPage() {
                     </form>
                   </div>
                 ) : (
+                  // Not logged in - show login prompt
                   <div className="bg-surface-white rounded-xl border border-border-subtle p-6 text-center">
                     <span className="material-symbols-outlined text-3xl text-border-subtle mb-2">comment</span>
                     <p className="text-text-secondary mb-3">Yorum yapmak için giriş yapın</p>

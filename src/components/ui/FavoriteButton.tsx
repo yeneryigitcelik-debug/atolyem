@@ -7,7 +7,7 @@ interface FavoriteButtonProps {
   listingId: string;
   initialFavorited?: boolean;
   onFavoriteChange?: (isFavorited: boolean) => void;
-  variant?: "icon" | "button" | "card"; // Different visual styles
+  variant?: "icon" | "button" | "card" | "outline"; // Different visual styles
   size?: "sm" | "md" | "lg";
   className?: string;
   showToast?: boolean;
@@ -57,11 +57,14 @@ export default function FavoriteButton({
     setIsLoading(true);
 
     try {
-      const res = await fetch("/api/favorites", {
-        method: newState ? "POST" : "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ listingId }),
-      });
+      const res = await fetch(
+        newState ? "/api/favorites" : `/api/favorites?listingId=${listingId}`,
+        {
+          method: newState ? "POST" : "DELETE",
+          headers: { "Content-Type": "application/json" },
+          ...(newState && { body: JSON.stringify({ listingId }) }),
+        }
+      );
 
       if (!res.ok) {
         // Revert on error
@@ -192,6 +195,30 @@ export default function FavoriteButton({
           </button>
         );
 
+      case "outline":
+        return (
+          <button
+            onClick={handleClick}
+            disabled={isLoading}
+            className={`
+              w-full py-4 bg-surface-white border font-semibold rounded-md transition-all duration-300 flex items-center justify-center gap-2
+              ${isFavorited 
+                ? "border-red-300 text-red-500 hover:bg-red-50" 
+                : "border-border-subtle text-text-charcoal hover:border-primary hover:text-primary"
+              }
+              ${isAnimating ? "scale-[1.02]" : "scale-100"}
+              ${isLoading ? "opacity-70 cursor-not-allowed" : ""}
+              ${className}
+            `}
+            aria-label={isFavorited ? "Favorilerden çıkar" : "Favorilere ekle"}
+          >
+            <span className={`material-symbols-outlined ${isFavorited ? "fill" : ""} ${isAnimating ? "animate-bounce" : ""}`}>
+              {isFavorited ? "favorite" : "favorite_border"}
+            </span>
+            {isFavorited ? "Favorilerde" : "Favorilere Ekle"}
+          </button>
+        );
+
       default:
         return null;
     }
@@ -242,11 +269,14 @@ export function useFavorite(listingId: string, initialFavorited: boolean = false
     setIsLoading(true);
 
     try {
-      const res = await fetch("/api/favorites", {
-        method: newState ? "POST" : "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ listingId }),
-      });
+      const res = await fetch(
+        newState ? "/api/favorites" : `/api/favorites?listingId=${listingId}`,
+        {
+          method: newState ? "POST" : "DELETE",
+          headers: { "Content-Type": "application/json" },
+          ...(newState && { body: JSON.stringify({ listingId }) }),
+        }
+      );
 
       if (!res.ok) {
         setIsFavorited(!newState);

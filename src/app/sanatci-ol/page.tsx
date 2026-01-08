@@ -7,7 +7,7 @@ import Link from "next/link";
 import { useState } from "react";
 
 export default function SanatciOlPage() {
-  const { user, isLoading, refreshProfile } = useAuth();
+  const { user, profile, isLoading, refreshProfile } = useAuth();
   const router = useRouter();
   const [shopName, setShopName] = useState("");
   const [artType, setArtType] = useState("");
@@ -94,6 +94,31 @@ export default function SanatciOlPage() {
             <div className="bg-surface-white rounded-lg border border-border-subtle p-8 text-center">
               <div className="animate-spin w-8 h-8 border-2 border-primary border-t-transparent rounded-full mx-auto"></div>
               <p className="text-text-secondary mt-4">Yükleniyor...</p>
+            </div>
+          ) : profile?.isArtist ? (
+            // Already an artist - show redirect banner
+            <div className="bg-surface-white rounded-lg border border-primary/20 p-8 text-center">
+              <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <span className="material-symbols-outlined text-green-600 text-4xl">check_circle</span>
+              </div>
+              <h2 className="text-xl font-bold text-text-charcoal mb-2">Zaten Sanatçısınız!</h2>
+              <p className="text-text-secondary mb-6">
+                Sanatçı profiliniz aktif. Satıcı panelinize giderek ürünlerinizi yönetebilirsiniz.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                <Link
+                  href="/satici-paneli"
+                  className="px-6 py-3 bg-primary hover:bg-primary-dark text-white font-semibold rounded-md transition-colors"
+                >
+                  Satıcı Paneline Git
+                </Link>
+                <Link
+                  href="/sell/new"
+                  className="px-6 py-3 border border-border-subtle text-text-charcoal hover:border-primary hover:text-primary font-semibold rounded-md transition-colors"
+                >
+                  Yeni Ürün Ekle
+                </Link>
+              </div>
             </div>
           ) : !user ? (
             // Not logged in - show login prompt

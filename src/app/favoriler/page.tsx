@@ -1,116 +1,132 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import PageHeader from "@/components/ui/PageHeader";
 import AccountSidebar from "@/components/layout/AccountSidebar";
+import EmptyState from "@/components/ui/EmptyState";
+import { FavoriteCardSkeleton } from "@/components/ui/Skeleton";
 import Link from "next/link";
+import Image from "next/image";
 
-const initialFavorites = [
-  { 
-    id: "1",
-    title: "Soyut Kompozisyon", 
-    artist: "Ayşe Demir", 
-    artistSlug: "ayse-demir",
-    price: 3500, 
-    slug: "soyut-kompozisyon", 
-    image: "https://images.unsplash.com/photo-1579783902614-a3fb3927b6a5?w=400&h=400&fit=crop", 
-    badge: "Orijinal" 
-  },
-  { 
-    id: "2",
-    title: "Mavi Harmoni", 
-    artist: "Mehmet Kaya", 
-    artistSlug: "mehmet-kaya",
-    price: 2800, 
-    slug: "mavi-harmoni", 
-    image: "https://images.unsplash.com/photo-1549887534-1541e9326642?w=400&h=400&fit=crop", 
-    badge: "Limited" 
-  },
-  { 
-    id: "3",
-    title: "Doğa Esintisi", 
-    artist: "Sinem Demirtaş", 
-    artistSlug: "sinem-demirtas",
-    price: 4200, 
-    slug: "doga-esintisi", 
-    image: "https://images.unsplash.com/photo-1578749556568-bc2c40e68b61?w=400&h=400&fit=crop", 
-    badge: "Orijinal" 
-  },
-  { 
-    id: "4",
-    title: "Seramik Vazo", 
-    artist: "Emre Arslan", 
-    artistSlug: "emre-arslan",
-    price: 1200, 
-    slug: "seramik-vazo", 
-    image: "https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=400&h=400&fit=crop", 
-    badge: "El İşi" 
-  },
-];
+interface FavoriteItem {
+  id: string;
+  listingId: string;
+  title: string;
+  slug: string;
+  price: number;
+  currency: string;
+  image: string | null;
+  artist: string;
+  artistSlug: string | null;
+  badge: string | null;
+}
 
 export default function FavorilerPage() {
-  const { user, isLoading } = useAuth();
-  const [favorites, setFavorites] = useState(initialFavorites);
+  const { user, isLoading: authLoading } = useAuth();
+  const [favorites, setFavorites] = useState<FavoriteItem[]>([]);
+  const [loading, setLoading] = useState(true);
   const [removingId, setRemovingId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleRemoveFavorite = async (id: string) => {
-    setRemovingId(id);
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 300));
-    setFavorites(prev => prev.filter(item => item.id !== id));
-    setRemovingId(null);
+  const fetchFavorites = useCallback(async () => {
+    if (!user) return;
+    
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const res = await fetch("/api/favorites");
+      if (res.ok) {
+        const data = await res.json();
+        setFavorites(data.favorites || []);
+      } else {
+        const errorData = await res.json();
+        setError(errorData.error || "Favoriler yüklenemedi");
+      }
+    } catch (err) {
+      console.error("Error fetching favorites:", err);
+      setError("Favoriler yüklenirken bir hata oluştu");
+    } finally {
+      setLoading(false);
+    }
+  }, [user]);
+
+  useEffect(() => {
+    if (user) {
+      fetchFavorites();
+    } else if (!authLoading) {
+      setLoading(false);
+    }
+  }, [user, authLoading, fetchFavorites]);
+
+  const handleRemoveFavorite = async (listingId: string) => {
+    setRemovingId(listingId);
+    
+    try {
+      const res = await fetch(`/api/favorites?listingId=${listingId}`, {
+        method: "DELETE",
+      });
+      
+      if (res.ok) {
+        setFavorites(prev => prev.filter(item => item.listingId !== listingId));
+      } else {
+        console.error("Failed to remove favorite");
+      }
+    } catch (err) {
+      console.error("Error removing favorite:", err);
+    } finally {
+      setRemovingId(null);
+    }
+  };
+
+  const handleRemoveAll = async () => {
+    if (!confirm("Tüm favorileri silmek istediğinize emin misiniz?")) return;
+    
+    for (const fav of favorites) {
+      await handleRemoveFavorite(fav.listingId);
+    }
+  };
+
+  const handleAddToCart = async (listingId: string) => {
+    try {
+      const res = await fetch("/api/cart", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ listingId, quantity: 1 }),
+      });
+      
+      if (res.ok) {
+        alert("Ürün sepete eklendi!");
+      } else {
+        const data = await res.json();
+        alert(data.error || "Sepete eklenemedi");
+      }
+    } catch (err) {
+      console.error("Error adding to cart:", err);
+      alert("Bir hata oluştu");
+    }
   };
 
   // Show login prompt if not authenticated
-  if (!isLoading && !user) {
+  if (!authLoading && !user) {
     return (
       <>
         <PageHeader title="Favorilerim" description="Beğendiğiniz eserleri burada saklayın." />
         <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          <div className="text-center py-16">
-            <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
-              <span className="material-symbols-outlined text-primary text-4xl">login</span>
-            </div>
-            <h2 className="text-xl font-bold text-text-charcoal mb-2">Giriş Yapın</h2>
-            <p className="text-text-secondary mb-8 max-w-md mx-auto">
-              Favorilerinizi görmek ve yönetmek için hesabınıza giriş yapmanız gerekmektedir.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-3 justify-center">
-              <Link 
-                href="/hesap" 
-                className="inline-flex items-center justify-center px-8 py-3 bg-primary hover:bg-primary-dark text-white font-semibold rounded-md transition-colors"
-              >
-                Giriş Yap
-              </Link>
-              <Link 
-                href="/kesfet" 
-                className="inline-flex items-center justify-center px-8 py-3 border border-border-subtle text-text-charcoal hover:border-primary hover:text-primary font-semibold rounded-md transition-colors"
-              >
-                Keşfetmeye Başla
-              </Link>
-            </div>
-          </div>
+          <EmptyState
+            icon="login"
+            title="Giriş Yapın"
+            description="Favorilerinizi görmek ve yönetmek için hesabınıza giriş yapmanız gerekmektedir."
+            actionLabel="Giriş Yap"
+            actionHref="/hesap"
+            secondaryLabel="Keşfetmeye Başla"
+            secondaryHref="/kesfet"
+          />
         </div>
       </>
     );
   }
-
-  if (isLoading) {
-    return (
-      <>
-        <PageHeader title="Favorilerim" description="Beğendiğiniz eserleri burada saklayın." />
-        <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          <div className="text-center py-16">
-            <div className="animate-spin w-8 h-8 border-2 border-primary border-t-transparent rounded-full mx-auto"></div>
-            <p className="text-text-secondary mt-4">Yükleniyor...</p>
-          </div>
-        </div>
-      </>
-    );
-  }
-
-  const hasFavorites = favorites.length > 0;
 
   return (
     <>
@@ -123,12 +139,34 @@ export default function FavorilerPage() {
 
           {/* Content */}
           <div className="lg:col-span-3">
-            {hasFavorites ? (
+            {loading || authLoading ? (
+              // Loading skeleton
+              <>
+                <div className="flex items-center justify-between mb-6">
+                  <div className="h-5 w-32 bg-gray-200 rounded animate-pulse"></div>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
+                  {Array.from({ length: 6 }).map((_, i) => (
+                    <FavoriteCardSkeleton key={i} />
+                  ))}
+                </div>
+              </>
+            ) : error ? (
+              // Error state
+              <EmptyState
+                icon="error"
+                title="Bir Hata Oluştu"
+                description={error}
+                actionLabel="Tekrar Dene"
+                onAction={fetchFavorites}
+              />
+            ) : favorites.length > 0 ? (
+              // Favorites list
               <>
                 <div className="flex items-center justify-between mb-6">
                   <p className="text-text-secondary">{favorites.length} eser favorilerinizde</p>
                   <button 
-                    onClick={() => setFavorites([])}
+                    onClick={handleRemoveAll}
                     className="text-sm text-red-500 hover:text-red-600 font-medium flex items-center gap-1"
                   >
                     <span className="material-symbols-outlined text-[18px]">delete_sweep</span>
@@ -141,15 +179,24 @@ export default function FavorilerPage() {
                     <div 
                       key={product.id} 
                       className={`bg-surface-white rounded-xl border border-border-subtle overflow-hidden group transition-all ${
-                        removingId === product.id ? 'opacity-50 scale-95' : ''
+                        removingId === product.listingId ? 'opacity-50 scale-95' : ''
                       }`}
                     >
                       {/* Image */}
                       <Link href={`/urun/${product.slug}`} className="block relative aspect-square overflow-hidden">
-                        <div 
-                          className="absolute inset-0 bg-cover bg-center group-hover:scale-105 transition-transform duration-500"
-                          style={{ backgroundImage: `url('${product.image}')` }}
-                        />
+                        {product.image ? (
+                          <Image
+                            src={product.image}
+                            alt={product.title}
+                            fill
+                            className="object-cover group-hover:scale-105 transition-transform duration-500"
+                            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                          />
+                        ) : (
+                          <div className="w-full h-full bg-gray-100 flex items-center justify-center">
+                            <span className="material-symbols-outlined text-4xl text-gray-300">image</span>
+                          </div>
+                        )}
                         {product.badge && (
                           <span className="absolute top-3 left-3 px-2 py-1 rounded-md text-xs font-medium bg-surface-white/90 text-text-charcoal">
                             {product.badge}
@@ -164,27 +211,37 @@ export default function FavorilerPage() {
                             {product.title}
                           </h3>
                         </Link>
-                        <Link 
-                          href={`/sanatsever/${product.artistSlug}`}
-                          className="text-sm text-text-secondary hover:text-primary transition-colors flex items-center gap-1 mt-1"
-                        >
-                          <span className="material-symbols-outlined text-[14px]">person</span>
-                          {product.artist}
-                        </Link>
+                        {product.artistSlug ? (
+                          <Link 
+                            href={`/sanatsever/${product.artistSlug}`}
+                            className="text-sm text-text-secondary hover:text-primary transition-colors flex items-center gap-1 mt-1"
+                          >
+                            <span className="material-symbols-outlined text-[14px]">person</span>
+                            {product.artist}
+                          </Link>
+                        ) : (
+                          <p className="text-sm text-text-secondary flex items-center gap-1 mt-1">
+                            <span className="material-symbols-outlined text-[14px]">person</span>
+                            {product.artist}
+                          </p>
+                        )}
                         <p className="font-bold text-text-charcoal mt-2">
                           {product.price.toLocaleString("tr-TR")} ₺
                         </p>
                         
                         {/* Actions */}
                         <div className="flex gap-2 mt-4">
-                          <button className="flex-1 py-2 bg-primary hover:bg-primary-dark text-white text-sm font-medium rounded-md transition-colors flex items-center justify-center gap-1">
+                          <button 
+                            onClick={() => handleAddToCart(product.listingId)}
+                            className="flex-1 py-2 bg-primary hover:bg-primary-dark text-white text-sm font-medium rounded-md transition-colors flex items-center justify-center gap-1"
+                          >
                             <span className="material-symbols-outlined text-[18px]">shopping_bag</span>
                             Sepete Ekle
                           </button>
                           <button 
-                            onClick={() => handleRemoveFavorite(product.id)}
-                            disabled={removingId === product.id}
-                            className="p-2 border border-red-200 text-red-500 hover:bg-red-50 hover:border-red-300 rounded-md transition-colors"
+                            onClick={() => handleRemoveFavorite(product.listingId)}
+                            disabled={removingId === product.listingId}
+                            className="p-2 border border-red-200 text-red-500 hover:bg-red-50 hover:border-red-300 rounded-md transition-colors disabled:opacity-50"
                             title="Favorilerden Kaldır"
                           >
                             <span className="material-symbols-outlined text-[20px]">heart_minus</span>
@@ -196,14 +253,14 @@ export default function FavorilerPage() {
                 </div>
               </>
             ) : (
-              <div className="text-center py-16">
-                <span className="material-symbols-outlined text-6xl text-border-subtle mb-4">favorite</span>
-                <h2 className="text-xl font-bold text-text-charcoal mb-2">Henüz favori eklemediniz</h2>
-                <p className="text-text-secondary mb-8">Beğendiğiniz eserleri favorilere ekleyerek takip edin.</p>
-                <Link href="/kesfet" className="inline-flex px-8 py-3 bg-primary hover:bg-primary-dark text-white font-semibold rounded-md transition-colors">
-                  Keşfetmeye Başla
-                </Link>
-              </div>
+              // Empty state
+              <EmptyState
+                icon="favorite"
+                title="Henüz favori eklemediniz"
+                description="Beğendiğiniz eserleri favorilere ekleyerek takip edin."
+                actionLabel="Keşfetmeye Başla"
+                actionHref="/kesfet"
+              />
             )}
           </div>
         </div>

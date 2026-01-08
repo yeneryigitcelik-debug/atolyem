@@ -1,9 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import PageHeader from "@/components/ui/PageHeader";
+import EmptyState from "@/components/ui/EmptyState";
+import { ConversationListSkeleton, MessageSkeleton } from "@/components/ui/Skeleton";
 import Link from "next/link";
+import Image from "next/image";
 
 interface Message {
   id: string;
@@ -11,6 +14,11 @@ interface Message {
   senderId: string;
   createdAt: string;
   isRead: boolean;
+  sender: {
+    id: string;
+    displayName: string;
+    avatarUrl: string | null;
+  };
 }
 
 interface Conversation {
@@ -18,127 +26,112 @@ interface Conversation {
   participant: {
     id: string;
     name: string;
-    username: string;
-    avatar: string;
-    isOnline: boolean;
+    username?: string;
+    avatar: string | null;
     isArtist: boolean;
   };
-  lastMessage: {
-    content: string;
-    createdAt: string;
-    isRead: boolean;
-    senderId: string;
-  };
-  unreadCount: number;
+  lastMessage: Message | null;
+  updatedAt: string;
+  unreadCount?: number;
 }
 
-// Mock data
-const mockConversations: Conversation[] = [
-  {
-    id: "1",
-    participant: {
-      id: "u1",
-      name: "Sinem Demirtaş",
-      username: "sinem-demirtas",
-      avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop",
-      isOnline: true,
-      isArtist: true,
-    },
-    lastMessage: {
-      content: "Merhaba! Siparişiniz hazırlandı, yarın kargoya verilecek.",
-      createdAt: "10:30",
-      isRead: false,
-      senderId: "u1",
-    },
-    unreadCount: 2,
-  },
-  {
-    id: "2",
-    participant: {
-      id: "u2",
-      name: "Mehmet Demir",
-      username: "mehmet-demir",
-      avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop",
-      isOnline: false,
-      isArtist: true,
-    },
-    lastMessage: {
-      content: "Özel tasarım için teşekkür ederim, çok güzel olmuş!",
-      createdAt: "Dün",
-      isRead: true,
-      senderId: "me",
-    },
-    unreadCount: 0,
-  },
-  {
-    id: "3",
-    participant: {
-      id: "u3",
-      name: "Elif Yıldız",
-      username: "elif-yildiz",
-      avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&h=100&fit=crop",
-      isOnline: true,
-      isArtist: false,
-    },
-    lastMessage: {
-      content: "O sanatçının atölyesini ziyaret ettin mi? Nasıldı?",
-      createdAt: "2 gün önce",
-      isRead: true,
-      senderId: "u3",
-    },
-    unreadCount: 0,
-  },
-];
-
-const mockMessages: Record<string, Message[]> = {
-  "1": [
-    { id: "m1", content: "Merhaba, siparişim ne zaman hazırlanır?", senderId: "me", createdAt: "09:15", isRead: true },
-    { id: "m2", content: "Merhaba! Siparişiniz üzerinde çalışıyorum.", senderId: "u1", createdAt: "09:45", isRead: true },
-    { id: "m3", content: "Yaklaşık 2-3 gün içinde hazır olur.", senderId: "u1", createdAt: "09:46", isRead: true },
-    { id: "m4", content: "Harika, teşekkür ederim!", senderId: "me", createdAt: "10:00", isRead: true },
-    { id: "m5", content: "Rica ederim! Size en güzel şekilde ulaştıracağım.", senderId: "u1", createdAt: "10:15", isRead: true },
-    { id: "m6", content: "Merhaba! Siparişiniz hazırlandı, yarın kargoya verilecek.", senderId: "u1", createdAt: "10:30", isRead: false },
-  ],
-  "2": [
-    { id: "m1", content: "Merhaba, özel bir seramik vazo yaptırabilir miyim?", senderId: "me", createdAt: "Pazartesi", isRead: true },
-    { id: "m2", content: "Tabii ki! Nasıl bir tasarım düşünüyorsunuz?", senderId: "u2", createdAt: "Pazartesi", isRead: true },
-    { id: "m3", content: "Mavi tonlarında, geometrik desenli olsun istiyorum.", senderId: "me", createdAt: "Salı", isRead: true },
-    { id: "m4", content: "Anladım, size birkaç eskiz hazırlayayım.", senderId: "u2", createdAt: "Salı", isRead: true },
-    { id: "m5", content: "Özel tasarım için teşekkür ederim, çok güzel olmuş!", senderId: "me", createdAt: "Dün", isRead: true },
-  ],
-  "3": [
-    { id: "m1", content: "Selam! Geçen paylaştığın blog yazısı çok güzeldi.", senderId: "u3", createdAt: "3 gün önce", isRead: true },
-    { id: "m2", content: "Teşekkür ederim! Sinem Demirtaş'ın atölyesini yazdım.", senderId: "me", createdAt: "3 gün önce", isRead: true },
-    { id: "m3", content: "O sanatçının atölyesini ziyaret ettin mi? Nasıldı?", senderId: "u3", createdAt: "2 gün önce", isRead: true },
-  ],
-};
-
 export default function MesajlarPage() {
-  const { user, isLoading } = useAuth();
-  const [selectedConversation, setSelectedConversation] = useState<string | null>("1");
+  const { user, isLoading: authLoading } = useAuth();
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [selectedConversation, setSelectedConversation] = useState<string | null>(null);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
-  const [conversations] = useState<Conversation[]>(mockConversations);
-  const [messages, setMessages] = useState<Record<string, Message[]>>(mockMessages);
   const [searchQuery, setSearchQuery] = useState("");
   const [mobileShowChat, setMobileShowChat] = useState(false);
+  const [loadingConversations, setLoadingConversations] = useState(true);
+  const [loadingMessages, setLoadingMessages] = useState(false);
+  const [sendingMessage, setSendingMessage] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const handleSendMessage = (e: React.FormEvent) => {
+  // Fetch conversations
+  const fetchConversations = useCallback(async () => {
+    if (!user) return;
+    
+    setLoadingConversations(true);
+    try {
+      const res = await fetch("/api/messages");
+      if (res.ok) {
+        const data = await res.json();
+        setConversations(data.conversations || []);
+      }
+    } catch (err) {
+      console.error("Error fetching conversations:", err);
+    } finally {
+      setLoadingConversations(false);
+    }
+  }, [user]);
+
+  // Fetch messages for selected conversation
+  const fetchMessages = useCallback(async (conversationId: string) => {
+    if (!user) return;
+    
+    setLoadingMessages(true);
+    try {
+      const res = await fetch(`/api/messages/${conversationId}`);
+      if (res.ok) {
+        const data = await res.json();
+        setMessages(data.messages || []);
+      }
+    } catch (err) {
+      console.error("Error fetching messages:", err);
+    } finally {
+      setLoadingMessages(false);
+    }
+  }, [user]);
+
+  useEffect(() => {
+    if (user) {
+      fetchConversations();
+    } else if (!authLoading) {
+      setLoadingConversations(false);
+    }
+  }, [user, authLoading, fetchConversations]);
+
+  useEffect(() => {
+    if (selectedConversation) {
+      fetchMessages(selectedConversation);
+    }
+  }, [selectedConversation, fetchMessages]);
+
+  // Scroll to bottom when messages change
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newMessage.trim() || !selectedConversation) return;
+    if (!newMessage.trim() || !selectedConversation || sendingMessage) return;
 
-    const newMsg: Message = {
-      id: `new-${Date.now()}`,
-      content: newMessage,
-      senderId: "me",
-      createdAt: "Az önce",
-      isRead: false,
-    };
-
-    setMessages((prev) => ({
-      ...prev,
-      [selectedConversation]: [...(prev[selectedConversation] || []), newMsg],
-    }));
+    setSendingMessage(true);
+    const messageContent = newMessage;
     setNewMessage("");
+
+    try {
+      const res = await fetch(`/api/messages/${selectedConversation}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content: messageContent }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setMessages(prev => [...prev, data.message]);
+        // Refresh conversations to update last message
+        fetchConversations();
+      } else {
+        setNewMessage(messageContent); // Restore message if failed
+      }
+    } catch (err) {
+      console.error("Error sending message:", err);
+      setNewMessage(messageContent);
+    } finally {
+      setSendingMessage(false);
+    }
   };
 
   const filteredConversations = conversations.filter((conv) =>
@@ -146,35 +139,43 @@ export default function MesajlarPage() {
   );
 
   const selectedConv = conversations.find((c) => c.id === selectedConversation);
-  const currentMessages = selectedConversation ? messages[selectedConversation] || [] : [];
+
+  // Format date for display
+  const formatMessageTime = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
+    
+    if (diffDays === 0) {
+      return date.toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" });
+    } else if (diffDays === 1) {
+      return "Dün";
+    } else if (diffDays < 7) {
+      return date.toLocaleDateString("tr-TR", { weekday: "long" });
+    } else {
+      return date.toLocaleDateString("tr-TR", { day: "numeric", month: "short" });
+    }
+  };
 
   // Show login prompt if not authenticated
-  if (!isLoading && !user) {
+  if (!authLoading && !user) {
     return (
       <>
         <PageHeader title="Mesajlarım" />
         <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          <div className="text-center py-16">
-            <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
-              <span className="material-symbols-outlined text-primary text-4xl">mail</span>
-            </div>
-            <h2 className="text-xl font-bold text-text-charcoal mb-2">Giriş Yapın</h2>
-            <p className="text-text-secondary mb-8 max-w-md mx-auto">
-              Mesajlarınızı görmek için hesabınıza giriş yapmanız gerekmektedir.
-            </p>
-            <Link
-              href="/hesap"
-              className="inline-flex items-center justify-center px-8 py-3 bg-primary hover:bg-primary-dark text-white font-semibold rounded-md transition-colors"
-            >
-              Giriş Yap
-            </Link>
-          </div>
+          <EmptyState
+            icon="mail"
+            title="Giriş Yapın"
+            description="Mesajlarınızı görmek için hesabınıza giriş yapmanız gerekmektedir."
+            actionLabel="Giriş Yap"
+            actionHref="/hesap"
+          />
         </div>
       </>
     );
   }
 
-  if (isLoading) {
+  if (authLoading) {
     return (
       <>
         <PageHeader title="Mesajlarım" />
@@ -215,7 +216,9 @@ export default function MesajlarPage() {
 
               {/* Conversations */}
               <div className="flex-1 overflow-y-auto">
-                {filteredConversations.length > 0 ? (
+                {loadingConversations ? (
+                  <ConversationListSkeleton count={5} />
+                ) : filteredConversations.length > 0 ? (
                   filteredConversations.map((conv) => (
                     <button
                       key={conv.id}
@@ -228,15 +231,23 @@ export default function MesajlarPage() {
                       }`}
                     >
                       <div className="relative shrink-0">
-                        <div className="w-12 h-12 rounded-full overflow-hidden">
-                          <div
-                            className="w-full h-full bg-cover bg-center"
-                            style={{ backgroundImage: `url('${conv.participant.avatar}')` }}
-                          />
+                        <div className="w-12 h-12 rounded-full overflow-hidden bg-gray-100">
+                          {conv.participant.avatar ? (
+                            <Image
+                              src={conv.participant.avatar}
+                              alt={conv.participant.name}
+                              width={48}
+                              height={48}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center bg-primary/10">
+                              <span className="text-primary font-bold">
+                                {conv.participant.name[0]?.toUpperCase()}
+                              </span>
+                            </div>
+                          )}
                         </div>
-                        {conv.participant.isOnline && (
-                          <div className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-green-500 rounded-full border-2 border-surface-white" />
-                        )}
                       </div>
                       <div className="flex-grow min-w-0">
                         <div className="flex items-center justify-between gap-2">
@@ -248,24 +259,29 @@ export default function MesajlarPage() {
                               </span>
                             )}
                           </div>
-                          <span className="text-xs text-text-secondary shrink-0">{conv.lastMessage.createdAt}</span>
+                          {conv.lastMessage && (
+                            <span className="text-xs text-text-secondary shrink-0">
+                              {formatMessageTime(conv.lastMessage.createdAt)}
+                            </span>
+                          )}
                         </div>
-                        <div className="flex items-center justify-between gap-2 mt-1">
-                          <p className={`text-sm truncate ${conv.unreadCount > 0 ? "text-text-charcoal font-medium" : "text-text-secondary"}`}>
-                            {conv.lastMessage.senderId === "me" && (
+                        {conv.lastMessage && (
+                          <p className="text-sm text-text-secondary truncate mt-1">
+                            {conv.lastMessage.senderId === user?.id && (
                               <span className="text-text-secondary">Siz: </span>
                             )}
                             {conv.lastMessage.content}
                           </p>
-                          {conv.unreadCount > 0 && (
-                            <span className="shrink-0 w-5 h-5 bg-primary text-white text-xs font-bold rounded-full flex items-center justify-center">
-                              {conv.unreadCount}
-                            </span>
-                          )}
-                        </div>
+                        )}
                       </div>
                     </button>
                   ))
+                ) : conversations.length === 0 ? (
+                  <div className="p-8 text-center">
+                    <span className="material-symbols-outlined text-4xl text-border-subtle mb-2">chat</span>
+                    <p className="text-text-secondary text-sm">Henüz mesajınız yok</p>
+                    <p className="text-text-secondary text-xs mt-1">Bir sanatçıya mesaj göndererek başlayın</p>
+                  </div>
                 ) : (
                   <div className="p-8 text-center">
                     <span className="material-symbols-outlined text-4xl text-border-subtle mb-2">search_off</span>
@@ -288,19 +304,27 @@ export default function MesajlarPage() {
                       <span className="material-symbols-outlined">arrow_back</span>
                     </button>
                     <Link
-                      href={`/sanatsever/${selectedConv.participant.username}`}
+                      href={selectedConv.participant.username ? `/sanatsever/${selectedConv.participant.username}` : "#"}
                       className="flex items-center gap-3 flex-grow hover:opacity-80 transition-opacity"
                     >
                       <div className="relative">
-                        <div className="w-10 h-10 rounded-full overflow-hidden">
-                          <div
-                            className="w-full h-full bg-cover bg-center"
-                            style={{ backgroundImage: `url('${selectedConv.participant.avatar}')` }}
-                          />
+                        <div className="w-10 h-10 rounded-full overflow-hidden bg-gray-100">
+                          {selectedConv.participant.avatar ? (
+                            <Image
+                              src={selectedConv.participant.avatar}
+                              alt={selectedConv.participant.name}
+                              width={40}
+                              height={40}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center bg-primary/10">
+                              <span className="text-primary font-bold text-sm">
+                                {selectedConv.participant.name[0]?.toUpperCase()}
+                              </span>
+                            </div>
+                          )}
                         </div>
-                        {selectedConv.participant.isOnline && (
-                          <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-surface-white" />
-                        )}
                       </div>
                       <div>
                         <div className="flex items-center gap-1.5">
@@ -309,65 +333,73 @@ export default function MesajlarPage() {
                             <span className="px-1.5 py-0.5 bg-primary/10 text-primary text-[10px] font-medium rounded">Sanatçı</span>
                           )}
                         </div>
-                        <p className="text-xs text-text-secondary">
-                          {selectedConv.participant.isOnline ? "Çevrimiçi" : "Çevrimdışı"}
-                        </p>
                       </div>
                     </Link>
-                    <button className="p-2 text-text-secondary hover:text-text-charcoal hover:bg-background-ivory rounded-lg transition-colors">
-                      <span className="material-symbols-outlined">more_vert</span>
-                    </button>
                   </div>
 
                   {/* Messages */}
                   <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                    {currentMessages.map((message) => (
-                      <div
-                        key={message.id}
-                        className={`flex ${message.senderId === "me" ? "justify-end" : "justify-start"}`}
-                      >
+                    {loadingMessages ? (
+                      <>
+                        <MessageSkeleton isOwn={false} />
+                        <MessageSkeleton isOwn={true} />
+                        <MessageSkeleton isOwn={false} />
+                      </>
+                    ) : messages.length > 0 ? (
+                      messages.map((message) => (
                         <div
-                          className={`max-w-[70%] px-4 py-2.5 rounded-2xl ${
-                            message.senderId === "me"
-                              ? "bg-primary text-white rounded-br-md"
-                              : "bg-background-ivory text-text-charcoal rounded-bl-md"
-                          }`}
+                          key={message.id}
+                          className={`flex ${message.senderId === user?.id ? "justify-end" : "justify-start"}`}
                         >
-                          <p>{message.content}</p>
-                          <p
-                            className={`text-[10px] mt-1 ${
-                              message.senderId === "me" ? "text-white/70" : "text-text-secondary"
+                          <div
+                            className={`max-w-[70%] px-4 py-2.5 rounded-2xl ${
+                              message.senderId === user?.id
+                                ? "bg-primary text-white rounded-br-md"
+                                : "bg-background-ivory text-text-charcoal rounded-bl-md"
                             }`}
                           >
-                            {message.createdAt}
-                          </p>
+                            <p>{message.content}</p>
+                            <p
+                              className={`text-[10px] mt-1 ${
+                                message.senderId === user?.id ? "text-white/70" : "text-text-secondary"
+                              }`}
+                            >
+                              {formatMessageTime(message.createdAt)}
+                            </p>
+                          </div>
                         </div>
+                      ))
+                    ) : (
+                      <div className="text-center py-8">
+                        <span className="material-symbols-outlined text-4xl text-border-subtle mb-2">chat_bubble</span>
+                        <p className="text-text-secondary text-sm">Henüz mesaj yok</p>
+                        <p className="text-text-secondary text-xs mt-1">Bir mesaj göndererek konuşmaya başlayın</p>
                       </div>
-                    ))}
+                    )}
+                    <div ref={messagesEndRef} />
                   </div>
 
                   {/* Message Input */}
                   <div className="p-4 border-t border-border-subtle">
                     <form onSubmit={handleSendMessage} className="flex items-center gap-3">
-                      <button
-                        type="button"
-                        className="p-2 text-text-secondary hover:text-primary hover:bg-primary/5 rounded-lg transition-colors"
-                      >
-                        <span className="material-symbols-outlined">attach_file</span>
-                      </button>
                       <input
                         type="text"
                         value={newMessage}
                         onChange={(e) => setNewMessage(e.target.value)}
                         placeholder="Mesajınızı yazın..."
                         className="flex-1 px-4 py-2.5 border border-border-subtle rounded-full focus:outline-none focus:border-primary"
+                        disabled={sendingMessage}
                       />
                       <button
                         type="submit"
-                        disabled={!newMessage.trim()}
+                        disabled={!newMessage.trim() || sendingMessage}
                         className="p-2.5 bg-primary hover:bg-primary-dark disabled:bg-primary/50 text-white rounded-full transition-colors"
                       >
-                        <span className="material-symbols-outlined">send</span>
+                        {sendingMessage ? (
+                          <span className="material-symbols-outlined animate-spin">sync</span>
+                        ) : (
+                          <span className="material-symbols-outlined">send</span>
+                        )}
                       </button>
                     </form>
                   </div>
@@ -376,7 +408,9 @@ export default function MesajlarPage() {
                 <div className="flex-1 flex items-center justify-center">
                   <div className="text-center">
                     <span className="material-symbols-outlined text-6xl text-border-subtle mb-4">chat</span>
-                    <p className="text-text-secondary">Bir konuşma seçin</p>
+                    <p className="text-text-secondary">
+                      {conversations.length > 0 ? "Bir konuşma seçin" : "Henüz mesajınız yok"}
+                    </p>
                   </div>
                 </div>
               )}
@@ -387,4 +421,3 @@ export default function MesajlarPage() {
     </>
   );
 }
-

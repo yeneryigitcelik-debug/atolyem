@@ -1,157 +1,170 @@
 /**
- * GET /api/favorites - Get user's favorite listings
- * POST /api/favorites - Add listing to favorites
- * DELETE /api/favorites/:listingId - Remove from favorites
+ * GET /api/favorites - Get current user's own favorites
+ * DELETE /api/favorites - Remove a listing from favorites
+ * POST /api/favorites - Add a listing to favorites
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { withRequestContext } from "@/interface/middleware/with-request-context";
-import { requireAuth } from "@/lib/auth/require-auth";
-import { favoriteListingSchema, paginationSchema } from "@/lib/api/validation";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/db/prisma";
-import { assertNotSelfFavorite } from "@/application/integrity-rules/ownership-rules";
-import { NotFoundError, AppError, ErrorCodes } from "@/lib/api/errors";
 
-export const GET = withRequestContext(async (request: NextRequest, { requestId }) => {
-  const { user } = await requireAuth();
+export async function GET(request: NextRequest) {
+  try {
+    const supabase = await createSupabaseServerClient();
+    const { data: { user } } = await supabase.auth.getUser();
 
-  const searchParams = Object.fromEntries(request.nextUrl.searchParams);
-  const { page, limit } = paginationSchema.parse(searchParams);
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
-  const skip = (page - 1) * limit;
-
-  const [favorites, total] = await Promise.all([
-    prisma.favoriteListing.findMany({
+    const favorites = await prisma.favoriteListing.findMany({
       where: { userId: user.id },
       include: {
         listing: {
-          include: {
-            shop: { select: { id: true, shopName: true, shopSlug: true } },
-            media: { where: { isPrimary: true }, take: 1 },
+          select: {
+            id: true,
+            title: true,
+            slug: true,
+            basePriceMinor: true,
+            currency: true,
+            status: true,
+            shop: {
+              select: {
+                id: true,
+                shopName: true,
+                shopSlug: true,
+                owner: {
+                  select: {
+                    publicProfile: {
+                      select: {
+                        username: true,
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            media: {
+              where: { isPrimary: true },
+              take: 1,
+              select: { url: true },
+            },
+            tags: {
+              take: 1,
+              select: { tag: { select: { name: true } } },
+            },
           },
         },
       },
       orderBy: { createdAt: "desc" },
-      skip,
-      take: limit,
-    }),
-    prisma.favoriteListing.count({ where: { userId: user.id } }),
-  ]);
+    });
 
-  return NextResponse.json(
-    {
-      favorites: favorites
-        .filter((f) => f.listing.status === "PUBLISHED") // Only show published
-        .map((f) => ({
-          listingId: f.listingId,
-          listing: {
-            id: f.listing.id,
-            title: f.listing.title,
-            slug: f.listing.slug,
-            basePriceMinor: f.listing.basePriceMinor,
-            currency: f.listing.currency,
-            shop: f.listing.shop,
-            thumbnail: f.listing.media[0]?.url ?? null,
-          },
-          favoritedAt: f.createdAt,
-        })),
-      pagination: {
-        page,
-        limit,
-        total,
-        totalPages: Math.ceil(total / limit),
+    // Filter to only include published listings
+    const publishedFavorites = favorites.filter((f) => f.listing.status === "PUBLISHED");
+
+    return NextResponse.json({
+      favorites: publishedFavorites.map((f) => ({
+        id: f.id,
+        listingId: f.listingId,
+        title: f.listing.title,
+        slug: f.listing.slug,
+        price: f.listing.basePriceMinor / 100, // Convert from minor to major currency
+        currency: f.listing.currency,
+        image: f.listing.media[0]?.url ?? null,
+        artist: f.listing.shop?.shopName ?? "Bilinmeyen",
+        artistSlug: f.listing.shop?.owner?.publicProfile?.username ?? null,
+        badge: f.listing.tags[0]?.tag?.name ?? null,
+        favoritedAt: f.createdAt,
+      })),
+      total: publishedFavorites.length,
+    });
+  } catch (error) {
+    console.error("Error fetching favorites:", error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    const supabase = await createSupabaseServerClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const body = await request.json();
+    const { listingId } = body;
+
+    if (!listingId) {
+      return NextResponse.json({ error: "Listing ID is required" }, { status: 400 });
+    }
+
+    // Check if listing exists and is published
+    const listing = await prisma.listing.findUnique({
+      where: { id: listingId },
+      select: { id: true, status: true },
+    });
+
+    if (!listing || listing.status !== "PUBLISHED") {
+      return NextResponse.json({ error: "Listing not found" }, { status: 404 });
+    }
+
+    // Check if already favorited
+    const existing = await prisma.favoriteListing.findUnique({
+      where: {
+        userId_listingId: {
+          userId: user.id,
+          listingId,
+        },
       },
-    },
-    { headers: { "x-request-id": requestId } }
-  );
-});
+    });
 
-export const POST = withRequestContext(async (request: NextRequest, { requestId, logger }) => {
-  const { user } = await requireAuth();
+    if (existing) {
+      return NextResponse.json({ message: "Already in favorites" }, { status: 200 });
+    }
 
-  const body = await request.json();
-  const data = favoriteListingSchema.parse(body);
-
-  // Get listing
-  const listing = await prisma.listing.findUnique({
-    where: { id: data.listingId },
-    select: {
-      id: true,
-      sellerUserId: true,
-      status: true,
-    },
-  });
-
-  if (!listing) {
-    throw new NotFoundError("Listing");
-  }
-
-  // Check not self-favoriting
-  assertNotSelfFavorite(listing.sellerUserId, user.id);
-
-  // Check listing is published
-  if (listing.status !== "PUBLISHED") {
-    throw new AppError(
-      ErrorCodes.LISTING_NOT_AVAILABLE,
-      "You can only favorite published listings",
-      400
-    );
-  }
-
-  // Check if already favorited
-  const existing = await prisma.favoriteListing.findUnique({
-    where: {
-      userId_listingId: {
+    // Add to favorites
+    const favorite = await prisma.favoriteListing.create({
+      data: {
         userId: user.id,
-        listingId: data.listingId,
+        listingId,
       },
-    },
-  });
+    });
 
-  if (existing) {
-    return NextResponse.json(
-      { message: "Already in favorites" },
-      { headers: { "x-request-id": requestId } }
-    );
+    return NextResponse.json({ favorite }, { status: 201 });
+  } catch (error) {
+    console.error("Error adding to favorites:", error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
+}
 
-  await prisma.favoriteListing.create({
-    data: {
-      userId: user.id,
-      listingId: data.listingId,
-    },
-  });
+export async function DELETE(request: NextRequest) {
+  try {
+    const supabase = await createSupabaseServerClient();
+    const { data: { user } } = await supabase.auth.getUser();
 
-  logger.info("Listing favorited", { listingId: data.listingId });
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
-  return NextResponse.json(
-    { message: "Added to favorites" },
-    { status: 201, headers: { "x-request-id": requestId } }
-  );
-});
+    const { searchParams } = new URL(request.url);
+    const listingId = searchParams.get("listingId");
 
-export const DELETE = withRequestContext(async (request: NextRequest, { requestId, logger }) => {
-  const { user } = await requireAuth();
+    if (!listingId) {
+      return NextResponse.json({ error: "Listing ID is required" }, { status: 400 });
+    }
 
-  const url = new URL(request.url);
-  const listingId = url.searchParams.get("listingId");
+    await prisma.favoriteListing.deleteMany({
+      where: {
+        userId: user.id,
+        listingId,
+      },
+    });
 
-  if (!listingId) {
-    throw new AppError(ErrorCodes.VALIDATION_ERROR, "listingId is required", 400);
+    return NextResponse.json({ message: "Removed from favorites" });
+  } catch (error) {
+    console.error("Error removing from favorites:", error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
-
-  await prisma.favoriteListing.deleteMany({
-    where: {
-      userId: user.id,
-      listingId,
-    },
-  });
-
-  logger.info("Listing unfavorited", { listingId });
-
-  return NextResponse.json(
-    { message: "Removed from favorites" },
-    { headers: { "x-request-id": requestId } }
-  );
-});
-
+}
