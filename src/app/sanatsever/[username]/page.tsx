@@ -553,10 +553,10 @@ export default function SanatseverPage() {
                   </div>
                 </div>
                 <Link 
-                  href={`/sanatci/${profile.username}`}
+                  href={`/sanatsever/${profile.username}`}
                   className="block w-full text-center px-4 py-2.5 bg-primary hover:bg-primary-dark text-white font-medium rounded-lg transition-colors"
                 >
-                  Dükkanı Ziyaret Et
+                  Profili Görüntüle
                 </Link>
               </div>
             )}
@@ -796,8 +796,8 @@ export default function SanatseverPage() {
             {/* Comments Tab */}
             {activeTab === "comments" && (
               <div className="space-y-4">
-                {/* Comment Form */}
-                {user ? (
+                {/* Comment Form - Only show if not own profile */}
+                {user && !isOwnProfile ? (
                   <div className="bg-surface-white rounded-xl border border-border-subtle p-4">
                     <form onSubmit={handleCommentSubmit}>
                       <div className="flex gap-3">

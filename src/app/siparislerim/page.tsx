@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import PageHeader from "@/components/ui/PageHeader";
 import AccountSidebar from "@/components/layout/AccountSidebar";
@@ -27,73 +27,7 @@ interface Order {
   estimatedDelivery?: string;
 }
 
-const mockOrders: Order[] = [
-  {
-    id: "1",
-    orderNumber: "ATL-2026-001234",
-    date: "3 Ocak 2026",
-    status: "shipped",
-    total: 4350,
-    trackingNumber: "TR12345678901",
-    estimatedDelivery: "8 Ocak 2026",
-    items: [
-      {
-        id: "1",
-        title: "Soyut Kompozisyon",
-        artist: "Ayşe Demir",
-        price: 3500,
-        quantity: 1,
-        image: "https://images.unsplash.com/photo-1579783902614-a3fb3927b6a5?w=200&h=200&fit=crop",
-        slug: "soyut-kompozisyon",
-      },
-      {
-        id: "2",
-        title: "El Yapımı Seramik Vazo",
-        artist: "Mehmet Demir",
-        price: 850,
-        quantity: 1,
-        image: "https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=200&h=200&fit=crop",
-        slug: "el-yapimi-seramik-vazo",
-      },
-    ],
-  },
-  {
-    id: "2",
-    orderNumber: "ATL-2025-009876",
-    date: "15 Aralık 2025",
-    status: "delivered",
-    total: 2800,
-    items: [
-      {
-        id: "3",
-        title: "Mavi Harmoni",
-        artist: "Mehmet Kaya",
-        price: 2800,
-        quantity: 1,
-        image: "https://images.unsplash.com/photo-1549887534-1541e9326642?w=200&h=200&fit=crop",
-        slug: "mavi-harmoni",
-      },
-    ],
-  },
-  {
-    id: "3",
-    orderNumber: "ATL-2025-008765",
-    date: "1 Aralık 2025",
-    status: "delivered",
-    total: 1200,
-    items: [
-      {
-        id: "4",
-        title: "Cam Takı Seti",
-        artist: "Emre Arslan",
-        price: 1200,
-        quantity: 1,
-        image: "https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?w=200&h=200&fit=crop",
-        slug: "cam-taki-seti",
-      },
-    ],
-  },
-];
+// Orders will be fetched from API
 
 const statusConfig: Record<OrderStatus, { label: string; color: string; icon: string }> = {
   pending: { label: "Onay Bekliyor", color: "bg-yellow-100 text-yellow-700", icon: "schedule" },
@@ -105,8 +39,52 @@ const statusConfig: Record<OrderStatus, { label: string; color: string; icon: st
 
 export default function SiparislerimPage() {
   const { user, isLoading } = useAuth();
-  const [orders] = useState<Order[]>(mockOrders);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [loading, setLoading] = useState(true);
   const [selectedTab, setSelectedTab] = useState<"all" | "active" | "completed">("all");
+
+  useEffect(() => {
+    if (!isLoading && user) {
+      fetchOrders();
+    } else if (!isLoading && !user) {
+      setLoading(false);
+    }
+  }, [user, isLoading]);
+
+  const fetchOrders = async () => {
+    try {
+      const res = await fetch("/api/orders");
+      if (res.ok) {
+        const data = await res.json();
+        // Transform API response to match Order interface
+        const transformedOrders: Order[] = data.orders.map((order: any) => ({
+          id: order.id,
+          orderNumber: order.orderNumber,
+          date: new Date(order.createdAt).toLocaleDateString("tr-TR", { day: "numeric", month: "long", year: "numeric" }),
+          status: order.status.toLowerCase().replace("_", "-") as OrderStatus,
+          total: order.grandTotalMinor / 100,
+          items: order.items.map((item: any) => ({
+            id: item.id,
+            title: item.titleSnapshot,
+            artist: item.shopId, // Will need shop name from API
+            price: item.unitPriceMinor / 100,
+            quantity: item.quantity,
+            image: "", // Will need from listing
+            slug: item.listing.slug || "",
+          })),
+          trackingNumber: order.items[0]?.trackingNumber,
+          estimatedDelivery: order.items[0]?.estimatedShipByDate 
+            ? new Date(order.items[0].estimatedShipByDate).toLocaleDateString("tr-TR", { day: "numeric", month: "long", year: "numeric" })
+            : undefined,
+        }));
+        setOrders(transformedOrders);
+      }
+    } catch (err) {
+      console.error("Error fetching orders:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   if (!isLoading && !user) {
     return (
@@ -131,7 +109,7 @@ export default function SiparislerimPage() {
     );
   }
 
-  if (isLoading) {
+  if (isLoading || loading) {
     return (
       <>
         <PageHeader title="Siparişlerim" />

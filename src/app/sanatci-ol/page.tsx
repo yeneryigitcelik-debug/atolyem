@@ -7,7 +7,7 @@ import Link from "next/link";
 import { useState } from "react";
 
 export default function SanatciOlPage() {
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, refreshProfile } = useAuth();
   const router = useRouter();
   const [shopName, setShopName] = useState("");
   const [artType, setArtType] = useState("");
@@ -15,6 +15,7 @@ export default function SanatciOlPage() {
   const [instagram, setInstagram] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleCreateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -23,11 +24,34 @@ export default function SanatciOlPage() {
       return;
     }
     
+    setError(null);
     setIsSubmitting(true);
-    // Simulating API call
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    // In real implementation, this would create the seller profile
-    router.push("/satici-paneli");
+    
+    try {
+      const res = await fetch("/api/seller/onboard", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          shopName,
+          tagline: artType ? `${artType} Sanatçısı` : undefined,
+          about: bio || undefined,
+        }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Profil oluşturulamadı");
+      }
+
+      // Refresh profile to get updated role and shop info
+      await refreshProfile();
+      
+      // Redirect to seller panel
+      router.push("/satici-paneli");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Bir hata oluştu");
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -114,6 +138,12 @@ export default function SanatciOlPage() {
               </div>
 
               <h2 className="text-xl font-bold text-text-charcoal mb-6">Sanatçı Profilinizi Oluşturun</h2>
+              
+              {error && (
+                <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+                  {error}
+                </div>
+              )}
               
               <form onSubmit={handleCreateProfile} className="space-y-6">
                 <div>

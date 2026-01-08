@@ -19,3 +19,5 @@ VALUES
   (gen_random_uuid(), 'ANNIVERSARY_5', '5 Yıllık Üye', '5 yıldır platformda', 'military_tech', '#FACC15', 14, true, NOW())
 ON CONFLICT (type) DO NOTHING;
 
+
+

@@ -28,7 +28,7 @@ export default function SanatcilarPage() {
         <h2 className="text-2xl font-bold text-text-charcoal mb-8">Öne Çıkan Sanatçılar</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {featuredArtists.map((artist) => (
-            <Link key={artist.slug} href={`/sanatci/${artist.slug}`} className="group">
+            <Link key={artist.slug} href={`/sanatsever/${artist.slug}`} className="group">
               <div className="bg-surface-white rounded-lg border border-border-subtle overflow-hidden hover:border-primary transition-all duration-300 hover:shadow-lg">
                 <div className="aspect-[4/3] overflow-hidden">
                   <div
@@ -71,7 +71,7 @@ export default function SanatcilarPage() {
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6">
             {allArtists.map((artist) => (
-              <Link key={artist.slug} href={`/sanatci/${artist.slug}`} className="group">
+              <Link key={artist.slug} href={`/sanatsever/${artist.slug}`} className="group">
                 <div className="bg-surface-white rounded-lg border border-border-subtle p-4 hover:border-primary transition-all duration-300 hover:shadow-md text-center">
                   <div className="w-20 h-20 rounded-full overflow-hidden mx-auto mb-4">
                     <div

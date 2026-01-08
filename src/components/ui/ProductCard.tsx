@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useState, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -34,6 +35,7 @@ export default function ProductCard({
   const [isAnimating, setIsAnimating] = useState(false);
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState("");
+  const [isAddingToCart, setIsAddingToCart] = useState(false);
 
   const handleFavoriteClick = useCallback(async (e: React.MouseEvent) => {
     e.preventDefault();
@@ -99,23 +101,71 @@ export default function ProductCard({
         </button>
 
         {/* Quick Add to Cart - Shows on Hover */}
-        <button 
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            // TODO: Add to cart functionality
-          }}
-          className="absolute bottom-[120px] left-1/2 -translate-x-1/2 z-10 px-4 py-2 bg-primary text-white font-medium rounded-full shadow-lg opacity-0 group-hover:opacity-100 translate-y-2 group-hover:translate-y-0 transition-all duration-300 whitespace-nowrap flex items-center gap-2"
-        >
-          <span className="material-symbols-outlined text-[18px]">add_shopping_cart</span>
-          Sepete Ekle
-        </button>
+        {listingId && (
+          <button 
+            onClick={async (e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              
+              if (!user) {
+                window.location.href = "/hesap";
+                return;
+              }
+
+              if (!listingId || isAddingToCart) return;
+
+              setIsAddingToCart(true);
+              try {
+                const res = await fetch("/api/cart", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    listingId,
+                    quantity: 1,
+                  }),
+                });
+
+                if (!res.ok) {
+                  const error = await res.json();
+                  setToastMessage(error.error || "Sepete eklenirken bir hata oluştu");
+                } else {
+                  setToastMessage("Sepete eklendi");
+                }
+              } catch (err) {
+                setToastMessage("Bir hata oluştu");
+              } finally {
+                setIsAddingToCart(false);
+                setShowToast(true);
+                setTimeout(() => setShowToast(false), 2000);
+              }
+            }}
+            disabled={isAddingToCart || !listingId}
+            className="absolute bottom-[120px] left-1/2 -translate-x-1/2 z-10 px-4 py-2 bg-primary text-white font-medium rounded-full shadow-lg opacity-0 group-hover:opacity-100 translate-y-2 group-hover:translate-y-0 transition-all duration-300 whitespace-nowrap flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isAddingToCart ? (
+              <>
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                Ekleniyor...
+              </>
+            ) : (
+              <>
+                <span className="material-symbols-outlined text-[18px]">add_shopping_cart</span>
+                Sepete Ekle
+              </>
+            )}
+          </button>
+        )}
 
         {/* Image */}
-        <div className="aspect-square overflow-hidden bg-gray-100">
-          <div
-            className="w-full h-full bg-cover bg-center group-hover:scale-105 transition-transform duration-500"
-            style={{ backgroundImage: `url('${image}')` }}
+        <div className="aspect-square overflow-hidden bg-gray-100 relative">
+          <Image
+            src={image}
+            alt={title}
+            fill
+            className="object-cover group-hover:scale-105 transition-transform duration-500"
+            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+            placeholder="blur"
+            blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/2wBDAQkJCQwLDBgNDRgyIRwhMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjL/wAARCAAIAAoDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAhEAACAQMDBQAAAAAAAAAAAAABAgMABAUGIWGRkqGx0f/EABUBAQEAAAAAAAAAAAAAAAAAAAMF/8QAGhEAAgIDAAAAAAAAAAAAAAAAAAECEgMRkf/aAAwDAQACEQADAD8AkjR4nVsYk2BtPmJbjvqD6T9b6bk+h0R//9k="
           />
         </div>
 
@@ -153,7 +203,7 @@ export default function ProductCard({
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
-                  window.location.href = `/sanatci/${artistSlug}`;
+                  window.location.href = `/sanatsever/${artistSlug}`;
                 }}
                 className="hover:text-primary cursor-pointer transition-colors"
               >

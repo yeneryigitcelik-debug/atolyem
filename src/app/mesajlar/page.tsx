@@ -288,7 +288,7 @@ export default function MesajlarPage() {
                       <span className="material-symbols-outlined">arrow_back</span>
                     </button>
                     <Link
-                      href={selectedConv.participant.isArtist ? `/sanatci/${selectedConv.participant.username}` : `/sanatsever/${selectedConv.participant.username}`}
+                      href={`/sanatsever/${selectedConv.participant.username}`}
                       className="flex items-center gap-3 flex-grow hover:opacity-80 transition-opacity"
                     >
                       <div className="relative">

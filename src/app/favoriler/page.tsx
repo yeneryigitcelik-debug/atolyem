@@ -165,7 +165,7 @@ export default function FavorilerPage() {
                           </h3>
                         </Link>
                         <Link 
-                          href={`/sanatci/${product.artistSlug}`}
+                          href={`/sanatsever/${product.artistSlug}`}
                           className="text-sm text-text-secondary hover:text-primary transition-colors flex items-center gap-1 mt-1"
                         >
                           <span className="material-symbols-outlined text-[14px]">person</span>

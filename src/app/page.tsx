@@ -1,4 +1,5 @@
 import Link from "next/link";
+import HeroCarousel from "@/components/ui/HeroCarousel";
 
 // Mock data for categories
 const categories = [
@@ -17,76 +18,17 @@ const collections = [
   { title: "Doğadan İlham", desc: "Organik materyaller ve sürdürülebilir sanat.", slug: "dogadan-ilham", image: "https://images.unsplash.com/photo-1513519245088-0e12902e5a38?w=600&h=800&fit=crop" },
 ];
 
-// Mock data for products
-const newProducts = [
-  { title: "Mavi Düşler No.4", artist: "Elif Yılmaz", price: 2500, badge: "Orijinal", slug: "mavi-dusler-no4", image: "https://images.unsplash.com/photo-1549887534-1541e9326642?w=400&h=400&fit=crop" },
-  { title: "Benekli Seramik Kupa", artist: "Toprak Atölyesi", price: 450, badge: "El Yapımı", slug: "benekli-seramik-kupa", image: "https://images.unsplash.com/photo-1514228742587-6b1558fcca3d?w=400&h=400&fit=crop" },
-  { title: "Özgürlük Heykeli", artist: "Caner Demir", price: 8000, badge: "Limited", slug: "ozgurluk-heykeli", image: "https://images.unsplash.com/photo-1549887534-1541e9326642?w=400&h=400&fit=crop" },
-  { title: "Dokuma Duvar Süsü", artist: "İplik Studio", price: 1200, badge: "El Yapımı", slug: "dokuma-duvar-susu", image: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&h=400&fit=crop" },
-];
-
-const popularProducts = [
-  { title: "Vazo No.12", artist: "Seramik Atölyesi", price: 650, slug: "vazo-no12", image: "https://images.unsplash.com/photo-1578749556568-bc2c40e68b61?w=400&h=500&fit=crop" },
-  { title: "Yeşil Vadi", artist: "Ahmet Yılmaz", price: 3200, slug: "yesil-vadi", image: "https://images.unsplash.com/photo-1518709414768-a88981a4515d?w=400&h=500&fit=crop" },
-  { title: "Ahşap Sandalye", artist: "WoodArt", price: 5500, slug: "ahsap-sandalye", image: "https://images.unsplash.com/photo-1503602642458-232111445657?w=400&h=500&fit=crop" },
-  { title: "Cam Obje", artist: "Glass Master", price: 1800, slug: "cam-obje", image: "https://images.unsplash.com/photo-1518709414768-a88981a4515d?w=400&h=500&fit=crop" },
-  { title: "Metal Form", artist: "Metal İşleri", price: 4200, slug: "metal-form", image: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&h=500&fit=crop" },
-];
-
-const blogPosts = [
-  { title: "Sanatçının Atölyesine Yolculuk", desc: "Üretim sürecinin perde arkasındaki ilham kaynaklarını ve teknikleri keşfedin.", slug: "sanatcinin-atolyesine-yolculuk", image: "https://images.unsplash.com/photo-1460661419201-fd4cecdf8a8b?w=600&h=400&fit=crop" },
-  { title: "Evde Sanat Koleksiyonu Nasıl Oluşturulur?", desc: "Başlangıç seviyesindeki koleksiyonerler için bütçe dostu ve etkili ipuçları.", slug: "evde-sanat-koleksiyonu", image: "https://images.unsplash.com/photo-1513519245088-0e12902e5a38?w=600&h=400&fit=crop" },
-  { title: "El Yapımı Seramiklerin Bakımı", desc: "Seramik eserlerinizi uzun yıllar ilk günkü gibi korumanın püf noktaları.", slug: "seramik-bakimi", image: "https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=600&h=400&fit=crop" },
-];
+// Products will be fetched from API
+const newProducts: any[] = [];
+const popularProducts: any[] = [];
+const blogPosts: any[] = [];
 
 export default function Home() {
   return (
     <>
-      {/* Hero Section */}
-      <section className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-20">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
-          {/* Text Content */}
-          <div className="flex flex-col gap-6 order-2 lg:order-1 text-center lg:text-left">
-            <h2 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-text-charcoal leading-[1.1] tracking-tight">
-              Atölyelerden çıkan <br className="hidden lg:block" /> <span className="text-primary italic">özgün</span> eserler.
-            </h2>
-            <p className="text-lg sm:text-xl text-text-secondary max-w-lg mx-auto lg:mx-0 font-light leading-relaxed">
-              Küratöryel seçkiler, doğrulanmış satıcılar ve güvenli alışveriş ile eviniz için en özel parçaları keşfedin.
-            </p>
-            <div className="flex flex-wrap justify-center lg:justify-start gap-4 pt-4">
-              <Link
-                href="/kesfet"
-                className="px-8 py-3.5 bg-primary hover:bg-primary-dark text-white text-base font-semibold rounded-md shadow-sm hover:shadow transition-all duration-300 transform hover:-translate-y-0.5"
-              >
-                Keşfet
-              </Link>
-              <Link
-                href="/sanatci-ol"
-                className="px-8 py-3.5 bg-transparent border border-border-subtle text-text-charcoal hover:border-primary hover:bg-primary/5 text-base font-semibold rounded-md transition-all duration-300"
-              >
-                Sanatçı Ol
-              </Link>
-            </div>
-          </div>
-
-          {/* Image Grid */}
-          <div className="relative order-1 lg:order-2 h-[400px] sm:h-[500px] w-full">
-            <div className="absolute top-0 right-0 w-3/4 h-3/4 bg-surface-white rounded-lg overflow-hidden shadow-lg z-10 transform translate-x-4 -translate-y-4">
-              <div
-                className="w-full h-full bg-cover bg-center"
-                style={{ backgroundImage: "url('https://images.unsplash.com/photo-1579783902614-a3fb3927b6a5?w=800&h=600&fit=crop')" }}
-              />
-            </div>
-            <div className="absolute bottom-0 left-0 w-2/3 h-2/3 bg-surface-white rounded-lg overflow-hidden shadow-lg z-20 border-4 border-background-ivory">
-              <div
-                className="w-full h-full bg-cover bg-center"
-                style={{ backgroundImage: "url('https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=600&h=400&fit=crop')" }}
-              />
-            </div>
-            {/* Decorative Circle */}
-            <div className="absolute -bottom-8 -right-8 w-32 h-32 bg-primary/10 rounded-full blur-2xl -z-10"></div>
-          </div>
-        </div>
+      {/* Hero Carousel Section */}
+      <section className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-8 lg:py-12">
+        <HeroCarousel />
       </section>
 
       {/* Quick Discovery Categories */}
@@ -159,36 +101,48 @@ export default function Home() {
             <span className="material-symbols-outlined ml-1 text-base group-hover:translate-x-1 transition-transform">arrow_forward</span>
           </Link>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {newProducts.map((product) => (
-            <Link
-              key={product.slug}
-              href={`/urun/${product.slug}`}
-              className="group bg-surface-white rounded-md border border-border-subtle hover:border-primary transition-all duration-300 hover:shadow-md hover:-translate-y-1 relative"
-            >
-              <button className="absolute top-3 right-3 z-10 p-1.5 bg-white/80 rounded-full text-text-secondary hover:text-primary transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100">
-                <span className="material-symbols-outlined text-[20px]">favorite</span>
-              </button>
-              <div className="aspect-square overflow-hidden rounded-t-md bg-gray-100">
-                <div className="w-full h-full bg-cover bg-center" style={{ backgroundImage: `url('${product.image}')` }} />
-              </div>
-              <div className="p-4">
-                <div className="flex gap-2 mb-2">
-                  <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-background-ivory border border-border-subtle ${product.badge === "Orijinal" || product.badge === "Limited" ? "text-primary" : "text-text-secondary"}`}>
-                    {product.badge}
-                  </span>
+        {newProducts.length > 0 ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {newProducts.map((product) => (
+              <Link
+                key={product.slug}
+                href={`/urun/${product.slug}`}
+                className="group bg-surface-white rounded-md border border-border-subtle hover:border-primary transition-all duration-300 hover:shadow-md hover:-translate-y-1 relative"
+              >
+                <button className="absolute top-3 right-3 z-10 p-1.5 bg-white/80 rounded-full text-text-secondary hover:text-primary transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100">
+                  <span className="material-symbols-outlined text-[20px]">favorite</span>
+                </button>
+                <div className="aspect-square overflow-hidden rounded-t-md bg-gray-100">
+                  <div className="w-full h-full bg-cover bg-center" style={{ backgroundImage: `url('${product.image}')` }} />
                 </div>
-                <h4 className="text-text-charcoal font-semibold text-lg leading-tight truncate">{product.title}</h4>
-                <div className="flex items-center justify-between mt-2">
-                  <div>
-                    <p className="text-xs text-text-secondary">Sanatçı: <span className="text-text-charcoal font-medium">{product.artist}</span></p>
+                <div className="p-4">
+                  <div className="flex gap-2 mb-2">
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-background-ivory border border-border-subtle ${product.badge === "Orijinal" || product.badge === "Limited" ? "text-primary" : "text-text-secondary"}`}>
+                      {product.badge}
+                    </span>
                   </div>
-                  <span className="text-text-charcoal font-bold">{product.price.toLocaleString("tr-TR")} TL</span>
+                  <h4 className="text-text-charcoal font-semibold text-lg leading-tight truncate">{product.title}</h4>
+                  <div className="flex items-center justify-between mt-2">
+                    <div>
+                      <p className="text-xs text-text-secondary">Sanatçı: <span className="text-text-charcoal font-medium">{product.artist}</span></p>
+                    </div>
+                    <span className="text-text-charcoal font-bold">{product.price.toLocaleString("tr-TR")} TL</span>
+                  </div>
                 </div>
-              </div>
+              </Link>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-16 bg-surface-white rounded-lg border border-border-subtle">
+            <span className="material-symbols-outlined text-6xl text-border-subtle mb-4">palette</span>
+            <h3 className="text-xl font-semibold text-text-charcoal mb-2">Henüz yeni eser eklenmedi</h3>
+            <p className="text-text-secondary mb-6">Yakında harika eserler burada görünecek.</p>
+            <Link href="/kesfet" className="inline-flex items-center gap-2 px-6 py-3 bg-primary hover:bg-primary-dark text-white font-medium rounded-md transition-colors">
+              Tüm Eserleri Keşfet
+              <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
             </Link>
-          ))}
-        </div>
+          </div>
+        )}
       </section>
 
       {/* Trust / Quality Strip */}
@@ -258,7 +212,7 @@ export default function Home() {
                   <div className="w-full h-full bg-cover bg-center" style={{ backgroundImage: "url('https://images.unsplash.com/photo-1578749556568-bc2c40e68b61?w=200&h=200&fit=crop')" }} />
                 </div>
               </div>
-              <Link href="/sanatci/sinem-demirtas" className="self-start px-6 py-3 bg-primary hover:bg-primary-dark text-white font-medium rounded-md transition-colors shadow-sm">
+              <Link href="/sanatsever/sinem-demirtas" className="self-start px-6 py-3 bg-primary hover:bg-primary-dark text-white font-medium rounded-md transition-colors shadow-sm">
                 Sanatçıyı İncele
               </Link>
             </div>
@@ -280,22 +234,34 @@ export default function Home() {
           <Link href="/kategori/heykel" className="whitespace-nowrap px-4 py-2 bg-surface-white border border-border-subtle text-text-charcoal hover:border-primary hover:text-primary transition-colors text-sm font-medium rounded-full">Modern Heykel</Link>
         </div>
         {/* Horizontal Scroll Container */}
-        <div className="flex gap-6 overflow-x-auto scrollbar-hide pb-4 snap-x">
-          {popularProducts.map((product) => (
-            <Link key={product.slug} href={`/urun/${product.slug}`} className="min-w-[280px] w-[280px] snap-start">
-              <div className="group bg-surface-white rounded-md border border-border-subtle hover:border-primary transition-all duration-300 relative">
-                <div className="aspect-[3/4] overflow-hidden rounded-t-md bg-gray-100">
-                  <div className="w-full h-full bg-cover bg-center" style={{ backgroundImage: `url('${product.image}')` }} />
+        {popularProducts.length > 0 ? (
+          <div className="flex gap-6 overflow-x-auto scrollbar-hide pb-4 snap-x">
+            {popularProducts.map((product) => (
+              <Link key={product.slug} href={`/urun/${product.slug}`} className="min-w-[280px] w-[280px] snap-start">
+                <div className="group bg-surface-white rounded-md border border-border-subtle hover:border-primary transition-all duration-300 relative">
+                  <div className="aspect-[3/4] overflow-hidden rounded-t-md bg-gray-100">
+                    <div className="w-full h-full bg-cover bg-center" style={{ backgroundImage: `url('${product.image}')` }} />
+                  </div>
+                  <div className="p-4">
+                    <h4 className="text-text-charcoal font-semibold text-base truncate">{product.title}</h4>
+                    <p className="text-xs text-text-secondary mt-1">{product.artist}</p>
+                    <p className="text-text-charcoal font-bold mt-2">{product.price.toLocaleString("tr-TR")} TL</p>
+                  </div>
                 </div>
-                <div className="p-4">
-                  <h4 className="text-text-charcoal font-semibold text-base truncate">{product.title}</h4>
-                  <p className="text-xs text-text-secondary mt-1">{product.artist}</p>
-                  <p className="text-text-charcoal font-bold mt-2">{product.price.toLocaleString("tr-TR")} TL</p>
-                </div>
-              </div>
+              </Link>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-16 bg-surface-white rounded-lg border border-border-subtle">
+            <span className="material-symbols-outlined text-6xl text-border-subtle mb-4">trending_up</span>
+            <h3 className="text-xl font-semibold text-text-charcoal mb-2">Henüz popüler eser yok</h3>
+            <p className="text-text-secondary mb-6">En çok beğenilen eserler burada görünecek.</p>
+            <Link href="/kesfet" className="inline-flex items-center gap-2 px-6 py-3 bg-primary hover:bg-primary-dark text-white font-medium rounded-md transition-colors">
+              Keşfetmeye Başla
+              <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
             </Link>
-          ))}
-        </div>
+          </div>
+        )}
       </section>
 
       {/* Blog Teaser */}
@@ -308,23 +274,35 @@ export default function Home() {
               <span className="material-symbols-outlined ml-1 text-base group-hover:translate-x-1 transition-transform">arrow_forward</span>
             </Link>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {blogPosts.map((post) => (
-              <Link key={post.slug} href={`/blog/${post.slug}`} className="flex flex-col gap-4 group cursor-pointer">
-                <div className="aspect-video overflow-hidden rounded-md bg-gray-200">
-                  <div
-                    className="w-full h-full bg-cover bg-center transition-transform duration-500 group-hover:scale-105"
-                    style={{ backgroundImage: `url('${post.image}')` }}
-                  />
-                </div>
-                <div>
-                  <h4 className="text-xl font-bold text-text-charcoal mb-2 group-hover:text-primary transition-colors">{post.title}</h4>
-                  <p className="text-text-secondary text-sm mb-3 line-clamp-2">{post.desc}</p>
-                  <span className="text-primary text-sm font-medium border-b border-primary/20 pb-0.5 group-hover:border-primary transition-colors inline-block">Devamını Oku</span>
-                </div>
+          {blogPosts.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              {blogPosts.map((post) => (
+                <Link key={post.slug} href={`/blog/${post.slug}`} className="flex flex-col gap-4 group cursor-pointer">
+                  <div className="aspect-video overflow-hidden rounded-md bg-gray-200">
+                    <div
+                      className="w-full h-full bg-cover bg-center transition-transform duration-500 group-hover:scale-105"
+                      style={{ backgroundImage: `url('${post.image}')` }}
+                    />
+                  </div>
+                  <div>
+                    <h4 className="text-xl font-bold text-text-charcoal mb-2 group-hover:text-primary transition-colors">{post.title}</h4>
+                    <p className="text-text-secondary text-sm mb-3 line-clamp-2">{post.desc}</p>
+                    <span className="text-primary text-sm font-medium border-b border-primary/20 pb-0.5 group-hover:border-primary transition-colors inline-block">Devamını Oku</span>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-16 bg-surface-white rounded-lg border border-border-subtle">
+              <span className="material-symbols-outlined text-6xl text-border-subtle mb-4">article</span>
+              <h3 className="text-xl font-semibold text-text-charcoal mb-2">Henüz blog yazısı yok</h3>
+              <p className="text-text-secondary mb-6">Yakında ilham verici içerikler burada olacak.</p>
+              <Link href="/blog" className="inline-flex items-center gap-2 px-6 py-3 bg-primary hover:bg-primary-dark text-white font-medium rounded-md transition-colors">
+                Blog'a Git
+                <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
               </Link>
-            ))}
-          </div>
+            </div>
+          )}
         </div>
       </section>
     </>

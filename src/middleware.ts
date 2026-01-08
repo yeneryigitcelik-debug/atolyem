@@ -1,17 +1,29 @@
 /**
  * Next.js Middleware for Supabase Auth session refresh.
- * This middleware runs on every request and refreshes the auth session
- * to keep the user logged in.
+ * Optimized to only call getUser() on protected routes to improve performance.
+ * 
+ * Performance Note: getUser() makes a network call to Supabase. We only call it
+ * when necessary (protected routes or API routes) to avoid blocking public pages.
  */
 
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 // Routes that require authentication
-const protectedRoutes = ["/satici-paneli"];
+const protectedRoutes = ["/satici-paneli", "/dashboard", "/sell", "/profil-duzenle", "/adreslerim", "/siparislerim", "/favoriler", "/mesajlar", "/ayarlar"];
 
 // Routes that should redirect to home if already logged in
 const authRoutes = ["/hesap"];
+
+// Check if path is an API route
+function isApiRoute(pathname: string): boolean {
+  return pathname.startsWith("/api/");
+}
+
+// Check if path is a protected route
+function isProtectedRoute(pathname: string): boolean {
+  return protectedRoutes.some(route => pathname.startsWith(route));
+}
 
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({
@@ -19,6 +31,17 @@ export async function middleware(request: NextRequest) {
       headers: request.headers,
     },
   });
+
+  const pathname = request.nextUrl.pathname;
+
+  // Only create Supabase client if we need to check auth
+  // This avoids unnecessary initialization on public pages
+  const needsAuthCheck = isProtectedRoute(pathname) || isApiRoute(pathname);
+
+  if (!needsAuthCheck) {
+    // Public page - skip auth check entirely for better performance
+    return response;
+  }
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -68,13 +91,12 @@ export async function middleware(request: NextRequest) {
     }
   );
 
-  // Refresh session if expired - required for Server Components
+  // Only call getUser() for protected routes or API routes
+  // This is the expensive network call we're optimizing
   const { data: { user } } = await supabase.auth.getUser();
 
-  const pathname = request.nextUrl.pathname;
-
   // Check if trying to access protected route without auth
-  if (protectedRoutes.some(route => pathname.startsWith(route))) {
+  if (isProtectedRoute(pathname)) {
     if (!user) {
       const redirectUrl = new URL("/hesap", request.url);
       redirectUrl.searchParams.set("redirect", pathname);

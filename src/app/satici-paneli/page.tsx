@@ -103,10 +103,10 @@ export default function SaticiPaneliPage() {
               <span className="material-symbols-outlined text-2xl">receipt_long</span>
               <span className="text-sm font-medium">Siparişler</span>
             </button>
-            <button className="flex flex-col items-center gap-2 p-6 border border-border-subtle rounded-lg hover:border-primary hover:text-primary transition-colors">
-              <span className="material-symbols-outlined text-2xl">settings</span>
-              <span className="text-sm font-medium">Ayarlar</span>
-            </button>
+            <Link href="/satici-paneli/abonelik" className="flex flex-col items-center gap-2 p-6 border border-border-subtle rounded-lg hover:border-primary hover:text-primary transition-colors">
+              <span className="material-symbols-outlined text-2xl">workspace_premium</span>
+              <span className="text-sm font-medium">Abonelik</span>
+            </Link>
           </div>
         </div>
 

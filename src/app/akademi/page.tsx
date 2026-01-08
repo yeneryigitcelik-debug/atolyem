@@ -442,7 +442,7 @@ export default function AkademiPage() {
                   <h3 className="font-bold text-text-charcoal text-lg mb-2 line-clamp-2">{workshop.title}</h3>
                   <p className="text-sm text-text-secondary mb-3 line-clamp-2">{workshop.description}</p>
                   <Link
-                    href={`/sanatci/${workshop.instructorSlug}`}
+                    href={`/sanatsever/${workshop.instructorSlug}`}
                     className="flex items-center gap-2 mb-4 hover:text-primary transition-colors"
                   >
                     <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">

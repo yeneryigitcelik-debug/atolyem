@@ -119,6 +119,19 @@ enum ReportStatus {
   DISMISSED
 }
 
+/// Subscription plan type
+enum SubscriptionPlan {
+  BASIC
+  PREMIUM
+}
+
+/// Subscription status
+enum SubscriptionStatus {
+  ACTIVE
+  CANCELED
+  PAST_DUE
+}
+
 // ============================================================================
 // IDENTITY MODELS
 // ============================================================================
@@ -150,6 +163,7 @@ model User {
   badges           UserBadge[]
   blogComments     BlogComment[] @relation("BlogCommentAuthor")
   blogPosts        BlogPost[]    @relation("BlogPostAuthor")
+  subscription     Subscription?
   
   // Messaging relations
   sentMessages         Message[]           @relation("SentMessages")
@@ -283,6 +297,24 @@ model SellerProfile {
   shop Shop? @relation(fields: [shopId], references: [id])
 
   @@map("seller_profile")
+}
+
+/// Subscription for sellers
+model Subscription {
+  id                  String             @id @default(uuid()) @db.Uuid
+  userId              String             @unique @map("user_id") @db.Uuid
+  plan                SubscriptionPlan
+  status              SubscriptionStatus @default(ACTIVE)
+  currentPeriodStart  DateTime           @map("current_period_start")
+  currentPeriodEnd    DateTime           @map("current_period_end")
+  canceledAt          DateTime?          @map("canceled_at")
+  createdAt           DateTime           @default(now()) @map("created_at")
+  updatedAt           DateTime           @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, status])
+  @@map("subscription")
 }
 
 /// User addresses (for shipping)
@@ -766,7 +798,9 @@ model Order {
   paidAt                 DateTime?     @map("paid_at")
   cancelledAt            DateTime?     @map("cancelled_at")
 
-  buyer User        @relation(fields: [buyerUserId], references: [id])
+  // Critical: Orders must be preserved even if user is deleted (financial/legal records)
+  // Using Restrict prevents accidental deletion of orders when user is deleted
+  buyer User        @relation(fields: [buyerUserId], references: [id], onDelete: Restrict)
   items OrderItem[]
 
   @@index([buyerUserId, createdAt(sort: Desc)])

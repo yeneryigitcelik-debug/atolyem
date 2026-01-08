@@ -126,6 +126,14 @@ export async function POST(
     // Require authentication
     const { user } = await requireAuth();
 
+    // Prevent users from commenting on their own profile
+    if (profileUserId === user.id) {
+      return NextResponse.json(
+        { error: "Kendi profilinize yorum yazamazsınız" },
+        { status: 403 }
+      );
+    }
+
     // Check if target profile exists
     const profileUser = await prisma.user.findUnique({
       where: { id: profileUserId },

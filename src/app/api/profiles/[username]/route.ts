@@ -11,8 +11,9 @@ export async function GET(
 ) {
   try {
     const { username } = await params;
-
-    const profile = await prisma.publicProfile.findUnique({
+    
+    // Try exact match first
+    let profile = await prisma.publicProfile.findUnique({
       where: { username },
       select: {
         userId: true,
@@ -56,6 +57,60 @@ export async function GET(
         },
       },
     });
+
+    // If not found, try case-insensitive lookup
+    if (!profile) {
+      const normalizedUsername = username.toLowerCase();
+      profile = await prisma.publicProfile.findFirst({
+        where: {
+          username: {
+            equals: normalizedUsername,
+            mode: "insensitive",
+          },
+        },
+        select: {
+          userId: true,
+          username: true,
+          displayName: true,
+          bio: true,
+          avatarUrl: true,
+          bannerUrl: true,
+          location: true,
+          websiteUrl: true,
+          instagramHandle: true,
+          isPublic: true,
+          showFavorites: true,
+          user: {
+            select: {
+              accountType: true,
+              createdAt: true,
+              _count: {
+                select: {
+                  favorites: true,
+                  followedShops: true,
+                  reviews: true,
+                  following: true,
+                  followers: true,
+                },
+              },
+            },
+          },
+          badges: {
+            where: { isDisplayed: true },
+            select: {
+              badge: {
+                select: {
+                  name: true,
+                  iconName: true,
+                  color: true,
+                  description: true,
+                },
+              },
+            },
+          },
+        },
+      });
+    }
 
     if (!profile || !profile.isPublic) {
       return NextResponse.json({ error: "Profile not found" }, { status: 404 });

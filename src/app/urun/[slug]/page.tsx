@@ -1,5 +1,6 @@
 import Link from "next/link";
 import ProductCard from "@/components/ui/ProductCard";
+import AddToCartButton from "@/components/ui/AddToCartButton";
 
 const products: Record<string, { title: string; artist: string; artistSlug: string; price: number; description: string; details: { material: string; size: string; year: number } }> = {
   "soyut-kompozisyon": { title: "Soyut Kompozisyon", artist: "Ayşe Demir", artistSlug: "ayse-demir", price: 3500, description: "Bu eser, modern soyut sanatın en güzel örneklerinden biri. Canlı renkler ve dinamik fırça darbeleriyle mekanınıza enerji katacak.", details: { material: "Tuval üzeri akrilik", size: "80x100 cm", year: 2024 } },
@@ -65,7 +66,7 @@ export default async function UrunPage({ params }: { params: Promise<{ slug: str
               <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-background-ivory text-text-secondary border border-border-subtle">El Yapımı</span>
             </div>
             <h1 className="text-3xl font-bold text-text-charcoal mb-2">{product.title}</h1>
-            <Link href={`/sanatci/${product.artistSlug}`} className="text-text-secondary hover:text-primary transition-colors">
+            <Link href={`/sanatsever/${product.artistSlug}`} className="text-text-secondary hover:text-primary transition-colors">
               {product.artist}
             </Link>
 
@@ -103,10 +104,7 @@ export default async function UrunPage({ params }: { params: Promise<{ slug: str
 
             {/* Actions */}
             <div className="py-6 space-y-4">
-              <button className="w-full py-4 bg-primary hover:bg-primary-dark text-white font-semibold rounded-md transition-colors flex items-center justify-center gap-2">
-                <span className="material-symbols-outlined">shopping_bag</span>
-                Sepete Ekle
-              </button>
+              <AddToCartButton listingId={undefined} />
               <button className="w-full py-4 bg-surface-white border border-border-subtle text-text-charcoal hover:border-primary hover:text-primary font-semibold rounded-md transition-colors flex items-center justify-center gap-2">
                 <span className="material-symbols-outlined">favorite</span>
                 Favorilere Ekle
@@ -150,5 +148,7 @@ export default async function UrunPage({ params }: { params: Promise<{ slug: str
     </>
   );
 }
+
+
 
 

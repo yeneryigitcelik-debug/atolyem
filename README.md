@@ -91,6 +91,42 @@ npm run db:studio    # Open Prisma Studio
 npm run db:migrate   # Run migrations
 ```
 
+### Production Setup - Database Connection Pooling
+
+**⚠️ CRITICAL for Serverless Deployments (Vercel, etc.)**
+
+When deploying to serverless environments, you **MUST** use Supabase's **Transaction Pooler** connection string instead of the direct connection.
+
+#### Why?
+
+Serverless functions create many concurrent connections. Using direct connections (port 5432) can exhaust your database connection limit and cause "Too many connections" errors.
+
+#### How to Configure
+
+1. **Get Transaction Pooler URL from Supabase Dashboard:**
+   - Go to your Supabase project → Settings → Database
+   - Find "Connection Pooling" section
+   - Copy the **Session mode** connection string (port 6543)
+
+2. **Update your `.env` file:**
+   ```env
+   # ✅ CORRECT - Transaction Pooler (for production/serverless)
+   DATABASE_URL="postgresql://postgres.[project-ref]:[password]@aws-0-[region].pooler.supabase.com:6543/postgres?pgbouncer=true"
+   
+   # ❌ WRONG - Direct connection (only for local development)
+   # DATABASE_URL="postgresql://postgres:[password]@db.[project-ref].supabase.co:5432/postgres"
+   ```
+
+3. **Note:** The Transaction Pooler connection string includes `?pgbouncer=true` parameter, which is required for proper connection pooling.
+
+#### Local Development
+
+For local development, you can use either:
+- Direct connection (port 5432) - faster, fewer limitations
+- Transaction Pooler (port 6543) - matches production environment
+
+The code in `src/lib/db/prisma.ts` uses `Pool` from `pg` library, which works with both connection types.
+
 ## 🗄 Database Schema
 
 ### Core Models

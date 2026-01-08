@@ -41,6 +41,19 @@ export const POST = withRequestContext<RouteParams>(
 
     assertCanEditListing(listing.sellerUserId, user.id, user.isAdmin);
 
+    // Check max images limit (8)
+    const currentMediaCount = await prisma.listingMedia.count({
+      where: { listingId: listing.id },
+    });
+
+    if (currentMediaCount >= 8) {
+      throw new AppError(
+        ErrorCodes.VALIDATION_ERROR,
+        "Maximum 8 images allowed per listing",
+        400
+      );
+    }
+
     const formData = await request.formData();
     const file = formData.get("file") as File | null;
     const sortOrder = formData.get("sortOrder")

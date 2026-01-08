@@ -1,57 +1,101 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import PageHeader from "@/components/ui/PageHeader";
 import Link from "next/link";
 
 interface CartItem {
   id: string;
+  listingId: string;
   title: string;
   artist: string;
-  artistSlug: string;
+  artistSlug?: string;
   price: number;
-  image: string;
+  image?: string;
   slug: string;
+  quantity: number;
 }
-
-const initialCartItems: CartItem[] = [
-  { 
-    id: "1",
-    title: "Soyut Kompozisyon", 
-    artist: "Ayşe Demir", 
-    artistSlug: "ayse-demir",
-    price: 3500, 
-    image: "https://images.unsplash.com/photo-1579783902614-a3fb3927b6a5?w=200&h=200&fit=crop",
-    slug: "soyut-kompozisyon"
-  },
-  { 
-    id: "2",
-    title: "El Yapımı Seramik Vazo", 
-    artist: "Mehmet Demir", 
-    artistSlug: "mehmet-demir",
-    price: 850, 
-    image: "https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=200&h=200&fit=crop",
-    slug: "el-yapimi-seramik-vazo"
-  },
-];
 
 export default function SepetPage() {
   const { user, isLoading } = useAuth();
-  const [cartItems, setCartItems] = useState<CartItem[]>(initialCartItems);
+  const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [removingId, setRemovingId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [subtotal, setSubtotal] = useState(0);
+  const [shipping, setShipping] = useState(0);
+  const [total, setTotal] = useState(0);
+
+  // Fetch cart from API
+  useEffect(() => {
+    if (!isLoading && user) {
+      fetchCart();
+    } else if (!isLoading && !user) {
+      setLoading(false);
+    }
+  }, [user, isLoading]);
+
+  const fetchCart = async () => {
+    try {
+      const res = await fetch("/api/cart");
+      if (res.ok) {
+        const data = await res.json();
+        const cart = data.cart;
+        
+        // Handle case where cart or items might be undefined
+        const items: CartItem[] = (cart?.items || []).map((item: any) => ({
+          id: item.id,
+          listingId: item.listingId || item.listing?.id,
+          title: item.listing?.title || "",
+          artist: item.listing?.shop?.shopName || "",
+          artistSlug: item.listing?.shop?.ownerUsername || item.listing?.shop?.shopSlug,
+          price: (item.unitPriceMinor || item.effectivePriceMinor || 0) / 100,
+          image: item.listing?.thumbnail || item.listing?.media?.[0]?.url,
+          slug: item.listing?.slug || "",
+          quantity: item.quantity || 1,
+        }));
+        setCartItems(items);
+        setSubtotal((cart?.subtotalMinor || 0) / 100);
+        // Shipping and grand total not provided by API, calculate from subtotal
+        const calculatedShipping = 0; // Free shipping for now
+        setShipping(calculatedShipping);
+        setTotal((cart?.subtotalMinor || 0) / 100 + calculatedShipping);
+      }
+    } catch (err) {
+      console.error("Error fetching cart:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleRemoveItem = async (id: string) => {
     setRemovingId(id);
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 300));
-    setCartItems(prev => prev.filter(item => item.id !== id));
-    setRemovingId(null);
+    try {
+      const res = await fetch(`/api/cart/items/${id}`, {
+        method: "DELETE",
+      });
+      if (res.ok) {
+        await fetchCart();
+      }
+    } catch (err) {
+      console.error("Error removing item:", err);
+    } finally {
+      setRemovingId(null);
+    }
   };
 
-  const subtotal = cartItems.reduce((sum, item) => sum + item.price, 0);
-  const shipping = subtotal >= 500 ? 0 : 50;
-  const total = subtotal + shipping;
+  const handleClearCart = async () => {
+    if (!confirm("Sepeti tamamen boşaltmak istediğinize emin misiniz?")) return;
+    
+    try {
+      for (const item of cartItems) {
+        await fetch(`/api/cart/items/${item.id}`, { method: "DELETE" });
+      }
+      await fetchCart();
+    } catch (err) {
+      console.error("Error clearing cart:", err);
+    }
+  };
 
   // Show login prompt if not authenticated
   if (!isLoading && !user) {
@@ -87,7 +131,7 @@ export default function SepetPage() {
     );
   }
 
-  if (isLoading) {
+  if (isLoading || loading) {
     return (
       <>
         <PageHeader title="Sepetim" />
@@ -114,13 +158,15 @@ export default function SepetPage() {
             <div className="lg:col-span-2 space-y-4">
               <div className="flex items-center justify-between mb-4">
                 <p className="text-text-secondary">{cartItems.length} ürün</p>
-                <button 
-                  onClick={() => setCartItems([])}
-                  className="text-sm text-red-500 hover:text-red-600 font-medium flex items-center gap-1"
-                >
-                  <span className="material-symbols-outlined text-[18px]">delete_sweep</span>
-                  Sepeti Boşalt
-                </button>
+                {cartItems.length > 0 && (
+                  <button 
+                    onClick={handleClearCart}
+                    className="text-sm text-red-500 hover:text-red-600 font-medium flex items-center gap-1"
+                  >
+                    <span className="material-symbols-outlined text-[18px]">delete_sweep</span>
+                    Sepeti Boşalt
+                  </button>
+                )}
               </div>
 
               {cartItems.map((item) => (
@@ -133,11 +179,17 @@ export default function SepetPage() {
                   <div className="flex gap-4 sm:gap-6">
                     {/* Product Image */}
                     <Link href={`/urun/${item.slug}`} className="shrink-0">
-                      <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-lg overflow-hidden">
-                        <div 
-                          className="w-full h-full bg-cover bg-center hover:scale-105 transition-transform" 
-                          style={{ backgroundImage: `url('${item.image}')` }} 
-                        />
+                      <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-lg overflow-hidden bg-gray-100">
+                        {item.image ? (
+                          <div 
+                            className="w-full h-full bg-cover bg-center hover:scale-105 transition-transform" 
+                            style={{ backgroundImage: `url('${item.image}')` }} 
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center">
+                            <span className="material-symbols-outlined text-gray-400">image</span>
+                          </div>
+                        )}
                       </div>
                     </Link>
                     
@@ -150,12 +202,16 @@ export default function SepetPage() {
                               {item.title}
                             </h3>
                           </Link>
-                          <Link 
-                            href={`/sanatci/${item.artistSlug}`}
-                            className="text-sm text-text-secondary hover:text-primary transition-colors"
-                          >
-                            {item.artist}
-                          </Link>
+                          {item.artistSlug ? (
+                            <Link 
+                              href={`/sanatsever/${item.artistSlug}`}
+                              className="text-sm text-text-secondary hover:text-primary transition-colors"
+                            >
+                              {item.artist}
+                            </Link>
+                          ) : (
+                            <span className="text-sm text-text-secondary">{item.artist}</span>
+                          )}
                         </div>
                         
                         {/* Remove Button */}
@@ -170,10 +226,13 @@ export default function SepetPage() {
                         </button>
                       </div>
                       
-                      {/* Price */}
-                      <div className="mt-4 text-right">
+                      {/* Price & Quantity */}
+                      <div className="mt-4 flex items-center justify-between">
+                        <div className="text-sm text-text-secondary">
+                          Adet: <span className="font-medium text-text-charcoal">{item.quantity}</span>
+                        </div>
                         <p className="font-bold text-lg text-text-charcoal">
-                          {item.price.toLocaleString("tr-TR")} ₺
+                          {(item.price * item.quantity).toLocaleString("tr-TR")} ₺
                         </p>
                       </div>
                     </div>

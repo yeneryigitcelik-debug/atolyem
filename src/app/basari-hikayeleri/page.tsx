@@ -48,7 +48,7 @@ export default function BasariHikayeleriPage() {
                 <blockquote className="text-xl text-text-secondary italic leading-relaxed mb-6">
                   &quot;{story.quote}&quot;
                 </blockquote>
-                <Link href={`/sanatci/${story.slug}`} className="inline-flex items-center text-primary font-medium hover:underline">
+                <Link href={`/sanatsever/${story.slug}`} className="inline-flex items-center text-primary font-medium hover:underline">
                   Sanatçıyı İncele
                   <span className="material-symbols-outlined ml-1 text-base">arrow_forward</span>
                 </Link>

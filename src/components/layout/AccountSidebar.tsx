@@ -116,15 +116,15 @@ export default function AccountSidebar({ activePage }: AccountSidebarProps) {
         })}
 
         {/* Artist Links */}
-        {profile?.isArtist && profile?.shopSlug && (
+        {profile?.isArtist && profile?.username && (
           <>
             <hr className="border-border-subtle my-3" />
             <Link 
-              href={`/sanatci/${profile.shopSlug}`} 
+              href={`/sanatsever/${profile.username}`} 
               className="flex items-center gap-2 px-4 py-2.5 text-text-charcoal hover:bg-background-ivory rounded-md transition-colors"
             >
               <span className="material-symbols-outlined text-[20px]">storefront</span>
-              Dükkanım
+              Profilim
             </Link>
             <Link 
               href="/satici-paneli" 

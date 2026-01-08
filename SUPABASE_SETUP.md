@@ -76,3 +76,5 @@ Kayıt olduktan sonra:
 - E-posta doğrulama linki gönderilir (eğer etkinse)
 
 
+
+

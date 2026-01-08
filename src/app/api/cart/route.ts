@@ -35,7 +35,14 @@ export const GET = withRequestContext(async (request, { requestId }) => {
         include: {
           listing: {
             include: {
-              shop: { select: { id: true, shopName: true, shopSlug: true } },
+              shop: { 
+                select: { 
+                  id: true, 
+                  shopName: true, 
+                  shopSlug: true,
+                  ownerUserId: true,
+                },
+              },
               media: { where: { isPrimary: true }, take: 1 },
             },
           },
@@ -59,7 +66,7 @@ export const GET = withRequestContext(async (request, { requestId }) => {
           include: {
             listing: {
               include: {
-                shop: { select: { id: true, shopName: true, shopSlug: true } },
+                shop: { select: { id: true, shopName: true, shopSlug: true, ownerUserId: true } },
                 media: { where: { isPrimary: true }, take: 1 },
               },
             },
@@ -75,6 +82,20 @@ export const GET = withRequestContext(async (request, { requestId }) => {
       },
     });
   }
+
+  // Get shop owner usernames in batch
+  const shopOwnerIds = [...new Set(cart.items.map(item => item.listing.shop.ownerUserId))];
+  const shopOwners = await prisma.user.findMany({
+    where: { id: { in: shopOwnerIds } },
+    include: {
+      publicProfile: {
+        select: { username: true },
+      },
+    },
+  });
+  const ownerUsernameMap = new Map(
+    shopOwners.map(u => [u.id, u.publicProfile?.username ?? null])
+  );
 
   // Calculate totals
   let subtotalMinor = 0;
@@ -95,7 +116,10 @@ export const GET = withRequestContext(async (request, { requestId }) => {
         status: item.listing.status,
         basePriceMinor: item.listing.basePriceMinor,
         currency: item.listing.currency,
-        shop: item.listing.shop,
+        shop: {
+          ...item.listing.shop,
+          ownerUsername: ownerUsernameMap.get(item.listing.shop.ownerUserId) ?? null,
+        },
         thumbnail: item.listing.media[0]?.url ?? null,
       },
       variant: item.variant

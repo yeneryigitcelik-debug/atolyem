@@ -10,9 +10,21 @@ import { createListingSchema, listingSearchSchema } from "@/lib/api/validation";
 import { prisma } from "@/lib/db/prisma";
 import { slugify, generateUniqueSlug } from "@/domain/value-objects/slug";
 import { assertValidTags } from "@/application/integrity-rules/tag-rules";
+import { checkListingLimit } from "@/lib/subscription/utils";
+import { AppError, ErrorCodes } from "@/lib/api/errors";
 
 export const POST = withRequestContext(async (request: NextRequest, { requestId, logger }) => {
   const { user, sellerProfile } = await requireSeller();
+
+  // Check subscription and listing limit
+  const limitCheck = await checkListingLimit(user.id);
+  if (!limitCheck.canCreate) {
+    throw new AppError(
+      ErrorCodes.VALIDATION_ERROR,
+      limitCheck.reason || "Ürün ekleme limitinize ulaştınız",
+      403
+    );
+  }
 
   const body = await request.json();
   const data = createListingSchema.parse(body);

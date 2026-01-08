@@ -1,25 +1,17 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import PageHeader from "@/components/ui/PageHeader";
-
-interface ListingMedia {
-  id: string;
-  url: string;
-  sortOrder: number;
-  isPrimary: boolean;
-  altText?: string | null;
-}
+import ImageUploader, { UploadedImage } from "@/components/ui/ImageUploader";
 
 export default function EditListingPage() {
   const { user, isLoading: authLoading } = useAuth();
   const router = useRouter();
   const params = useParams();
   const listingId = params?.id as string;
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [loading, setLoading] = useState(true);
   const [title, setTitle] = useState("");
@@ -30,8 +22,7 @@ export default function EditListingPage() {
   const [status, setStatus] = useState<"DRAFT" | "PUBLISHED" | "ARCHIVED">("DRAFT");
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState("");
-  const [media, setMedia] = useState<ListingMedia[]>([]);
-  const [uploading, setUploading] = useState(false);
+  const [media, setMedia] = useState<UploadedImage[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [slug, setSlug] = useState<string>("");
@@ -65,7 +56,13 @@ export default function EditListingPage() {
         setQuantity(listing.baseQuantity.toString());
         setStatus(listing.status);
         setTags(listing.tags || []);
-        setMedia(listing.media || []);
+        setMedia((listing.media || []).map((m: any) => ({
+          id: m.id,
+          url: m.url,
+          sortOrder: m.sortOrder,
+          isPrimary: m.isPrimary,
+          altText: m.altText,
+        })));
       } catch (err) {
         setError(err instanceof Error ? err.message : "Ürün yüklenemedi");
       } finally {
@@ -76,86 +73,6 @@ export default function EditListingPage() {
     fetchListing();
   }, [listingId, authLoading]);
 
-  const handleFileSelect = async (files: FileList | null) => {
-    if (!files || files.length === 0 || !slug) return;
-
-    setUploading(true);
-    setError(null);
-
-    try {
-      for (const file of Array.from(files)) {
-        if (!file.type.startsWith("image/")) {
-          setError("Sadece görsel dosyaları yüklenebilir");
-          continue;
-        }
-
-        const formData = new FormData();
-        formData.append("file", file);
-        formData.append("sortOrder", media.length.toString());
-        formData.append("isPrimary", (media.length === 0).toString());
-
-        const uploadRes = await fetch(`/api/listings/${slug}/media`, {
-          method: "POST",
-          body: formData,
-        });
-
-        if (!uploadRes.ok) {
-          const data = await uploadRes.json();
-          throw new Error(data.error || "Görsel yüklenemedi");
-        }
-
-        const uploadData = await uploadRes.json();
-        setMedia((prev) => [...prev, uploadData.media]);
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Görsel yüklenirken hata oluştu");
-    } finally {
-      setUploading(false);
-    }
-  };
-
-  const handleDeleteMedia = async (mediaId: string) => {
-    if (!slug) return;
-
-    try {
-      const res = await fetch(`/api/listings/${slug}/media/${mediaId}`, {
-        method: "DELETE",
-      });
-
-      if (!res.ok) {
-        throw new Error("Görsel silinemedi");
-      }
-
-      setMedia((prev) => prev.filter((m) => m.id !== mediaId));
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Görsel silinirken hata oluştu");
-    }
-  };
-
-  const handleSetPrimary = async (mediaId: string) => {
-    if (!slug) return;
-
-    try {
-      const res = await fetch(`/api/listings/${slug}/media/${mediaId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ isPrimary: true }),
-      });
-
-      if (!res.ok) {
-        throw new Error("Ana görsel ayarlanamadı");
-      }
-
-      setMedia((prev) =>
-        prev.map((m) => ({
-          ...m,
-          isPrimary: m.id === mediaId,
-        }))
-      );
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Ana görsel ayarlanırken hata oluştu");
-    }
-  };
 
   const handleAddTag = () => {
     const tag = tagInput.trim().toLowerCase();
@@ -393,61 +310,17 @@ export default function EditListingPage() {
             {/* Images */}
             <div className="bg-surface-white rounded-lg border border-border-subtle p-6">
               <h2 className="text-xl font-bold text-text-charcoal mb-4">Görseller</h2>
+              <p className="text-sm text-text-secondary mb-4">
+                Sürükle-bırak ile sıralayabilirsiniz (max 8 görsel)
+              </p>
 
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                multiple
-                onChange={(e) => handleFileSelect(e.target.files)}
-                className="hidden"
+              <ImageUploader
+                listingSlug={slug}
+                images={media}
+                onImagesChange={setMedia}
+                maxImages={8}
+                disabled={submitting}
               />
-
-              <button
-                onClick={() => fileInputRef.current?.click()}
-                disabled={uploading}
-                className="w-full py-3 border-2 border-dashed border-border-subtle rounded-lg hover:border-primary hover:text-primary transition-colors disabled:opacity-50"
-              >
-                {uploading ? "Yükleniyor..." : "+ Görsel Ekle"}
-              </button>
-
-              <div className="mt-4 space-y-2">
-                {media.map((img, index) => (
-                  <div
-                    key={img.id}
-                    className="relative group border border-border-subtle rounded-lg overflow-hidden"
-                  >
-                    <img src={img.url} alt={img.altText || `Görsel ${index + 1}`} className="w-full h-32 object-cover" />
-                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                      {!img.isPrimary && (
-                        <button
-                          onClick={() => handleSetPrimary(img.id)}
-                          className="px-3 py-1 bg-white text-text-charcoal rounded text-sm hover:bg-primary hover:text-white"
-                        >
-                          Ana Görsel
-                        </button>
-                      )}
-                      {img.isPrimary && (
-                        <span className="px-3 py-1 bg-primary text-white rounded text-sm">
-                          Ana Görsel
-                        </span>
-                      )}
-                      <button
-                        onClick={() => handleDeleteMedia(img.id)}
-                        className="px-3 py-1 bg-red-500 text-white rounded text-sm hover:bg-red-600"
-                      >
-                        Sil
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {media.length === 0 && (
-                <p className="text-sm text-text-secondary mt-2">
-                  Yayınlamak için en az 1 görsel gereklidir
-                </p>
-              )}
             </div>
 
             {/* Actions */}
@@ -491,4 +364,6 @@ export default function EditListingPage() {
     </>
   );
 }
+
+
 

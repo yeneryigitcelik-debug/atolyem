@@ -1,22 +1,15 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import PageHeader from "@/components/ui/PageHeader";
-
-interface ListingMedia {
-  id: string;
-  url: string;
-  sortOrder: number;
-  isPrimary: boolean;
-}
+import ImageUploader, { UploadedImage } from "@/components/ui/ImageUploader";
 
 export default function NewListingPage() {
   const { user, isLoading: authLoading } = useAuth();
   const router = useRouter();
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -25,118 +18,64 @@ export default function NewListingPage() {
   const [quantity, setQuantity] = useState("1");
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState("");
-  const [media, setMedia] = useState<ListingMedia[]>([]);
-  const [uploading, setUploading] = useState(false);
+  const [media, setMedia] = useState<UploadedImage[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [listingSlug, setListingSlug] = useState<string | null>(null);
+  const [limitInfo, setLimitInfo] = useState<{
+    canCreate: boolean;
+    remaining: number | null;
+    currentCount: number | null;
+    limit: number | null;
+  } | null>(null);
 
-  const handleFileSelect = async (files: FileList | null) => {
-    if (!files || files.length === 0) return;
+  // Fetch subscription limit info
+  useEffect(() => {
+    if (!authLoading && user) {
+      fetch("/api/subscription")
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.limitInfo) {
+            setLimitInfo(data.limitInfo);
+          }
+        })
+        .catch(console.error);
+    }
+  }, [authLoading, user]);
 
-    setUploading(true);
-    setError(null);
+  // Ensure listing exists before allowing image uploads
+  const ensureListingExists = async () => {
+    if (listingSlug) return listingSlug;
 
     try {
-      // Need to create listing first if not exists
-      if (!listingSlug) {
-        // Create draft listing first
-        const createRes = await fetch("/api/listings", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            listingType,
-            title: title || "Yeni Ürün",
-            description: description || "",
-            basePriceMinor: Math.round(parseFloat(price || "0") * 100),
-            currency: "TRY",
-            baseQuantity: parseInt(quantity || "1", 10),
-            tags: [],
-          }),
-        });
+      const createRes = await fetch("/api/listings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          listingType,
+          title: title || "Yeni Ürün",
+          description: description || "",
+          basePriceMinor: Math.round(parseFloat(price || "0") * 100),
+          currency: "TRY",
+          baseQuantity: parseInt(quantity || "1", 10),
+          tags: [],
+        }),
+      });
 
-        if (!createRes.ok) {
-          const data = await createRes.json();
-          throw new Error(data.error || "Ürün oluşturulamadı");
-        }
+      if (!createRes.ok) {
+        const data = await createRes.json();
+        throw new Error(data.error || "Ürün oluşturulamadı");
+      }
 
-        const createData = await createRes.json();
-        setListingSlug(createData.listing.slug);
+      const createData = await createRes.json();
+      setListingSlug(createData.listing.slug);
+      if (!title) {
         setTitle(createData.listing.title);
       }
-
-      // Upload each file
-      for (const file of Array.from(files)) {
-        if (!file.type.startsWith("image/")) {
-          setError("Sadece görsel dosyaları yüklenebilir");
-          continue;
-        }
-
-        const formData = new FormData();
-        formData.append("file", file);
-        formData.append("sortOrder", media.length.toString());
-        formData.append("isPrimary", (media.length === 0).toString());
-
-        const uploadRes = await fetch(`/api/listings/${listingSlug}/media`, {
-          method: "POST",
-          body: formData,
-        });
-
-        if (!uploadRes.ok) {
-          const data = await uploadRes.json();
-          throw new Error(data.error || "Görsel yüklenemedi");
-        }
-
-        const uploadData = await uploadRes.json();
-        setMedia((prev) => [...prev, uploadData.media]);
-      }
+      return createData.listing.slug;
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Görsel yüklenirken hata oluştu");
-    } finally {
-      setUploading(false);
-    }
-  };
-
-  const handleDeleteMedia = async (mediaId: string) => {
-    if (!listingSlug) return;
-
-    try {
-      const res = await fetch(`/api/listings/${listingSlug}/media/${mediaId}`, {
-        method: "DELETE",
-      });
-
-      if (!res.ok) {
-        throw new Error("Görsel silinemedi");
-      }
-
-      setMedia((prev) => prev.filter((m) => m.id !== mediaId));
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Görsel silinirken hata oluştu");
-    }
-  };
-
-  const handleSetPrimary = async (mediaId: string) => {
-    if (!listingSlug) return;
-
-    try {
-      const res = await fetch(`/api/listings/${listingSlug}/media/${mediaId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ isPrimary: true }),
-      });
-
-      if (!res.ok) {
-        throw new Error("Ana görsel ayarlanamadı");
-      }
-
-      setMedia((prev) =>
-        prev.map((m) => ({
-          ...m,
-          isPrimary: m.id === mediaId,
-        }))
-      );
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Ana görsel ayarlanırken hata oluştu");
+      setError(err instanceof Error ? err.message : "Ürün oluşturulamadı");
+      return null;
     }
   };
 
@@ -265,6 +204,51 @@ export default function NewListingPage() {
         {error && (
           <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
             {error}
+          </div>
+        )}
+
+        {/* Subscription Limit Indicator */}
+        {limitInfo && (
+          <div className={`mb-6 p-4 rounded-lg border ${
+            limitInfo.canCreate
+              ? limitInfo.remaining !== null && limitInfo.remaining !== Infinity && limitInfo.remaining <= 1
+                ? "bg-amber-50 border-amber-200"
+                : "bg-blue-50 border-blue-200"
+              : "bg-red-50 border-red-200"
+          }`}>
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <div className="flex items-center gap-3">
+                <span className={`material-symbols-outlined ${
+                  limitInfo.canCreate ? "text-blue-600" : "text-red-600"
+                }`}>
+                  {limitInfo.canCreate ? "info" : "warning"}
+                </span>
+                <div>
+                  <p className={`font-medium ${
+                    limitInfo.canCreate ? "text-blue-900" : "text-red-900"
+                  }`}>
+                    {limitInfo.canCreate
+                      ? limitInfo.remaining === Infinity
+                        ? "Premium Plan: Sınırsız ürün yükleyebilirsiniz"
+                        : `Bu ay ${limitInfo.currentCount ?? 0}/${limitInfo.limit} ürün yüklediniz`
+                      : "Ürün ekleme limitinize ulaştınız"}
+                  </p>
+                  {limitInfo.canCreate && limitInfo.remaining !== Infinity && (
+                    <p className="text-sm text-blue-700 mt-1">
+                      {limitInfo.remaining} ürün hakkınız kaldı
+                    </p>
+                  )}
+                </div>
+              </div>
+              {!limitInfo.canCreate && (
+                <Link
+                  href="/satici-paneli/abonelik"
+                  className="px-4 py-2 bg-primary hover:bg-primary-dark text-white text-sm font-medium rounded-md transition-colors"
+                >
+                  Abonelik Yükselt
+                </Link>
+              )}
+            </div>
           </div>
         )}
 
@@ -405,61 +389,23 @@ export default function NewListingPage() {
             {/* Images */}
             <div className="bg-surface-white rounded-lg border border-border-subtle p-6">
               <h2 className="text-xl font-bold text-text-charcoal mb-4">Görseller</h2>
+              <p className="text-sm text-text-secondary mb-4">
+                Yayınlamak için en az 1 görsel gereklidir (max 8 görsel)
+              </p>
 
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                multiple
-                onChange={(e) => handleFileSelect(e.target.files)}
-                className="hidden"
+              <ImageUploader
+                listingSlug={listingSlug}
+                images={media}
+                onImagesChange={(newImages) => {
+                  setMedia(newImages);
+                  // Ensure listing exists if images are being added
+                  if (newImages.length > media.length && !listingSlug) {
+                    ensureListingExists();
+                  }
+                }}
+                maxImages={8}
+                disabled={submitting}
               />
-
-              <button
-                onClick={() => fileInputRef.current?.click()}
-                disabled={uploading}
-                className="w-full py-3 border-2 border-dashed border-border-subtle rounded-lg hover:border-primary hover:text-primary transition-colors disabled:opacity-50"
-              >
-                {uploading ? "Yükleniyor..." : "+ Görsel Ekle"}
-              </button>
-
-              <div className="mt-4 space-y-2">
-                {media.map((img, index) => (
-                  <div
-                    key={img.id}
-                    className="relative group border border-border-subtle rounded-lg overflow-hidden"
-                  >
-                    <img src={img.url} alt={`Görsel ${index + 1}`} className="w-full h-32 object-cover" />
-                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                      {!img.isPrimary && (
-                        <button
-                          onClick={() => handleSetPrimary(img.id)}
-                          className="px-3 py-1 bg-white text-text-charcoal rounded text-sm hover:bg-primary hover:text-white"
-                        >
-                          Ana Görsel
-                        </button>
-                      )}
-                      {img.isPrimary && (
-                        <span className="px-3 py-1 bg-primary text-white rounded text-sm">
-                          Ana Görsel
-                        </span>
-                      )}
-                      <button
-                        onClick={() => handleDeleteMedia(img.id)}
-                        className="px-3 py-1 bg-red-500 text-white rounded text-sm hover:bg-red-600"
-                      >
-                        Sil
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {media.length === 0 && (
-                <p className="text-sm text-text-secondary mt-2">
-                  Yayınlamak için en az 1 görsel gereklidir
-                </p>
-              )}
             </div>
 
             {/* Actions */}
@@ -493,4 +439,6 @@ export default function NewListingPage() {
     </>
   );
 }
+
+
 

@@ -45,7 +45,6 @@ export default function Footer() {
           <div>
             <h5 className="text-text-charcoal font-bold mb-4">Satıcı</h5>
             <ul className="flex flex-col gap-2.5 text-sm text-text-secondary">
-              <li><Link href="/sanatci-ol" className="hover:text-primary transition-colors">Sanatçı Ol</Link></li>
               <li><Link href="/satici-paneli" className="hover:text-primary transition-colors">Satıcı Paneli</Link></li>
               <li><Link href="/satis-kurallari" className="hover:text-primary transition-colors">Satış Kuralları</Link></li>
               <li><Link href="/basari-hikayeleri" className="hover:text-primary transition-colors">Başarı Hikayeleri</Link></li>
@@ -89,5 +88,7 @@ export default function Footer() {
     </footer>
   );
 }
+
+
 
 

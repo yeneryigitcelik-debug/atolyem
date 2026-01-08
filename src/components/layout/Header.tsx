@@ -121,13 +121,25 @@ export default function Header() {
 
           {/* Right Actions */}
           <div className="flex items-center gap-2 sm:gap-4 shrink-0">
-            {/* CTA Button */}
-            <Link
-              href="/sanatci-ol"
-              className="hidden sm:flex items-center justify-center px-5 py-2.5 border border-transparent text-sm font-medium rounded-md text-white bg-primary hover:bg-primary-dark transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
-            >
-              Sanatçı Ol
-            </Link>
+            {/* Artist Panel Button - Only show for artists */}
+            {profile?.isArtist && (
+              <Link
+                href="/satici-paneli"
+                className="hidden sm:flex items-center justify-center px-5 py-2.5 border border-transparent text-sm font-medium rounded-md text-white bg-primary hover:bg-primary-dark transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
+              >
+                Sanatçı Paneli
+              </Link>
+            )}
+            
+            {/* Become Artist Button - Only show for non-artists */}
+            {user && !profile?.isArtist && (
+              <Link
+                href="/sanatci-ol"
+                className="hidden sm:flex items-center justify-center px-5 py-2.5 border border-primary text-sm font-medium rounded-md text-primary hover:bg-primary hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
+              >
+                Sanatçı Ol
+              </Link>
+            )}
 
             {/* Icon Buttons */}
             <div className="flex items-center gap-1 sm:gap-2">
@@ -211,15 +223,15 @@ export default function Header() {
                             Profilim
                           </button>
                         )}
-                        {profile?.isArtist && profile?.shopSlug && (
+                        {profile?.isArtist && profile?.username && (
                           <>
                             <Link 
-                              href={`/sanatci/${profile.shopSlug}`}
+                              href={`/sanatsever/${profile.username}`}
                               onClick={() => setUserMenuOpen(false)}
                               className="flex items-center gap-2 px-4 py-2 text-text-charcoal hover:bg-background-ivory transition-colors"
                             >
                               <span className="material-symbols-outlined text-[20px]">storefront</span>
-                              Dükkanım
+                              Profilim
                             </Link>
                             <Link 
                               href="/satici-paneli"
@@ -416,11 +428,11 @@ export default function Header() {
                       Profilim
                     </button>
                   )}
-                  {profile?.isArtist && profile?.shopSlug && (
+                  {profile?.isArtist && profile?.username && (
                     <>
-                      <Link href={`/sanatci/${profile.shopSlug}`} className="px-4 py-2 text-text-charcoal hover:text-primary hover:bg-background-ivory rounded-md transition-colors flex items-center gap-2">
+                      <Link href={`/sanatsever/${profile.username}`} className="px-4 py-2 text-text-charcoal hover:text-primary hover:bg-background-ivory rounded-md transition-colors flex items-center gap-2">
                         <span className="material-symbols-outlined text-[18px]">storefront</span>
-                        Dükkanım
+                        Profilim
                       </Link>
                       <Link href="/satici-paneli" className="px-4 py-2 text-text-charcoal hover:text-primary hover:bg-background-ivory rounded-md transition-colors flex items-center gap-2">
                         <span className="material-symbols-outlined text-[18px]">dashboard</span>
@@ -442,12 +454,22 @@ export default function Header() {
                   </Link>
                 </>
               )}
-              <Link
-                href="/sanatci-ol"
-                className="mt-2 flex items-center justify-center px-5 py-2.5 border border-transparent text-sm font-medium rounded-md text-white bg-primary hover:bg-primary-dark transition-colors"
-              >
-                Sanatçı Ol
-              </Link>
+              {profile?.isArtist && (
+                <Link
+                  href="/satici-paneli"
+                  className="mt-2 flex items-center justify-center px-5 py-2.5 border border-transparent text-sm font-medium rounded-md text-white bg-primary hover:bg-primary-dark transition-colors"
+                >
+                  Sanatçı Paneli
+                </Link>
+              )}
+              {user && !profile?.isArtist && (
+                <Link
+                  href="/sanatci-ol"
+                  className="mt-2 flex items-center justify-center px-5 py-2.5 border border-primary text-sm font-medium rounded-md text-primary hover:bg-primary hover:text-white transition-colors"
+                >
+                  Sanatçı Ol
+                </Link>
+              )}
             </nav>
           </div>
         )}
