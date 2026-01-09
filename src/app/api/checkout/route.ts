@@ -193,10 +193,37 @@ export const POST = withRequestContext(
     // CRITICAL: Create order WITHOUT decrementing stock
     // Stock will be decremented only after payment confirmation via webhook
     const order = await prisma.$transaction(async (tx) => {
-      // Generate order number
-      const orderNumber = `ATL-${Date.now()
-        .toString(36)
-        .toUpperCase()}-${nanoid(4).toUpperCase()}`;
+      // Generate unique order number with collision prevention
+      // Use nanoid(8) instead of nanoid(4) to reduce collision risk
+      // Even with same millisecond, nanoid(8) has ~218 trillion combinations
+      let orderNumber: string;
+      let attempts = 0;
+      const maxAttempts = 5;
+
+      do {
+        orderNumber = `ATL-${Date.now()
+          .toString(36)
+          .toUpperCase()}-${nanoid(8).toUpperCase()}`;
+        
+        // Check if order number already exists
+        const existing = await tx.order.findUnique({
+          where: { orderNumber },
+          select: { id: true },
+        });
+
+        if (!existing) {
+          break; // Order number is unique
+        }
+
+        attempts++;
+        if (attempts >= maxAttempts) {
+          throw new AppError(
+            ErrorCodes.INTERNAL_ERROR,
+            "Failed to generate unique order number",
+            500
+          );
+        }
+      } while (attempts < maxAttempts);
 
       // Create order
       const newOrder = await tx.order.create({
