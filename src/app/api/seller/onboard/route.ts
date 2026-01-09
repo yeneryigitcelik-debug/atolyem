@@ -100,16 +100,17 @@ export const POST = withRequestContext(async (request: NextRequest, { requestId,
     });
 
     // Create default shipping profile
+    // MVP Decision: "Satıcı Öder" modeli - Kargo ücreti platform tarafından alıcıdan tahsil edilmez
     await tx.shippingProfile.create({
       data: {
         shopId: shop.id,
-        name: "Yurt İçi Kargo",
+        name: "Standart Gönderim (Satıcı Öder)",
         originProvince: "İstanbul",
         rulesJson: {
           domestic: {
-            basePriceMinor: 3000, // 30 TL
-            freeAboveMinor: 50000, // Free above 500 TL
-            additionalItemMinor: 1500, // +15 TL per additional item
+            basePriceMinor: 0, // 0 TL (Ücretsiz - Satıcı öder)
+            additionalItemMinor: 0, // Ek ürün için ücret yok
+            // freeAboveMinor alanına gerek yok çünkü zaten ücretsiz
           },
         },
         isDefault: true,

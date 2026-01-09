@@ -20,8 +20,6 @@ import {
   getEffectivePrice,
   getEffectiveStock,
   createOrderItemSnapshot,
-  calculateShippingTotal,
-  type ShippingRules,
 } from "@/application/integrity-rules/pricing-rules";
 import { AppError, ErrorCodes } from "@/lib/api/errors";
 import { nanoid } from "nanoid";
@@ -145,48 +143,16 @@ export const POST = withRequestContext(
       currency: item.listing.currency,
     }));
 
-    // Calculate shipping using ShippingProfile rules
-    // Group items by shop and calculate shipping per seller
-    const shippingItems = cart.items.map((item) => {
-      const unitPrice = getEffectivePrice(
-        item.listing.basePriceMinor,
-        item.variant?.priceMinorOverride
-      );
+    // MVP Decision: "Satıcı Öder" Kargo Modeli
+    // Kargo ücreti platform tarafından alıcıdan tahsil edilmez, satıcı öder.
+    // Karmaşık shipping calculation mantığı devre dışı bırakıldı.
+    // İleride alıcıdan kargo ücreti tahsil edilmek istenirse, bu bölüm tekrar aktif edilebilir.
+    const shippingTotalMinor = 0; // Kargo her zaman 0 TL (Ücretsiz / Satıcı Öder)
 
-      // Get shipping profile rules (default if not set on listing)
-      const shippingRules = item.listing.shippingProfile?.rulesJson as ShippingRules | undefined;
-      
-      if (!shippingRules) {
-        // Fallback: if no shipping profile, use 0 shipping
-        // In production, you might want to throw an error or use shop default
-        return {
-          shopId: item.listing.shopId,
-          quantity: item.quantity,
-          unitPriceMinor: unitPrice,
-          shippingRules: {
-            domestic: { basePriceMinor: 0 },
-          } as ShippingRules,
-          isInternational: false, // TODO: Determine from shipping address
-        };
-      }
-
-      // Determine if international shipping (simplified - check if address country != TR)
-      const isInternational = (data.shippingAddress as { country?: string })?.country !== "TR";
-
-      return {
-        shopId: item.listing.shopId,
-        quantity: item.quantity,
-        unitPriceMinor: unitPrice,
-        shippingRules,
-        isInternational,
-      };
-    });
-
-    const shippingTotal = calculateShippingTotal(shippingItems, "TRY");
     const totals = calculateOrderTotals(
       lineItems,
-      shippingTotal.amountMinor,
-      0,
+      shippingTotalMinor, // Sabit 0 gönderiliyor
+      0, // Discount (varsa)
       "TRY"
     );
 
