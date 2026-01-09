@@ -20,10 +20,14 @@ import {
   getEffectivePrice,
   getEffectiveStock,
   createOrderItemSnapshot,
+  calculateShippingTotal,
+  type ShippingRules,
 } from "@/application/integrity-rules/pricing-rules";
 import { AppError, ErrorCodes } from "@/lib/api/errors";
 import { nanoid } from "nanoid";
 import { Prisma } from "@prisma/client";
+import { getPaymentProvider } from "@/lib/payment/payment-provider";
+import { getTaxRate } from "@/lib/tax/tax-rates";
 
 export const POST = withRequestContext(
   async (request: NextRequest, { requestId, logger }) => {
@@ -70,7 +74,7 @@ export const POST = withRequestContext(
       );
     }
 
-    // Get cart with all items
+    // Get cart with all items including shipping profiles
     const cart = await prisma.cart.findUnique({
       where: { userId: user.id },
       include: {
@@ -81,6 +85,7 @@ export const POST = withRequestContext(
                 shop: { include: { policies: true } },
                 processingProfile: true,
                 personalizationFields: true,
+                shippingProfile: true,
               },
             },
             variant: {
@@ -140,11 +145,53 @@ export const POST = withRequestContext(
       currency: item.listing.currency,
     }));
 
-    // For now, mock shipping calculation (0 for simplicity)
-    const shippingMinor = 0;
-    const totals = calculateOrderTotals(lineItems, shippingMinor, 0, "TRY");
+    // Calculate shipping using ShippingProfile rules
+    // Group items by shop and calculate shipping per seller
+    const shippingItems = cart.items.map((item) => {
+      const unitPrice = getEffectivePrice(
+        item.listing.basePriceMinor,
+        item.variant?.priceMinorOverride
+      );
 
-    // Create order in transaction with stock updates
+      // Get shipping profile rules (default if not set on listing)
+      const shippingRules = item.listing.shippingProfile?.rulesJson as ShippingRules | undefined;
+      
+      if (!shippingRules) {
+        // Fallback: if no shipping profile, use 0 shipping
+        // In production, you might want to throw an error or use shop default
+        return {
+          shopId: item.listing.shopId,
+          quantity: item.quantity,
+          unitPriceMinor: unitPrice,
+          shippingRules: {
+            domestic: { basePriceMinor: 0 },
+          } as ShippingRules,
+          isInternational: false, // TODO: Determine from shipping address
+        };
+      }
+
+      // Determine if international shipping (simplified - check if address country != TR)
+      const isInternational = (data.shippingAddress as { country?: string })?.country !== "TR";
+
+      return {
+        shopId: item.listing.shopId,
+        quantity: item.quantity,
+        unitPriceMinor: unitPrice,
+        shippingRules,
+        isInternational,
+      };
+    });
+
+    const shippingTotal = calculateShippingTotal(shippingItems, "TRY");
+    const totals = calculateOrderTotals(
+      lineItems,
+      shippingTotal.amountMinor,
+      0,
+      "TRY"
+    );
+
+    // CRITICAL: Create order WITHOUT decrementing stock
+    // Stock will be decremented only after payment confirmation via webhook
     const order = await prisma.$transaction(async (tx) => {
       // Generate order number
       const orderNumber = `ATL-${Date.now()
@@ -167,6 +214,10 @@ export const POST = withRequestContext(
           idempotencyKey: data.idempotencyKey,
         },
       });
+
+      // Get tax rate for invoice (based on shipping address country)
+      const shippingCountry = (data.shippingAddress as { country?: string })?.country || "TR";
+      const taxRate = getTaxRate(shippingCountry);
 
       // Create order items with snapshots
       for (const cartItem of cart.items) {
@@ -234,30 +285,15 @@ export const POST = withRequestContext(
             personalizationSnapshot: snapshot.personalizationSnapshot as Prisma.InputJsonValue | undefined,
             processingTimeSnapshot: snapshot.processingTimeSnapshot as Prisma.InputJsonValue | undefined,
             policySnapshot: snapshot.policySnapshot as Prisma.InputJsonValue | undefined,
+            taxRateSnapshot: taxRate.rate, // Store tax rate at purchase time for invoice
             estimatedShipByDate,
           },
         });
 
-        // Decrement stock
-        if (cartItem.variant) {
-          await tx.listingVariant.update({
-            where: { id: cartItem.variant.id },
-            data: {
-              quantityOverride: {
-                decrement: cartItem.quantity,
-              },
-            },
-          });
-        } else {
-          await tx.listing.update({
-            where: { id: cartItem.listingId },
-            data: {
-              baseQuantity: {
-                decrement: cartItem.quantity,
-              },
-            },
-          });
-        }
+        // CRITICAL: Do NOT decrement stock here
+        // Stock will be decremented only after payment confirmation via webhook
+        // This prevents stock from being reserved without payment
+        // Stock validation was already done above, so we know stock is available
       }
 
       // Clear cart
@@ -268,16 +304,51 @@ export const POST = withRequestContext(
       return newOrder;
     });
 
-    logger.info("Order created successfully", {
+    // Create payment intent with payment provider
+    const paymentProvider = getPaymentProvider();
+    
+    // Get user email for payment
+    const userEmail = user.email;
+    const buyerName = data.shippingAddress.name || user.displayName || undefined;
+    const buyerPhone = data.shippingAddress.phone || user.phone || undefined;
+
+    const paymentIntent = await paymentProvider.createPaymentIntent({
       orderId: order.id,
       orderNumber: order.orderNumber,
+      amountMinor: totals.grandTotalMinor,
+      currency: totals.currency,
+      buyerEmail: userEmail,
+      buyerName,
+      buyerPhone,
+      shippingAddress: data.shippingAddress,
+      metadata: {
+        orderId: order.id,
+        orderNumber: order.orderNumber,
+        userId: user.id,
+      },
+      returnUrl: `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/siparislerim/${order.id}`,
+      webhookUrl: `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/api/payment/webhook`,
+    });
+
+    // Store payment intent ID in order
+    await prisma.order.update({
+      where: { id: order.id },
+      data: {
+        paymentProviderRef: paymentIntent.id,
+      },
+    });
+
+    logger.info("Order and payment intent created", {
+      orderId: order.id,
+      orderNumber: order.orderNumber,
+      paymentIntentId: paymentIntent.id,
       grandTotal: order.grandTotalMinor,
       itemCount: cart.items.length,
     });
 
     return NextResponse.json(
       {
-        message: "Order created successfully",
+        message: "Order created successfully. Please complete payment.",
         order: {
           id: order.id,
           orderNumber: order.orderNumber,
@@ -289,6 +360,13 @@ export const POST = withRequestContext(
           grandTotalMinor: order.grandTotalMinor,
           currency: order.currency,
           createdAt: order.createdAt,
+        },
+        payment: {
+          paymentIntentId: paymentIntent.id,
+          clientSecret: paymentIntent.clientSecret,
+          checkoutFormContent: paymentIntent.checkoutFormContent,
+          redirectUrl: paymentIntent.redirectUrl,
+          status: paymentIntent.status,
         },
       },
       { status: 201, headers: { "x-request-id": requestId } }

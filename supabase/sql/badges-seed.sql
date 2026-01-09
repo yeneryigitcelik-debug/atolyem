@@ -21,3 +21,4 @@ ON CONFLICT (type) DO NOTHING;
 
 
 
+

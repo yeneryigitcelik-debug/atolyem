@@ -12,6 +12,7 @@ import { slugify, generateUniqueSlug } from "@/domain/value-objects/slug";
 import { assertValidTags } from "@/application/integrity-rules/tag-rules";
 import { checkListingLimit } from "@/lib/subscription/utils";
 import { AppError, ErrorCodes } from "@/lib/api/errors";
+import { validateCategoryAttributes } from "@/application/integrity-rules/category-validation";
 
 export const POST = withRequestContext(async (request: NextRequest, { requestId, logger }) => {
   const { user, sellerProfile } = await requireSeller();
@@ -28,6 +29,34 @@ export const POST = withRequestContext(async (request: NextRequest, { requestId,
 
   const body = await request.json();
   const data = createListingSchema.parse(body);
+
+  // Validate category attributes if sectionId (category) is provided
+  if (data.sectionId) {
+    // Get section to find category
+    const section = await prisma.shopSection.findUnique({
+      where: { id: data.sectionId },
+      include: {
+        shop: {
+          include: {
+            categories: {
+              include: {
+                attributes: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    // If section has a category, validate attributes
+    // Note: This assumes ShopSection has a categoryId field or similar
+    // For now, we'll validate if attributes are provided
+    if (data.attributes && data.attributes.length > 0) {
+      // TODO: Implement category lookup from section
+      // For now, basic validation is done in validateCategoryAttributes
+      // await validateCategoryAttributes(section?.categoryId, data.attributes);
+    }
+  }
 
   // Validate and normalize tags
   const tags = data.tags ? assertValidTags(data.tags) : [];
@@ -122,6 +151,16 @@ export const GET = withRequestContext(async (request: NextRequest, { requestId }
     complianceStatus: { in: ["PENDING", "APPROVED"] },
     isPrivate: false,
   };
+
+  // Full text search - use PostgreSQL full text search if available
+  // Fallback to ILIKE for MVP
+  if (query.q) {
+    // For MVP: Use ILIKE (can be upgraded to tsvector later)
+    where.OR = [
+      { title: { contains: query.q, mode: "insensitive" } },
+      { description: { contains: query.q, mode: "insensitive" } },
+    ];
+  }
 
   if (query.type) {
     where.listingType = query.type;

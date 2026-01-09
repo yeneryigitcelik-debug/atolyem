@@ -830,6 +830,7 @@ model OrderItem {
   personalizationSnapshot  Json?    @map("personalization_snapshot")
   processingTimeSnapshot   Json?    @map("processing_time_snapshot") // { mode, minDays, maxDays }
   policySnapshot           Json?    @map("policy_snapshot") // Return policy at purchase
+  taxRateSnapshot          Decimal? @map("tax_rate_snapshot") @db.Decimal(5, 4) // Tax rate at purchase (e.g., 0.2000 for 20% KDV)
   
   // Fulfillment
   estimatedShipByDate      DateTime? @map("estimated_ship_by_date")

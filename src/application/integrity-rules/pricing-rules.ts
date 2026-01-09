@@ -46,30 +46,125 @@ export function calculateSubtotal(items: LineItemPricing[]): Money {
 }
 
 /**
- * Calculate shipping total
- * For now, a simplified calculation
+ * Shipping rules structure from ShippingProfile.rulesJson
+ */
+export interface ShippingRules {
+  domestic: {
+    basePriceMinor: number;
+    freeAboveMinor?: number;
+    additionalItemMinor?: number;
+  };
+  international?: {
+    basePriceMinor: number;
+    freeAboveMinor?: number;
+    additionalItemMinor?: number;
+  };
+}
+
+/**
+ * Calculate shipping cost for a single seller's items
+ * Implements Etsy-like combined shipping logic
+ */
+export function calculateShippingForSeller(
+  items: Array<{
+    quantity: number;
+    unitPriceMinor: number;
+  }>,
+  shippingRules: ShippingRules,
+  isInternational = false,
+  currency = "TRY"
+): Money {
+  const rules = isInternational ? shippingRules.international : shippingRules.domestic;
+  
+  if (!rules) {
+    // If no rules for this type, return 0
+    return createMoney(0, currency);
+  }
+
+  // Calculate subtotal for this seller's items
+  const subtotal = items.reduce((sum, item) => sum + (item.unitPriceMinor * item.quantity), 0);
+
+  // Check if free shipping threshold is met
+  if (rules.freeAboveMinor && subtotal >= rules.freeAboveMinor) {
+    return createMoney(0, currency);
+  }
+
+  // Calculate total quantity
+  const totalQuantity = items.reduce((sum, item) => sum + item.quantity, 0);
+
+  if (totalQuantity === 0) {
+    return createMoney(0, currency);
+  }
+
+  // First item uses base price
+  let shippingTotal = rules.basePriceMinor;
+
+  // Additional items use additionalItemMinor if specified
+  if (totalQuantity > 1 && rules.additionalItemMinor !== undefined) {
+    shippingTotal += rules.additionalItemMinor * (totalQuantity - 1);
+  }
+
+  return createMoney(shippingTotal, currency);
+}
+
+/**
+ * Calculate shipping total for entire cart
+ * Groups items by seller and calculates shipping per seller
+ * Then sums all seller shipping costs
  */
 export function calculateShippingTotal(
   items: Array<{
+    shopId: string;
     quantity: number;
-    shippingPriceMinor: number;
-    additionalItemPriceMinor?: number;
+    unitPriceMinor: number;
+    shippingRules: ShippingRules;
+    isInternational?: boolean;
   }>,
   currency = "TRY"
 ): Money {
-  let total = 0;
+  // Group items by shopId (seller)
+  const itemsByShop = new Map<string, Array<{
+    quantity: number;
+    unitPriceMinor: number;
+    shippingRules: ShippingRules;
+    isInternational?: boolean;
+  }>>();
 
   for (const item of items) {
-    // First item uses base shipping price
-    total += item.shippingPriceMinor;
-
-    // Additional items in same order
-    if (item.quantity > 1 && item.additionalItemPriceMinor !== undefined) {
-      total += item.additionalItemPriceMinor * (item.quantity - 1);
+    if (!itemsByShop.has(item.shopId)) {
+      itemsByShop.set(item.shopId, []);
     }
+    itemsByShop.get(item.shopId)!.push({
+      quantity: item.quantity,
+      unitPriceMinor: item.unitPriceMinor,
+      shippingRules: item.shippingRules,
+      isInternational: item.isInternational,
+    });
   }
 
-  return createMoney(total, currency);
+  // Calculate shipping for each seller and sum
+  let totalShipping = 0;
+
+  for (const [shopId, shopItems] of itemsByShop.entries()) {
+    // All items from same shop use same shipping rules
+    const firstItem = shopItems[0];
+    const shippingRules = firstItem.shippingRules;
+    const isInternational = firstItem.isInternational ?? false;
+
+    const shopShipping = calculateShippingForSeller(
+      shopItems.map(item => ({
+        quantity: item.quantity,
+        unitPriceMinor: item.unitPriceMinor,
+      })),
+      shippingRules,
+      isInternational,
+      currency
+    );
+
+    totalShipping += shopShipping.amountMinor;
+  }
+
+  return createMoney(totalShipping, currency);
 }
 
 /**
