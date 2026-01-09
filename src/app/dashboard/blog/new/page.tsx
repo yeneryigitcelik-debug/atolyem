@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -28,6 +28,13 @@ export default function NewBlogPostPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [previewMode, setPreviewMode] = useState(false);
+
+  // Redirect to login if not authenticated
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.push("/hesap?redirect=/dashboard/blog/new");
+    }
+  }, [authLoading, user, router]);
 
   const handleSubmit = async (publishStatus: "DRAFT" | "PUBLISHED") => {
     if (!title.trim() || !content.trim()) {
@@ -81,8 +88,12 @@ export default function NewBlogPostPage() {
   }
 
   if (!user) {
-    router.push("/hesap?redirect=/dashboard/blog/new");
-    return null;
+    // Redirect handled by useEffect above
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
   }
 
   return (

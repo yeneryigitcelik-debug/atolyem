@@ -31,6 +31,16 @@ export async function GET(
           select: {
             accountType: true,
             createdAt: true,
+            sellerProfile: {
+              select: {
+                shop: {
+                  select: {
+                    shopSlug: true,
+                    shopName: true,
+                  },
+                },
+              },
+            },
             _count: {
               select: {
                 favorites: true,
@@ -84,6 +94,16 @@ export async function GET(
             select: {
               accountType: true,
               createdAt: true,
+              sellerProfile: {
+                select: {
+                  shop: {
+                    select: {
+                      shopSlug: true,
+                      shopName: true,
+                    },
+                  },
+                },
+              },
               _count: {
                 select: {
                   favorites: true,
@@ -117,6 +137,9 @@ export async function GET(
     }
 
     // Format the response
+    const isArtist = profile.user.accountType === "SELLER" || profile.user.accountType === "BOTH";
+    const shop = profile.user.sellerProfile?.shop;
+    
     const formattedProfile = {
       userId: profile.userId,
       username: profile.username,
@@ -127,9 +150,12 @@ export async function GET(
       location: profile.location,
       websiteUrl: profile.websiteUrl,
       instagramHandle: profile.instagramHandle,
-      isArtist: profile.user.accountType === "SELLER" || profile.user.accountType === "BOTH",
+      isArtist,
       memberSince: profile.user.createdAt,
       showFavorites: profile.showFavorites ?? true,
+      // Include shop info for artists
+      shopSlug: shop?.shopSlug ?? null,
+      shopName: shop?.shopName ?? null,
       stats: {
         favorites: profile.user._count.favorites,
         following: profile.user._count.followedShops + profile.user._count.following,

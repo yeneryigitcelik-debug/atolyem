@@ -10,9 +10,24 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: "https",
-        hostname: "*.supabase.co",
+        hostname: "**.supabase.co",
+      },
+      {
+        protocol: "https",
+        hostname: "wiynbmqoraexxskeiybr.supabase.co",
       },
     ],
+  },
+
+  // Redirects for removed routes
+  async redirects() {
+    return [
+      {
+        source: "/sanatcilar",
+        destination: "/kesfet",
+        permanent: true, // 301 redirect
+      },
+    ];
   },
 
   // Security headers for production

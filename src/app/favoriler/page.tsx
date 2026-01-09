@@ -191,6 +191,7 @@ export default function FavorilerPage() {
                             fill
                             className="object-cover group-hover:scale-105 transition-transform duration-500"
                             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                            unoptimized={product.image.includes('supabase.co')}
                           />
                         ) : (
                           <div className="w-full h-full bg-gray-100 flex items-center justify-center">

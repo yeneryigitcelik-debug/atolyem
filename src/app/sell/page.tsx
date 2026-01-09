@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -34,19 +34,11 @@ export default function SellPage() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [error, setError] = useState<string | null>(null);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [deletingListing, setDeletingListing] = useState<Listing | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
-  useEffect(() => {
-    if (authLoading) return;
-
-    if (!user) {
-      router.push("/hesap?redirect=/sell");
-      return;
-    }
-
-    fetchListings();
-  }, [statusFilter, page, authLoading]);
-
-  const fetchListings = async () => {
+  const fetchListings = useCallback(async () => {
     setLoading(true);
     setError(null);
 
@@ -74,6 +66,54 @@ export default function SellPage() {
     } finally {
       setLoading(false);
     }
+  }, [page, statusFilter]);
+
+  useEffect(() => {
+    if (authLoading) return;
+
+    if (!user) {
+      router.push("/hesap?redirect=/sell");
+      return;
+    }
+
+    fetchListings();
+  }, [statusFilter, page, authLoading, user, router, fetchListings]);
+
+  const handleDeleteClick = (listing: Listing) => {
+    setDeletingListing(listing);
+    setDeleteModalOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!deletingListing) return;
+
+    setDeleteLoading(true);
+    setError(null);
+
+    try {
+      const res = await fetch(`/api/listings/${deletingListing.slug}`, {
+        method: "DELETE",
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error?.message || data.error || "Ürün silinemedi");
+      }
+
+      // Remove from local state
+      setListings((prev) => prev.filter((l) => l.id !== deletingListing.id));
+      setDeleteModalOpen(false);
+      setDeletingListing(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Bir hata oluştu");
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
+  const handleDeleteCancel = () => {
+    setDeleteModalOpen(false);
+    setDeletingListing(null);
   };
 
   const getStatusBadge = (status: string) => {
@@ -269,6 +309,13 @@ export default function SellPage() {
                           Görüntüle
                         </Link>
                       )}
+                      <button
+                        onClick={() => handleDeleteClick(listing)}
+                        className="px-3 py-2 text-center bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors text-sm"
+                        title="Sil"
+                      >
+                        <span className="material-symbols-outlined text-[18px]">delete</span>
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -300,6 +347,70 @@ export default function SellPage() {
           </>
         )}
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {deleteModalOpen && deletingListing && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-black/50"
+            onClick={handleDeleteCancel}
+          />
+          
+          {/* Modal */}
+          <div className="relative bg-white rounded-xl shadow-xl max-w-md w-full p-6">
+            <div className="text-center mb-6">
+              <div className="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
+                <span className="material-symbols-outlined text-3xl text-red-600">
+                  delete_forever
+                </span>
+              </div>
+              <h3 className="text-xl font-bold text-text-charcoal mb-2">
+                Ürünü Sil
+              </h3>
+              <p className="text-text-secondary">
+                <strong className="text-text-charcoal">&quot;{deletingListing.title}&quot;</strong> ürününü silmek istediğinizden emin misiniz?
+              </p>
+              <p className="text-sm text-red-600 mt-2">
+                Bu işlem geri alınamaz. Ürün ve tüm görselleri kalıcı olarak silinecek.
+              </p>
+            </div>
+            
+            {error && (
+              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+                {error}
+              </div>
+            )}
+            
+            <div className="flex gap-3">
+              <button
+                onClick={handleDeleteCancel}
+                disabled={deleteLoading}
+                className="flex-1 px-4 py-3 border border-border-subtle rounded-lg font-medium text-text-charcoal hover:bg-background-ivory transition-colors disabled:opacity-50"
+              >
+                İptal
+              </button>
+              <button
+                onClick={handleDeleteConfirm}
+                disabled={deleteLoading}
+                className="flex-1 px-4 py-3 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {deleteLoading ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    Siliniyor...
+                  </>
+                ) : (
+                  <>
+                    <span className="material-symbols-outlined text-[18px]">delete</span>
+                    Evet, Sil
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

@@ -7,6 +7,7 @@ import { withRequestContext } from "@/interface/middleware/with-request-context"
 import { requireSeller } from "@/lib/auth/require-auth";
 import { prisma } from "@/lib/db/prisma";
 import { z } from "zod";
+import { ListingStatus, Prisma } from "@prisma/client";
 
 const sellerListingsQuerySchema = z.object({
   status: z.enum(["DRAFT", "PUBLISHED", "ARCHIVED", "REMOVED"]).optional(),
@@ -15,23 +16,20 @@ const sellerListingsQuerySchema = z.object({
 });
 
 export const GET = withRequestContext(async (request: NextRequest, { requestId }) => {
-  const { user, sellerProfile } = await requireSeller();
+  const { user } = await requireSeller();
 
   const searchParams = Object.fromEntries(request.nextUrl.searchParams);
   const query = sellerListingsQuerySchema.parse(searchParams);
 
   const skip = (query.page - 1) * query.limit;
 
-  // Build where clause
-  const where: {
-    sellerUserId: string;
-    status?: string;
-  } = {
+  // Build where clause with proper types
+  const where: Prisma.ListingWhereInput = {
     sellerUserId: user.id,
   };
 
   if (query.status) {
-    where.status = query.status;
+    where.status = query.status as ListingStatus;
   }
 
   const [listings, total] = await Promise.all([

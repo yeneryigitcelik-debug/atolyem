@@ -123,8 +123,8 @@ export default function Header() {
 
           {/* Right Actions */}
           <div className="flex items-center gap-2 sm:gap-4 shrink-0">
-            {/* Artist Panel Button - Only show for artists */}
-            {profile?.isArtist && (
+            {/* Artist Panel Button - Only show for logged-in artists */}
+            {user && profile?.isArtist === true && (
               <Link
                 href="/satici-paneli"
                 className="hidden sm:flex items-center justify-center px-5 py-2.5 border border-transparent text-sm font-medium rounded-md text-white bg-primary hover:bg-primary-dark transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
@@ -132,13 +132,18 @@ export default function Header() {
                 Sanatçı Paneli
               </Link>
             )}
-            
-            {/* Become Artist Button - Only show for non-artists */}
-            {user && !profile?.isArtist && (
+
+            {/* Sanatçı Ol Button - Show for:
+                1. Logged-out visitors (user is null)
+                2. Logged-in non-artists (profile exists but isArtist is false)
+                3. Logged-in users whose profile is still loading (profile is null but user exists)
+            */}
+            {(!user || profile?.isArtist !== true) && !isLoading && (
               <Link
                 href="/sanatci-ol"
-                className="hidden sm:flex items-center justify-center px-5 py-2.5 border border-primary text-sm font-medium rounded-md text-primary hover:bg-primary hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
+                className="hidden sm:flex items-center justify-center gap-1.5 px-5 py-2.5 border border-primary text-sm font-medium rounded-md text-primary hover:bg-primary hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
               >
+                <span className="material-symbols-outlined text-[18px]">palette</span>
                 Sanatçı Ol
               </Link>
             )}
@@ -236,7 +241,17 @@ export default function Header() {
                             className="flex items-center gap-2 px-4 py-2 text-text-charcoal hover:bg-background-ivory transition-colors"
                           >
                             <span className="material-symbols-outlined text-[20px]">dashboard</span>
-                            Satıcı Paneli
+                            Sanatçı Paneli
+                          </Link>
+                        )}
+                        {!profile?.isArtist && (
+                          <Link 
+                            href="/sanatci-ol"
+                            onClick={() => setUserMenuOpen(false)}
+                            className="flex items-center gap-2 px-4 py-2 text-primary hover:bg-primary/5 transition-colors"
+                          >
+                            <span className="material-symbols-outlined text-[20px]">palette</span>
+                            Sanatçı Ol
                           </Link>
                         )}
                         <Link 
@@ -315,16 +330,13 @@ export default function Header() {
           </div>
         </div>
 
-        {/* Secondary Navigation - Desktop */}
+        {/* Secondary Navigation - Desktop (Sanatçılar removed) */}
         <nav className="hidden md:flex items-center gap-6 pb-3 -mt-2">
           <Link href="/kesfet" className="text-sm font-medium text-text-charcoal hover:text-primary transition-colors">
             Keşfet
           </Link>
           <Link href="/koleksiyonlar" className="text-sm font-medium text-text-charcoal hover:text-primary transition-colors">
             Koleksiyonlar
-          </Link>
-          <Link href="/sanatcilar" className="text-sm font-medium text-text-charcoal hover:text-primary transition-colors">
-            Sanatçılar
           </Link>
           <Link href="/akademi" className="text-sm font-medium text-text-charcoal hover:text-primary transition-colors flex items-center gap-1">
             <span className="material-symbols-outlined text-[16px]">school</span>
@@ -355,7 +367,7 @@ export default function Header() {
           </div>
         </div>
 
-        {/* Mobile Menu */}
+        {/* Mobile Menu (Sanatçılar removed) */}
         {mobileMenuOpen && (
           <div className="md:hidden pb-4 border-t border-border-subtle pt-4">
             <nav className="flex flex-col gap-2">
@@ -381,9 +393,6 @@ export default function Header() {
               </Link>
               <Link href="/koleksiyonlar" className="px-4 py-2 text-text-charcoal hover:text-primary hover:bg-background-ivory rounded-md transition-colors">
                 Koleksiyonlar
-              </Link>
-              <Link href="/sanatcilar" className="px-4 py-2 text-text-charcoal hover:text-primary hover:bg-background-ivory rounded-md transition-colors">
-                Sanatçılar
               </Link>
               <Link href="/akademi" className="px-4 py-2 text-text-charcoal hover:text-primary hover:bg-background-ivory rounded-md transition-colors flex items-center gap-2">
                 <span className="material-symbols-outlined text-[18px]">school</span>
@@ -427,7 +436,7 @@ export default function Header() {
                   {profile?.isArtist && (
                     <Link href="/satici-paneli" className="px-4 py-2 text-text-charcoal hover:text-primary hover:bg-background-ivory rounded-md transition-colors flex items-center gap-2">
                       <span className="material-symbols-outlined text-[18px]">dashboard</span>
-                      Satıcı Paneli
+                      Sanatçı Paneli
                     </Link>
                   )}
                   <Link href="/siparislerim" className="px-4 py-2 text-text-charcoal hover:text-primary hover:bg-background-ivory rounded-md transition-colors flex items-center gap-2">
@@ -444,19 +453,22 @@ export default function Header() {
                   </Link>
                 </>
               )}
-              {profile?.isArtist && (
+              
+              {/* CTA Buttons for Mobile */}
+              <hr className="border-border-subtle my-2" />
+              {user && profile?.isArtist === true ? (
                 <Link
                   href="/satici-paneli"
-                  className="mt-2 flex items-center justify-center px-5 py-2.5 border border-transparent text-sm font-medium rounded-md text-white bg-primary hover:bg-primary-dark transition-colors"
+                  className="mx-2 flex items-center justify-center px-5 py-2.5 border border-transparent text-sm font-medium rounded-md text-white bg-primary hover:bg-primary-dark transition-colors"
                 >
                   Sanatçı Paneli
                 </Link>
-              )}
-              {user && !profile?.isArtist && (
+              ) : (
                 <Link
                   href="/sanatci-ol"
-                  className="mt-2 flex items-center justify-center px-5 py-2.5 border border-primary text-sm font-medium rounded-md text-primary hover:bg-primary hover:text-white transition-colors"
+                  className="mx-2 flex items-center justify-center gap-1.5 px-5 py-2.5 border border-primary text-sm font-medium rounded-md text-primary hover:bg-primary hover:text-white transition-colors"
                 >
+                  <span className="material-symbols-outlined text-[18px]">palette</span>
                   Sanatçı Ol
                 </Link>
               )}

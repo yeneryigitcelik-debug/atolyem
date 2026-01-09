@@ -35,7 +35,7 @@ export default function Footer() {
             <ul className="flex flex-col gap-2.5 text-sm text-text-secondary">
               <li><Link href="/kesfet" className="hover:text-primary transition-colors">Editörün Seçimi</Link></li>
               <li><Link href="/yeni-gelenler" className="hover:text-primary transition-colors">Yeni Gelenler</Link></li>
-              <li><Link href="/sanatcilar" className="hover:text-primary transition-colors">Sanatçılar</Link></li>
+              <li><Link href="/kesfet" className="hover:text-primary transition-colors">Tüm Eserler</Link></li>
               <li><Link href="/hediye-rehberi" className="hover:text-primary transition-colors">Hediye Rehberi</Link></li>
               <li><Link href="/blog" className="hover:text-primary transition-colors">Blog</Link></li>
             </ul>

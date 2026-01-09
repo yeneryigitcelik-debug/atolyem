@@ -540,23 +540,33 @@ export default function SanatseverPage() {
               </div>
             )}
 
-            {/* Artist Shop Link */}
+            {/* Artist Workshop Link */}
             {profile.isArtist && (
-              <div className="bg-gradient-to-br from-primary/10 to-primary/5 rounded-xl border border-primary/20 p-6">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
-                    <span className="material-symbols-outlined text-primary">storefront</span>
+              <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-xl border border-amber-200/50 p-6 relative overflow-hidden">
+                {/* Decorative Pattern */}
+                <div className="absolute top-0 right-0 w-32 h-32 opacity-10">
+                  <svg viewBox="0 0 100 100" className="w-full h-full text-amber-500">
+                    <circle cx="80" cy="20" r="15" fill="currentColor" />
+                    <circle cx="60" cy="40" r="8" fill="currentColor" />
+                    <circle cx="90" cy="50" r="5" fill="currentColor" />
+                  </svg>
+                </div>
+                
+                <div className="flex items-center gap-3 mb-4 relative">
+                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center shadow-lg">
+                    <span className="material-symbols-outlined text-white text-2xl">palette</span>
                   </div>
                   <div>
-                    <h3 className="font-semibold text-text-charcoal">Sanatçı Dükkanı</h3>
-                    <p className="text-sm text-text-secondary">Eserlerini keşfet</p>
+                    <h3 className="font-semibold text-stone-800">Sanatçı Atölyesi</h3>
+                    <p className="text-sm text-stone-500">Tüm eserleri keşfet</p>
                   </div>
                 </div>
                 <Link 
-                  href={`/sanatsever/${profile.username}`}
-                  className="block w-full text-center px-4 py-2.5 bg-primary hover:bg-primary-dark text-white font-medium rounded-lg transition-colors"
+                  href={`/atolye/${profile.username}`}
+                  className="block w-full text-center px-4 py-3 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-medium rounded-lg transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5 flex items-center justify-center gap-2"
                 >
-                  Profili Görüntüle
+                  <span className="material-symbols-outlined text-xl">brush</span>
+                  Eserleri Görüntüle
                 </Link>
               </div>
             )}
@@ -673,6 +683,7 @@ export default function SanatseverPage() {
                               alt={fav.listing.title}
                               fill
                               className="object-cover group-hover:scale-105 transition-transform duration-300"
+                              unoptimized={fav.listing.thumbnail.includes('supabase.co')}
                             />
                           ) : (
                             <div className="w-full h-full flex items-center justify-center">
@@ -726,6 +737,7 @@ export default function SanatseverPage() {
                               width={48}
                               height={48}
                               className="w-full h-full object-cover"
+                              unoptimized={follower.avatarUrl.includes('supabase.co')}
                             />
                           ) : (
                             <div className="w-full h-full flex items-center justify-center bg-primary/10">
@@ -775,6 +787,7 @@ export default function SanatseverPage() {
                               width={48}
                               height={48}
                               className="w-full h-full object-cover"
+                              unoptimized={followed.avatarUrl.includes('supabase.co')}
                             />
                           ) : (
                             <div className="w-full h-full flex items-center justify-center bg-primary/10">
@@ -817,6 +830,7 @@ export default function SanatseverPage() {
                               width={40}
                               height={40}
                               className="w-full h-full object-cover"
+                              unoptimized={authProfile.avatarUrl.includes('supabase.co')}
                             />
                           ) : (
                             <div className="w-full h-full flex items-center justify-center bg-primary/10">
@@ -904,6 +918,7 @@ export default function SanatseverPage() {
                                     width={40}
                                     height={40}
                                     className="w-full h-full object-cover"
+                                    unoptimized={comment.author.avatarUrl.includes('supabase.co')}
                                   />
                                 ) : (
                                   <div className="w-full h-full flex items-center justify-center bg-primary/10">

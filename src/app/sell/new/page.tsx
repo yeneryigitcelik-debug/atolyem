@@ -29,6 +29,13 @@ export default function NewListingPage() {
     limit: number | null;
   } | null>(null);
 
+  // Redirect to login if not authenticated
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.push("/hesap?redirect=/sell/new");
+    }
+  }, [authLoading, user, router]);
+
   // Fetch subscription limit info
   useEffect(() => {
     if (!authLoading && user) {
@@ -48,23 +55,31 @@ export default function NewListingPage() {
     if (listingSlug) return listingSlug;
 
     try {
+      // Calculate price - 0 is allowed for draft listings
+      const parsedPrice = parseFloat(price || "0");
+      const priceMinor = isNaN(parsedPrice) || parsedPrice < 0 ? 0 : Math.round(parsedPrice * 100);
+      
       const createRes = await fetch("/api/listings", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           listingType,
-          title: title || "Yeni Ürün",
+          title: title.trim() || "Yeni Ürün",
           description: description || "",
-          basePriceMinor: Math.round(parseFloat(price || "0") * 100),
+          basePriceMinor: priceMinor,
           currency: "TRY",
-          baseQuantity: parseInt(quantity || "1", 10),
+          baseQuantity: parseInt(quantity || "1", 10) || 1,
           tags: [],
         }),
       });
 
       if (!createRes.ok) {
         const data = await createRes.json();
-        throw new Error(data.error || "Ürün oluşturulamadı");
+        // Handle monthly limit error specially
+        if (data.error?.code === "MONTHLY_PRODUCT_LIMIT_REACHED") {
+          throw new Error(`LIMIT_REACHED:${data.error.message}`);
+        }
+        throw new Error(data.error?.message || data.error || "Ürün oluşturulamadı");
       }
 
       const createData = await createRes.json();
@@ -74,7 +89,8 @@ export default function NewListingPage() {
       }
       return createData.listing.slug;
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Ürün oluşturulamadı");
+      const errorMessage = err instanceof Error ? err.message : "Ürün oluşturulamadı";
+      setError(errorMessage);
       return null;
     }
   };
@@ -138,7 +154,11 @@ export default function NewListingPage() {
 
         if (!createRes.ok) {
           const data = await createRes.json();
-          throw new Error(data.error || "Ürün oluşturulamadı");
+          // Handle monthly limit error specially
+          if (data.error?.code === "MONTHLY_PRODUCT_LIMIT_REACHED") {
+            throw new Error(`LIMIT_REACHED:${data.error.message}`);
+          }
+          throw new Error(data.error?.message || data.error || "Ürün oluşturulamadı");
         }
 
         const createData = await createRes.json();
@@ -193,8 +213,12 @@ export default function NewListingPage() {
   }
 
   if (!user) {
-    router.push("/hesap?redirect=/sell/new");
-    return null;
+    // Redirect handled by useEffect above
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
   }
 
   return (
@@ -202,8 +226,31 @@ export default function NewListingPage() {
       <PageHeader title="Yeni Ürün Ekle" />
       <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {error && (
-          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
-            {error}
+          <div className={`mb-6 p-4 rounded-lg border ${
+            error.startsWith("LIMIT_REACHED:") 
+              ? "bg-amber-50 border-amber-200" 
+              : "bg-red-50 border-red-200"
+          }`}>
+            {error.startsWith("LIMIT_REACHED:") ? (
+              <div className="flex items-center justify-between flex-wrap gap-4">
+                <div className="flex items-center gap-3">
+                  <span className="material-symbols-outlined text-amber-600 text-2xl">workspace_premium</span>
+                  <div>
+                    <p className="font-medium text-amber-900">Aylık Ürün Limitine Ulaştınız</p>
+                    <p className="text-sm text-amber-700 mt-1">{error.replace("LIMIT_REACHED:", "")}</p>
+                  </div>
+                </div>
+                <Link
+                  href="/satici-paneli/abonelik"
+                  className="px-5 py-2.5 bg-primary hover:bg-primary-dark text-white font-medium rounded-lg transition-colors flex items-center gap-2"
+                >
+                  <span className="material-symbols-outlined text-[18px]">upgrade</span>
+                  Premium&apos;a Geç
+                </Link>
+              </div>
+            ) : (
+              <p className="text-red-700">{error}</p>
+            )}
           </div>
         )}
 
@@ -294,7 +341,7 @@ export default function NewListingPage() {
                   </label>
                   <select
                     value={listingType}
-                    onChange={(e) => setListingType(e.target.value as any)}
+                    onChange={(e) => setListingType(e.target.value as "MADE_BY_SELLER" | "DESIGNED_BY_SELLER" | "SOURCED_BY_SELLER" | "VINTAGE")}
                     className="w-full px-4 py-2 border border-border-subtle rounded-lg focus:ring-2 focus:ring-primary focus:border-primary"
                   >
                     <option value="MADE_BY_SELLER">Satıcı Tarafından Yapıldı</option>
@@ -396,13 +443,8 @@ export default function NewListingPage() {
               <ImageUploader
                 listingSlug={listingSlug}
                 images={media}
-                onImagesChange={(newImages) => {
-                  setMedia(newImages);
-                  // Ensure listing exists if images are being added
-                  if (newImages.length > media.length && !listingSlug) {
-                    ensureListingExists();
-                  }
-                }}
+                onImagesChange={setMedia}
+                onEnsureListing={ensureListingExists}
                 maxImages={8}
                 disabled={submitting}
               />

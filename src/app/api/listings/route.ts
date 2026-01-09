@@ -12,7 +12,6 @@ import { slugify, generateUniqueSlug } from "@/domain/value-objects/slug";
 import { assertValidTags } from "@/application/integrity-rules/tag-rules";
 import { checkListingLimit } from "@/lib/subscription/utils";
 import { AppError, ErrorCodes } from "@/lib/api/errors";
-import { validateCategoryAttributes } from "@/application/integrity-rules/category-validation";
 
 export const POST = withRequestContext(async (request: NextRequest, { requestId, logger }) => {
   const { user, sellerProfile } = await requireSeller();
@@ -21,40 +20,36 @@ export const POST = withRequestContext(async (request: NextRequest, { requestId,
   const limitCheck = await checkListingLimit(user.id);
   if (!limitCheck.canCreate) {
     throw new AppError(
-      ErrorCodes.VALIDATION_ERROR,
-      limitCheck.reason || "Ürün ekleme limitinize ulaştınız",
-      403
+      ErrorCodes.MONTHLY_PRODUCT_LIMIT_REACHED,
+      limitCheck.reason || "Basic pakette aylık 3 ürün yükleyebilirsiniz. Premium ile sınırsız.",
+      403,
+      {
+        currentCount: limitCheck.currentCount,
+        limit: limitCheck.limit,
+      }
     );
   }
 
   const body = await request.json();
   const data = createListingSchema.parse(body);
 
-  // Validate category attributes if sectionId (category) is provided
+  // Validate section belongs to seller's shop
   if (data.sectionId) {
-    // Get section to find category
     const section = await prisma.shopSection.findUnique({
       where: { id: data.sectionId },
-      include: {
-        shop: {
-          include: {
-            categories: {
-              include: {
-                attributes: true,
-              },
-            },
-          },
-        },
+      select: {
+        id: true,
+        shopId: true,
       },
     });
 
-    // If section has a category, validate attributes
-    // Note: This assumes ShopSection has a categoryId field or similar
-    // For now, we'll validate if attributes are provided
-    if (data.attributes && data.attributes.length > 0) {
-      // TODO: Implement category lookup from section
-      // For now, basic validation is done in validateCategoryAttributes
-      // await validateCategoryAttributes(section?.categoryId, data.attributes);
+    // Section must belong to the seller's shop
+    if (section && sellerProfile.shopId !== section.shopId) {
+      throw new AppError(
+        ErrorCodes.VALIDATION_ERROR,
+        "Section does not belong to your shop",
+        400
+      );
     }
   }
 

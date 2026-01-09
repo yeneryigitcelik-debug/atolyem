@@ -1,29 +1,28 @@
 import Link from "next/link";
 import HeroCarousel from "@/components/ui/HeroCarousel";
+import ProductCard from "@/components/ui/ProductCard";
+import { getNewListings, getPopularListings } from "@/lib/data/listings";
 
-// Mock data for categories
+// Force dynamic rendering to always show fresh data
+export const dynamic = "force-dynamic";
+
+// Categories - core site functionality, kept as curated navigation
 const categories = [
-  { name: "Tablolar", slug: "tablolar", image: "https://images.unsplash.com/photo-1579783902614-a3fb3927b6a5?w=200&h=200&fit=crop" },
-  { name: "Seramik", slug: "seramik", image: "https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=200&h=200&fit=crop" },
-  { name: "Heykel", slug: "heykel", image: "https://images.unsplash.com/photo-1544413660-299165566b1d?w=200&h=200&fit=crop" },
-  { name: "Fotoğraf", slug: "fotograf", image: "https://images.unsplash.com/photo-1452587925148-ce544e77e70d?w=200&h=200&fit=crop" },
-  { name: "Tekstil", slug: "tekstil", image: "https://images.unsplash.com/photo-1558171813-4c088753af8f?w=200&h=200&fit=crop" },
-  { name: "Cam", slug: "cam", image: "https://images.unsplash.com/photo-1518709414768-a88981a4515d?w=200&h=200&fit=crop" },
+  { name: "Tablolar", slug: "tablolar", icon: "brush" },
+  { name: "Seramik", slug: "seramik", icon: "water_drop" },
+  { name: "Heykel", slug: "heykel", icon: "view_in_ar" },
+  { name: "Fotoğraf", slug: "fotograf", icon: "photo_camera" },
+  { name: "Tekstil", slug: "tekstil", icon: "checkroom" },
+  { name: "Cam", slug: "cam", icon: "wine_bar" },
 ];
 
-// Mock data for collections
-const collections = [
-  { title: "Modern Minimalist", desc: "Sade formlar ve nötr renklerin huzurlu uyumu.", slug: "modern-minimalist", image: "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=600&h=800&fit=crop" },
-  { title: "Anadolu Dokuları", desc: "Geleneksel motiflerin modern yorumları.", slug: "anadolu-dokulari", image: "https://images.unsplash.com/photo-1600166898405-da9535204843?w=600&h=800&fit=crop" },
-  { title: "Doğadan İlham", desc: "Organik materyaller ve sürdürülebilir sanat.", slug: "dogadan-ilham", image: "https://images.unsplash.com/photo-1513519245088-0e12902e5a38?w=600&h=800&fit=crop" },
-];
+export default async function Home() {
+  // Fetch data in parallel
+  const [newListings, popularListings] = await Promise.all([
+    getNewListings(8),
+    getPopularListings(8),
+  ]);
 
-// Products will be fetched from API
-const newProducts: any[] = [];
-const popularProducts: any[] = [];
-const blogPosts: any[] = [];
-
-export default function Home() {
   return (
     <>
       {/* Hero Carousel Section */}
@@ -40,11 +39,10 @@ export default function Home() {
               href={`/kategori/${category.slug}`}
               className="group flex flex-col items-center gap-3 p-4 bg-surface-white rounded-md border border-border-subtle hover:border-primary transition-all duration-300 hover:shadow-md cursor-pointer"
             >
-              <div className="w-16 h-16 rounded-full overflow-hidden bg-background-ivory">
-                <div
-                  className="w-full h-full bg-cover bg-center group-hover:scale-110 transition-transform duration-500"
-                  style={{ backgroundImage: `url('${category.image}')` }}
-                />
+              <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+                <span className="material-symbols-outlined text-primary text-2xl group-hover:scale-110 transition-transform">
+                  {category.icon}
+                </span>
               </div>
               <span className="text-sm font-medium text-text-charcoal group-hover:text-primary transition-colors">{category.name}</span>
             </Link>
@@ -52,41 +50,26 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Featured Collections - Curator Picks */}
+      {/* Featured Collections - Coming Soon State */}
       <section className="bg-surface-warm py-16 border-y border-border-subtle/50">
         <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-end justify-between mb-8">
             <div>
               <h3 className="text-text-charcoal text-2xl font-bold tracking-tight">Editör Seçkileri</h3>
-              <p className="text-text-secondary mt-1">Bu ayın öne çıkan koleksiyonlarını keşfedin.</p>
+              <p className="text-text-secondary mt-1">Küratörlük ekibimiz tarafından özenle seçilmiş koleksiyonlar.</p>
             </div>
             <Link href="/koleksiyonlar" className="hidden sm:flex items-center text-sm font-medium text-primary hover:text-primary-dark transition-colors group">
               Tüm Koleksiyonlar
               <span className="material-symbols-outlined ml-1 text-base group-hover:translate-x-1 transition-transform">arrow_forward</span>
             </Link>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {collections.map((collection) => (
-              <Link key={collection.slug} href={`/koleksiyon/${collection.slug}`} className="group relative cursor-pointer">
-                <div className="aspect-[4/5] md:aspect-[3/4] overflow-hidden rounded-lg bg-gray-200">
-                  <div
-                    className="w-full h-full bg-cover bg-center transition-transform duration-700 group-hover:scale-105"
-                    style={{ backgroundImage: `url('${collection.image}')` }}
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-60"></div>
-                </div>
-                <div className="absolute bottom-0 left-0 p-6 w-full">
-                  <h4 className="text-white text-xl font-bold mb-1">{collection.title}</h4>
-                  <p className="text-white/80 text-sm mb-3 line-clamp-1">{collection.desc}</p>
-                  <span className="text-white text-sm font-medium border-b border-white/40 pb-0.5 group-hover:border-white transition-colors">Koleksiyonu Gör</span>
-                </div>
-              </Link>
-            ))}
-          </div>
-          <div className="mt-6 sm:hidden text-center">
-            <Link href="/koleksiyonlar" className="inline-flex items-center text-sm font-medium text-primary hover:text-primary-dark transition-colors">
-              Tüm Koleksiyonlar
-              <span className="material-symbols-outlined ml-1 text-base">arrow_forward</span>
+          <div className="text-center py-16 bg-surface-white rounded-lg border border-border-subtle">
+            <span className="material-symbols-outlined text-6xl text-border-subtle mb-4">collections</span>
+            <h3 className="text-xl font-semibold text-text-charcoal mb-2">Koleksiyonlar Hazırlanıyor</h3>
+            <p className="text-text-secondary mb-6 max-w-md mx-auto">Küratörlerimiz sizin için özel koleksiyonlar oluşturuyor. Yakında burada!</p>
+            <Link href="/kesfet" className="inline-flex items-center gap-2 px-6 py-3 bg-primary hover:bg-primary-dark text-white font-medium rounded-md transition-colors">
+              Eserleri Keşfet
+              <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
             </Link>
           </div>
         </div>
@@ -101,35 +84,20 @@ export default function Home() {
             <span className="material-symbols-outlined ml-1 text-base group-hover:translate-x-1 transition-transform">arrow_forward</span>
           </Link>
         </div>
-        {newProducts.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {newProducts.map((product) => (
-              <Link
-                key={product.slug}
-                href={`/urun/${product.slug}`}
-                className="group bg-surface-white rounded-md border border-border-subtle hover:border-primary transition-all duration-300 hover:shadow-md hover:-translate-y-1 relative"
-              >
-                <button className="absolute top-3 right-3 z-10 p-1.5 bg-white/80 rounded-full text-text-secondary hover:text-primary transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100">
-                  <span className="material-symbols-outlined text-[20px]">favorite</span>
-                </button>
-                <div className="aspect-square overflow-hidden rounded-t-md bg-gray-100">
-                  <div className="w-full h-full bg-cover bg-center" style={{ backgroundImage: `url('${product.image}')` }} />
-                </div>
-                <div className="p-4">
-                  <div className="flex gap-2 mb-2">
-                    <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-background-ivory border border-border-subtle ${product.badge === "Orijinal" || product.badge === "Limited" ? "text-primary" : "text-text-secondary"}`}>
-                      {product.badge}
-                    </span>
-                  </div>
-                  <h4 className="text-text-charcoal font-semibold text-lg leading-tight truncate">{product.title}</h4>
-                  <div className="flex items-center justify-between mt-2">
-                    <div>
-                      <p className="text-xs text-text-secondary">Sanatçı: <span className="text-text-charcoal font-medium">{product.artist}</span></p>
-                    </div>
-                    <span className="text-text-charcoal font-bold">{product.price.toLocaleString("tr-TR")} TL</span>
-                  </div>
-                </div>
-              </Link>
+        
+        {newListings.length > 0 ? (
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
+            {newListings.map((listing) => (
+              <ProductCard
+                key={listing.id}
+                title={listing.title}
+                artist={listing.artistName}
+                artistSlug={listing.artistSlug ?? undefined}
+                price={listing.price}
+                slug={listing.slug}
+                image={listing.thumbnail || "/images/placeholder-art.jpg"}
+                listingId={listing.id}
+              />
             ))}
           </div>
         ) : (
@@ -137,8 +105,8 @@ export default function Home() {
             <span className="material-symbols-outlined text-6xl text-border-subtle mb-4">palette</span>
             <h3 className="text-xl font-semibold text-text-charcoal mb-2">Henüz yeni eser eklenmedi</h3>
             <p className="text-text-secondary mb-6">Yakında harika eserler burada görünecek.</p>
-            <Link href="/kesfet" className="inline-flex items-center gap-2 px-6 py-3 bg-primary hover:bg-primary-dark text-white font-medium rounded-md transition-colors">
-              Tüm Eserleri Keşfet
+            <Link href="/sanatci-ol" className="inline-flex items-center gap-2 px-6 py-3 bg-primary hover:bg-primary-dark text-white font-medium rounded-md transition-colors">
+              Sanatçı Olarak Katıl
               <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
             </Link>
           </div>
@@ -182,45 +150,32 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Artist Spotlight */}
+      {/* Artist Spotlight - Coming Soon */}
       <section className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-16 lg:py-24">
-        <div className="bg-surface-white rounded-lg border border-border-subtle overflow-hidden">
+        <div className="bg-gradient-to-br from-primary/5 to-primary/10 rounded-lg border border-primary/20 overflow-hidden">
           <div className="flex flex-col lg:flex-row">
-            {/* Image */}
-            <div className="w-full lg:w-1/2 min-h-[400px]">
-              <div
-                className="w-full h-full bg-cover bg-center"
-                style={{ backgroundImage: "url('https://images.unsplash.com/photo-1460661419201-fd4cecdf8a8b?w=800&h=600&fit=crop')" }}
-              />
+            {/* Placeholder Art Pattern */}
+            <div className="w-full lg:w-1/2 min-h-[400px] bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
+              <div className="text-center">
+                <span className="material-symbols-outlined text-8xl text-primary/30 mb-4">person_celebrate</span>
+              </div>
             </div>
             {/* Content */}
             <div className="w-full lg:w-1/2 p-8 lg:p-12 flex flex-col justify-center">
               <span className="text-primary font-semibold tracking-wide text-sm uppercase mb-2">Ayın Sanatçısı</span>
-              <h3 className="text-3xl font-bold text-text-charcoal mb-4">Sinem Demirtaş</h3>
+              <h3 className="text-3xl font-bold text-text-charcoal mb-4">Çok Yakında</h3>
               <p className="text-text-secondary text-lg leading-relaxed mb-8">
-                &quot;Renklerin ve fırça darbelerinin dansı, ruhun özgürlüğüdür. Tuvallerimde doğanın ve insanın iç dünyasının buluştuğu anları yakalıyorum.&quot;
+                Yetenekli sanatçılarımızı burada tanıtacağız. İlham verici hikayeler ve benzersiz eserlerle tanışmak için bizi takip etmeye devam edin.
               </p>
-              {/* Mini Gallery */}
-              <div className="grid grid-cols-3 gap-4 mb-8">
-                <div className="aspect-square bg-gray-100 rounded-md overflow-hidden">
-                  <div className="w-full h-full bg-cover bg-center" style={{ backgroundImage: "url('https://images.unsplash.com/photo-1579783902614-a3fb3927b6a5?w=200&h=200&fit=crop')" }} />
-                </div>
-                <div className="aspect-square bg-gray-100 rounded-md overflow-hidden">
-                  <div className="w-full h-full bg-cover bg-center" style={{ backgroundImage: "url('https://images.unsplash.com/photo-1549887534-1541e9326642?w=200&h=200&fit=crop')" }} />
-                </div>
-                <div className="aspect-square bg-gray-100 rounded-md overflow-hidden">
-                  <div className="w-full h-full bg-cover bg-center" style={{ backgroundImage: "url('https://images.unsplash.com/photo-1578749556568-bc2c40e68b61?w=200&h=200&fit=crop')" }} />
-                </div>
-              </div>
-              <Link href="/sanatsever/sinem-demirtas" className="self-start px-6 py-3 bg-primary hover:bg-primary-dark text-white font-medium rounded-md transition-colors shadow-sm">
-                Sanatçıyı İncele
+              <Link href="/kesfet" className="self-start px-6 py-3 bg-primary hover:bg-primary-dark text-white font-medium rounded-md transition-colors shadow-sm">
+                Eserleri Keşfet
               </Link>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Popular / Trending Carousel */}
+      {/* Popular / Trending Section */}
       <section className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-10 overflow-hidden">
         <div className="flex items-center justify-between mb-6">
           <h3 className="text-text-charcoal text-2xl font-bold tracking-tight">Şu An Popüler</h3>
@@ -233,22 +188,20 @@ export default function Home() {
           <Link href="/kategori/tekstil" className="whitespace-nowrap px-4 py-2 bg-surface-white border border-border-subtle text-text-charcoal hover:border-primary hover:text-primary transition-colors text-sm font-medium rounded-full">Duvar Dekoru</Link>
           <Link href="/kategori/heykel" className="whitespace-nowrap px-4 py-2 bg-surface-white border border-border-subtle text-text-charcoal hover:border-primary hover:text-primary transition-colors text-sm font-medium rounded-full">Modern Heykel</Link>
         </div>
-        {/* Horizontal Scroll Container */}
-        {popularProducts.length > 0 ? (
-          <div className="flex gap-6 overflow-x-auto scrollbar-hide pb-4 snap-x">
-            {popularProducts.map((product) => (
-              <Link key={product.slug} href={`/urun/${product.slug}`} className="min-w-[280px] w-[280px] snap-start">
-                <div className="group bg-surface-white rounded-md border border-border-subtle hover:border-primary transition-all duration-300 relative">
-                  <div className="aspect-[3/4] overflow-hidden rounded-t-md bg-gray-100">
-                    <div className="w-full h-full bg-cover bg-center" style={{ backgroundImage: `url('${product.image}')` }} />
-                  </div>
-                  <div className="p-4">
-                    <h4 className="text-text-charcoal font-semibold text-base truncate">{product.title}</h4>
-                    <p className="text-xs text-text-secondary mt-1">{product.artist}</p>
-                    <p className="text-text-charcoal font-bold mt-2">{product.price.toLocaleString("tr-TR")} TL</p>
-                  </div>
-                </div>
-              </Link>
+        
+        {popularListings.length > 0 ? (
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
+            {popularListings.map((listing) => (
+              <ProductCard
+                key={listing.id}
+                title={listing.title}
+                artist={listing.artistName}
+                artistSlug={listing.artistSlug ?? undefined}
+                price={listing.price}
+                slug={listing.slug}
+                image={listing.thumbnail || "/images/placeholder-art.jpg"}
+                listingId={listing.id}
+              />
             ))}
           </div>
         ) : (
@@ -274,35 +227,15 @@ export default function Home() {
               <span className="material-symbols-outlined ml-1 text-base group-hover:translate-x-1 transition-transform">arrow_forward</span>
             </Link>
           </div>
-          {blogPosts.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              {blogPosts.map((post) => (
-                <Link key={post.slug} href={`/blog/${post.slug}`} className="flex flex-col gap-4 group cursor-pointer">
-                  <div className="aspect-video overflow-hidden rounded-md bg-gray-200">
-                    <div
-                      className="w-full h-full bg-cover bg-center transition-transform duration-500 group-hover:scale-105"
-                      style={{ backgroundImage: `url('${post.image}')` }}
-                    />
-                  </div>
-                  <div>
-                    <h4 className="text-xl font-bold text-text-charcoal mb-2 group-hover:text-primary transition-colors">{post.title}</h4>
-                    <p className="text-text-secondary text-sm mb-3 line-clamp-2">{post.desc}</p>
-                    <span className="text-primary text-sm font-medium border-b border-primary/20 pb-0.5 group-hover:border-primary transition-colors inline-block">Devamını Oku</span>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-16 bg-surface-white rounded-lg border border-border-subtle">
-              <span className="material-symbols-outlined text-6xl text-border-subtle mb-4">article</span>
-              <h3 className="text-xl font-semibold text-text-charcoal mb-2">Henüz blog yazısı yok</h3>
-              <p className="text-text-secondary mb-6">Yakında ilham verici içerikler burada olacak.</p>
-              <Link href="/blog" className="inline-flex items-center gap-2 px-6 py-3 bg-primary hover:bg-primary-dark text-white font-medium rounded-md transition-colors">
-                Blog'a Git
-                <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
-              </Link>
-            </div>
-          )}
+          <div className="text-center py-16 bg-surface-warm rounded-lg border border-border-subtle">
+            <span className="material-symbols-outlined text-6xl text-border-subtle mb-4">article</span>
+            <h3 className="text-xl font-semibold text-text-charcoal mb-2">Atölye Günlüğü Yakında</h3>
+            <p className="text-text-secondary mb-6 max-w-md mx-auto">Sanat dünyasından haberler, sanatçı röportajları ve ilham verici hikayeler yakında burada olacak.</p>
+            <Link href="/blog" className="inline-flex items-center gap-2 px-6 py-3 bg-primary hover:bg-primary-dark text-white font-medium rounded-md transition-colors">
+              Blog Sayfasına Git
+              <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
+            </Link>
+          </div>
         </div>
       </section>
     </>

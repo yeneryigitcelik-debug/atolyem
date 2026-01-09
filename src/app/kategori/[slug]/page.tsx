@@ -12,8 +12,17 @@ const categories: Record<string, { name: string; description: string }> = {
   cam: { name: "Cam", description: "Üflemeli cam, vitray ve cam sanatı eserleri." },
 };
 
-// Products will be fetched from API
-const mockProducts: any[] = [];
+// Products will be fetched from API - empty until API integration
+interface Product {
+  id: string;
+  title: string;
+  artist: string;
+  price: number;
+  slug: string;
+  image: string;
+  artistSlug?: string;
+}
+const mockProducts: Product[] = [];
 
 export default async function CategoryPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;

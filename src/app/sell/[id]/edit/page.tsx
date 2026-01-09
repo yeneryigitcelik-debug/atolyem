@@ -27,6 +27,13 @@ export default function EditListingPage() {
   const [error, setError] = useState<string | null>(null);
   const [slug, setSlug] = useState<string>("");
 
+  // Redirect to login if not authenticated
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.push(`/hesap?redirect=/sell/${listingId}/edit`);
+    }
+  }, [authLoading, user, router, listingId]);
+
   useEffect(() => {
     if (!listingId || authLoading) return;
 
@@ -39,7 +46,7 @@ export default function EditListingPage() {
           const sellerRes = await fetch("/api/seller/listings");
           if (!sellerRes.ok) throw new Error("Ürün bulunamadı");
           const sellerData = await sellerRes.json();
-          const listing = sellerData.listings.find((l: any) => l.id === listingId || l.slug === listingId);
+          const listing = sellerData.listings.find((l: { id: string; slug: string }) => l.id === listingId || l.slug === listingId);
           if (!listing) throw new Error("Ürün bulunamadı");
           res = await fetch(`/api/listings/${listing.slug}`);
           if (!res.ok) throw new Error("Ürün bulunamadı");
@@ -56,7 +63,7 @@ export default function EditListingPage() {
         setQuantity(listing.baseQuantity.toString());
         setStatus(listing.status);
         setTags(listing.tags || []);
-        setMedia((listing.media || []).map((m: any) => ({
+        setMedia((listing.media || []).map((m: { id: string; url: string; sortOrder: number; isPrimary: boolean; altText?: string }) => ({
           id: m.id,
           url: m.url,
           sortOrder: m.sortOrder,
@@ -165,8 +172,12 @@ export default function EditListingPage() {
   }
 
   if (!user) {
-    router.push(`/hesap?redirect=/sell/${listingId}/edit`);
-    return null;
+    // Redirect handled by useEffect above
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
   }
 
   return (

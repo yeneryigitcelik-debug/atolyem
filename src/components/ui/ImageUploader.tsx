@@ -22,6 +22,7 @@ interface ImageUploaderProps {
   listingSlug: string | null;
   images: UploadedImage[];
   onImagesChange: (images: UploadedImage[]) => void;
+  onEnsureListing?: () => Promise<string | null>;
   maxImages?: number;
   disabled?: boolean;
 }
@@ -30,6 +31,7 @@ export default function ImageUploader({
   listingSlug,
   images,
   onImagesChange,
+  onEnsureListing,
   maxImages = 8,
   disabled = false,
 }: ImageUploaderProps) {
@@ -38,15 +40,19 @@ export default function ImageUploader({
   const [uploadProgress, setUploadProgress] = useState<Map<string, UploadProgress>>(new Map());
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+  const [currentSlug, setCurrentSlug] = useState<string | null>(listingSlug);
+
+  // Keep currentSlug in sync with prop
+  useEffect(() => {
+    if (listingSlug) {
+      setCurrentSlug(listingSlug);
+    }
+  }, [listingSlug]);
 
   const canUploadMore = images.length < maxImages;
 
   const uploadFile = useCallback(
-    async (file: File, sortOrder: number, isPrimary: boolean): Promise<UploadedImage | null> => {
-      if (!listingSlug) {
-        throw new Error("Listing slug is required");
-      }
-
+    async (file: File, sortOrder: number, isPrimary: boolean, slug: string): Promise<UploadedImage | null> => {
       const fileId = `${file.name}-${Date.now()}`;
       setUploadProgress((prev) =>
         new Map(prev).set(fileId, { file, progress: 0 })
@@ -68,7 +74,7 @@ export default function ImageUploader({
           });
         }, 100);
 
-        const uploadRes = await fetch(`/api/listings/${listingSlug}/media`, {
+        const uploadRes = await fetch(`/api/listings/${slug}/media`, {
           method: "POST",
           body: formData,
         });
@@ -77,7 +83,7 @@ export default function ImageUploader({
 
         if (!uploadRes.ok) {
           const data = await uploadRes.json();
-          throw new Error(data.error || "Görsel yüklenemedi");
+          throw new Error(data.error?.message || data.error || "Görsel yüklenemedi");
         }
 
         const uploadData = await uploadRes.json();
@@ -101,12 +107,12 @@ export default function ImageUploader({
         return null;
       }
     },
-    [listingSlug]
+    []
   );
 
   const handleFiles = useCallback(
     async (files: FileList | File[]) => {
-      if (!listingSlug || disabled || !canUploadMore) return;
+      if (disabled || !canUploadMore) return;
 
       const fileArray = Array.from(files);
       const remainingSlots = maxImages - images.length;
@@ -135,13 +141,35 @@ export default function ImageUploader({
         return;
       }
 
+      // Ensure listing exists before uploading
+      let activeSlug = currentSlug;
+      if (!activeSlug && onEnsureListing) {
+        activeSlug = await onEnsureListing();
+        if (activeSlug) {
+          setCurrentSlug(activeSlug);
+        }
+      }
+
+      if (!activeSlug) {
+        // Show error if we couldn't get a slug
+        const fileId = `error-${Date.now()}`;
+        setUploadProgress((prev) =>
+          new Map(prev).set(fileId, { 
+            file: validFiles[0], 
+            progress: 0, 
+            error: "Önce ürün bilgilerini kaydedin" 
+          })
+        );
+        return;
+      }
+
       // Upload files sequentially
       const newImages: UploadedImage[] = [];
       for (let i = 0; i < validFiles.length; i++) {
         const file = validFiles[i];
         const sortOrder = images.length + newImages.length;
         const isPrimary = images.length === 0 && newImages.length === 0;
-        const uploaded = await uploadFile(file, sortOrder, isPrimary);
+        const uploaded = await uploadFile(file, sortOrder, isPrimary, activeSlug);
         if (uploaded) {
           newImages.push(uploaded);
         }
@@ -151,7 +179,7 @@ export default function ImageUploader({
         onImagesChange([...images, ...newImages]);
       }
     },
-    [listingSlug, disabled, canUploadMore, maxImages, images, uploadFile, onImagesChange]
+    [currentSlug, disabled, canUploadMore, maxImages, images, uploadFile, onImagesChange, onEnsureListing]
   );
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -194,10 +222,10 @@ export default function ImageUploader({
   };
 
   const handleDelete = async (imageId: string) => {
-    if (!listingSlug || disabled) return;
+    if (!currentSlug || disabled) return;
 
     try {
-      const res = await fetch(`/api/listings/${listingSlug}/media/${imageId}`, {
+      const res = await fetch(`/api/listings/${currentSlug}/media/${imageId}`, {
         method: "DELETE",
       });
 
@@ -219,10 +247,10 @@ export default function ImageUploader({
   };
 
   const handleSetPrimary = async (imageId: string) => {
-    if (!listingSlug || disabled) return;
+    if (!currentSlug || disabled) return;
 
     try {
-      const res = await fetch(`/api/listings/${listingSlug}/media/${imageId}`, {
+      const res = await fetch(`/api/listings/${currentSlug}/media/${imageId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ isPrimary: true }),
@@ -245,7 +273,7 @@ export default function ImageUploader({
 
   const handleRetry = async (fileId: string) => {
     const progress = uploadProgress.get(fileId);
-    if (!progress) return;
+    if (!progress || !currentSlug) return;
 
     setUploadProgress((prev) => {
       const current = prev.get(fileId);
@@ -255,7 +283,7 @@ export default function ImageUploader({
 
     const sortOrder = images.length;
     const isPrimary = images.length === 0;
-    const uploaded = await uploadFile(progress.file, sortOrder, isPrimary);
+    const uploaded = await uploadFile(progress.file, sortOrder, isPrimary, currentSlug);
 
     if (uploaded) {
       onImagesChange([...images, uploaded]);
@@ -281,7 +309,7 @@ export default function ImageUploader({
   };
 
   const handleDropItem = async (dropIndex: number) => {
-    if (draggedIndex === null || draggedIndex === dropIndex || !listingSlug) return;
+    if (draggedIndex === null || draggedIndex === dropIndex || !currentSlug) return;
 
     const newImages = [...images];
     const [draggedItem] = newImages.splice(draggedIndex, 1);
@@ -297,7 +325,7 @@ export default function ImageUploader({
 
     // Update backend
     try {
-      await fetch(`/api/listings/${listingSlug}/media/reorder`, {
+      await fetch(`/api/listings/${currentSlug}/media/reorder`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -436,6 +464,7 @@ export default function ImageUploader({
                   fill
                   className="object-cover"
                   sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, 25vw"
+                  unoptimized={img.url.includes('supabase.co')}
                 />
 
                 {/* Primary Badge */}

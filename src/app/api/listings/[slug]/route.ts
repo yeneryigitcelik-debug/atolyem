@@ -1,6 +1,7 @@
 /**
  * GET /api/listings/:slug - Get listing details (public if published)
  * PATCH /api/listings/:slug - Update listing (owner only)
+ * DELETE /api/listings/:slug - Delete listing (owner only)
  */
 
 import { NextRequest, NextResponse } from "next/server";
@@ -9,7 +10,8 @@ import { requireSeller, optionalAuth } from "@/lib/auth/require-auth";
 import { updateListingSchema } from "@/lib/api/validation";
 import { prisma } from "@/lib/db/prisma";
 import { assertCanViewListing, assertCanEditListing } from "@/application/integrity-rules/visibility-rules";
-import { NotFoundError } from "@/lib/api/errors";
+import { NotFoundError, AppError, ErrorCodes } from "@/lib/api/errors";
+import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 
 type RouteParams = { slug: string };
 
@@ -212,6 +214,84 @@ export const PATCH = withRequestContext<RouteParams>(async (request, { requestId
         slug: updatedListing.slug,
         updatedAt: updatedListing.updatedAt,
       },
+    },
+    { headers: { "x-request-id": requestId } }
+  );
+});
+
+export const DELETE = withRequestContext<RouteParams>(async (request, { requestId, logger, params }) => {
+  const { user } = await requireSeller();
+  const { slug } = params!;
+
+  const listing = await prisma.listing.findUnique({
+    where: { slug },
+    select: {
+      id: true,
+      sellerUserId: true,
+      title: true,
+      media: {
+        select: { id: true, url: true },
+      },
+    },
+  });
+
+  if (!listing) {
+    throw new NotFoundError("Listing");
+  }
+
+  assertCanEditListing(listing.sellerUserId, user.id, user.isAdmin);
+
+  // Check if there are any active orders for this listing
+  const activeOrders = await prisma.orderItem.count({
+    where: {
+      listingId: listing.id,
+      order: {
+        status: {
+          in: ["PENDING_PAYMENT", "PROCESSING", "SHIPPED"],
+        },
+      },
+    },
+  });
+
+  if (activeOrders > 0) {
+    throw new AppError(
+      ErrorCodes.CONFLICT,
+      "Bu ürün aktif siparişlerde bulunduğu için silinemez. Önce siparişleri tamamlayın.",
+      400
+    );
+  }
+
+  // Delete media files from storage
+  if (listing.media.length > 0) {
+    try {
+      const supabase = createSupabaseAdminClient();
+      const filePaths = listing.media
+        .map((m) => {
+          // Extract path from URL: https://xxx.supabase.co/storage/v1/object/public/listing-images/listings/uuid/filename
+          const match = m.url.match(/listing-images\/(.+)$/);
+          return match ? match[1] : null;
+        })
+        .filter((p): p is string => p !== null);
+
+      if (filePaths.length > 0) {
+        await supabase.storage.from("listing-images").remove(filePaths);
+      }
+    } catch (error) {
+      // Log but don't fail - orphan files can be cleaned up later
+      logger.warn("Failed to delete some media files from storage", { listingId: listing.id });
+    }
+  }
+
+  // Delete listing (cascades will handle related records)
+  await prisma.listing.delete({
+    where: { id: listing.id },
+  });
+
+  logger.info("Listing deleted", { listingId: listing.id, title: listing.title });
+
+  return NextResponse.json(
+    {
+      message: "Ürün başarıyla silindi",
     },
     { headers: { "x-request-id": requestId } }
   );

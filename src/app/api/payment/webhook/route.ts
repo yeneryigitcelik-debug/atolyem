@@ -21,7 +21,8 @@ export const POST = withRequestContext(
 
     // Read raw body for signature verification
     const rawBody = await request.text();
-    const body = JSON.parse(rawBody);
+    // body parsed from rawBody for webhook processing
+    JSON.parse(rawBody); // Validate JSON
 
     // Verify webhook signature
     const paymentProvider = getPaymentProvider();
@@ -34,10 +35,11 @@ export const POST = withRequestContext(
         webhookSecret
       );
     } catch (error) {
-      logger.error("Webhook signature verification failed", {
-        error: error instanceof Error ? error.message : String(error),
-        requestId,
-      });
+      logger.error(
+        "Webhook signature verification failed",
+        error instanceof Error ? error : new Error(String(error)),
+        { requestId }
+      );
       throw new AppError(
         ErrorCodes.UNAUTHORIZED,
         "Invalid webhook signature",
@@ -66,7 +68,7 @@ export const POST = withRequestContext(
       });
 
       if (!order) {
-        logger.error("Order not found for webhook", {
+        logger.error("Order not found for webhook", undefined, {
           orderId: webhookEvent.orderId,
           orderNumber: webhookEvent.orderNumber,
           requestId,
@@ -120,7 +122,7 @@ export const POST = withRequestContext(
             });
 
             if (updateResult.count === 0) {
-              logger.error("Insufficient stock when processing payment", {
+              logger.error("Insufficient stock when processing payment", undefined, {
                 orderId: order.id,
                 orderItemId: orderItem.id,
                 variantId: orderItem.variantId,
@@ -152,7 +154,7 @@ export const POST = withRequestContext(
             });
 
             if (updateResult.count === 0) {
-              logger.error("Insufficient stock when processing payment", {
+              logger.error("Insufficient stock when processing payment", undefined, {
                 orderId: order.id,
                 orderItemId: orderItem.id,
                 listingId: orderItem.listingId,

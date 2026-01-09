@@ -44,8 +44,8 @@ export const heroSlides: HeroSlide[] = [
     image: "https://images.unsplash.com/photo-1518709414768-a88981a4515d?w=1920&h=1080&fit=crop",
     title: "Sanatçılarla doğrudan bağlantı",
     subtitle: "Eserlerin hikayesini öğrenin, sanatçılarla tanışın.",
-    ctaText: "Sanatçıları Keşfet",
-    ctaLink: "/sanatcilar",
+    ctaText: "Eserleri Keşfet",
+    ctaLink: "/kesfet",
     overlay: true,
   },
   {

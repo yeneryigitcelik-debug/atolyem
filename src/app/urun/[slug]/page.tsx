@@ -53,17 +53,11 @@ export default async function UrunPage({ params }: Props) {
           shopName: true,
           shopSlug: true,
           logoImageUrl: true,
-          owner: {
-            select: {
-              publicProfile: {
-                select: { username: true, displayName: true, avatarUrl: true },
-              },
-            },
-          },
+          ownerUserId: true,
         },
       },
       media: { orderBy: { sortOrder: "asc" } },
-      tags: { include: { tag: true } },
+      tags: true,
       attributes: true,
       _count: { select: { favorites: true, reviews: true } },
     },
@@ -71,6 +65,20 @@ export default async function UrunPage({ params }: Props) {
 
   if (!listing || listing.status !== "PUBLISHED") {
     notFound();
+  }
+
+  // Get shop owner's public profile for artist info
+  let ownerProfile = null;
+  if (listing.shop?.ownerUserId) {
+    const owner = await prisma.user.findUnique({
+      where: { id: listing.shop.ownerUserId },
+      select: {
+        publicProfile: {
+          select: { username: true, displayName: true, avatarUrl: true },
+        },
+      },
+    });
+    ownerProfile = owner?.publicProfile;
   }
 
   // Get related products from same shop
@@ -81,19 +89,16 @@ export default async function UrunPage({ params }: Props) {
       id: { not: listing.id },
     },
     take: 4,
-    select: {
-      title: true,
-      slug: true,
-      basePriceMinor: true,
-      shop: { select: { shopName: true, owner: { select: { publicProfile: { select: { username: true } } } } } },
-      media: { where: { isPrimary: true }, take: 1, select: { url: true } },
-      tags: { take: 1, include: { tag: true } },
+    include: {
+      shop: { select: { shopName: true } },
+      media: { where: { isPrimary: true }, take: 1 },
+      tags: { take: 1 },
     },
   });
 
   const price = listing.basePriceMinor / 100;
-  const primaryImage = listing.media.find(m => m.isPrimary) || listing.media[0];
-  const artistUsername = listing.shop?.owner?.publicProfile?.username;
+  const primaryImage = listing.media.find((m) => m.isPrimary) || listing.media[0];
+  const artistUsername = ownerProfile?.username;
 
   return (
     <>
@@ -119,6 +124,7 @@ export default async function UrunPage({ params }: Props) {
                   className="object-cover"
                   sizes="(max-width: 768px) 100vw, 50vw"
                   priority
+                  unoptimized={primaryImage.url.includes('supabase.co')}
                 />
               ) : (
                 <div className="w-full h-full flex items-center justify-center bg-gray-100">
@@ -136,6 +142,7 @@ export default async function UrunPage({ params }: Props) {
                       fill
                       className="object-cover"
                       sizes="(max-width: 768px) 25vw, 12vw"
+                      unoptimized={media.url.includes('supabase.co')}
                     />
                   </div>
                 ))}
@@ -147,8 +154,8 @@ export default async function UrunPage({ params }: Props) {
           <div>
             <div className="flex items-center gap-2 mb-2">
               {listing.tags.slice(0, 2).map((t) => (
-                <span key={t.tag.id} className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-primary/10 text-primary">
-                  {t.tag.name}
+                <span key={t.id} className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-primary/10 text-primary">
+                  {t.tag}
                 </span>
               ))}
               {listing.isHandmadeClaimed && (
@@ -160,11 +167,11 @@ export default async function UrunPage({ params }: Props) {
             {/* Artist Info */}
             {artistUsername && (
               <Link href={`/sanatsever/${artistUsername}`} className="flex items-center gap-3 mb-4 group">
-                {listing.shop?.owner?.publicProfile?.avatarUrl ? (
+                {ownerProfile?.avatarUrl ? (
                   <div className="w-10 h-10 rounded-full overflow-hidden relative">
                     <Image
-                      src={listing.shop.owner.publicProfile.avatarUrl}
-                      alt={listing.shop.shopName || ""}
+                      src={ownerProfile.avatarUrl}
+                      alt={listing.shop?.shopName || ""}
                       fill
                       className="object-cover"
                     />
@@ -259,7 +266,7 @@ export default async function UrunPage({ params }: Props) {
                   price={product.basePriceMinor / 100}
                   slug={product.slug}
                   image={product.media[0]?.url || ""}
-                  badge={product.tags[0]?.tag?.name}
+                  badge={product.tags[0]?.tag}
                 />
               ))}
             </div>

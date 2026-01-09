@@ -57,13 +57,15 @@ export default function SiparislerimPage() {
       if (res.ok) {
         const data = await res.json();
         // Transform API response to match Order interface
-        const transformedOrders: Order[] = data.orders.map((order: any) => ({
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const transformedOrders: Order[] = data.orders.map((order: Record<string, any>) => ({
           id: order.id,
           orderNumber: order.orderNumber,
           date: new Date(order.createdAt).toLocaleDateString("tr-TR", { day: "numeric", month: "long", year: "numeric" }),
           status: order.status.toLowerCase().replace("_", "-") as OrderStatus,
           total: order.grandTotalMinor / 100,
-          items: order.items.map((item: any) => ({
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          items: order.items.map((item: Record<string, any>) => ({
             id: item.id,
             title: item.titleSnapshot,
             artist: item.shopId, // Will need shop name from API

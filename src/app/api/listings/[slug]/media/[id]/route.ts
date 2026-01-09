@@ -9,7 +9,7 @@ import { requireSeller } from "@/lib/auth/require-auth";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { prisma } from "@/lib/db/prisma";
 import { assertCanEditListing } from "@/application/integrity-rules/visibility-rules";
-import { NotFoundError, AppError, ErrorCodes } from "@/lib/api/errors";
+import { NotFoundError } from "@/lib/api/errors";
 import { z } from "zod";
 
 type RouteParams = { slug: string; id: string };
@@ -58,9 +58,10 @@ export const DELETE = withRequestContext<RouteParams>(
         await supabase.storage.from("listing-images").remove([filePath]);
       }
     } catch (error) {
-      logger.warn("Failed to delete image from storage", error as Error, {
+      logger.warn("Failed to delete image from storage", {
         mediaId: id,
         url: media.url,
+        error: String(error),
       });
       // Continue with DB deletion even if storage deletion fails
     }

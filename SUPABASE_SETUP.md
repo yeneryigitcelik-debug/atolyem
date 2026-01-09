@@ -18,23 +18,56 @@
 
 ### API Keys
 - **anon public** key → `.env.local` dosyasındaki `NEXT_PUBLIC_SUPABASE_ANON_KEY` değerine yapıştırın
-- Bu key uzun bir JWT token gibi görünür (200+ karakter)
+- **service_role secret** key → `.env.local` dosyasındaki `SUPABASE_SERVICE_ROLE_KEY` değerine yapıştırın
+  - ⚠️ Bu key gizli tutulmalı ve asla frontend'e açılmamalı!
 
-## 3. .env.local Dosyasını Güncelleme
+## 3. Storage Bucket Kurulumu (Görsel Yükleme için GEREKLİ)
+
+Görsel yüklemenin çalışması için Storage bucket'ları oluşturmanız gerekiyor:
+
+### Yöntem 1: SQL Editor ile (Önerilen)
+1. Supabase Dashboard → **SQL Editor** seçin
+2. **New query** tıklayın
+3. `supabase/sql/storage-setup.sql` dosyasındaki kodu kopyalayıp yapıştırın
+4. **Run** butonuna tıklayın
+
+### Yöntem 2: Manuel Oluşturma
+1. Supabase Dashboard → **Storage** seçin
+2. **New bucket** tıklayın
+3. Şu bucket'ları oluşturun:
+
+**listing-images bucket:**
+- Name: `listing-images`
+- Public bucket: ✅ Açık
+- File size limit: 10MB
+- Allowed MIME types: `image/jpeg`, `image/png`, `image/webp`
+
+**profile-images bucket:**
+- Name: `profile-images`
+- Public bucket: ✅ Açık
+- File size limit: 5MB
+- Allowed MIME types: `image/jpeg`, `image/png`, `image/webp`
+
+## 4. .env.local Dosyasını Güncelleme
 
 `.env.local` dosyasını açın ve şu satırları güncelleyin:
 
 ```env
-# Bu satırı güncelleyin:
+# Supabase URL
 NEXT_PUBLIC_SUPABASE_URL=https://YOUR_PROJECT_ID.supabase.co
-# ↓ Şöyle olmalı:
-NEXT_PUBLIC_SUPABASE_URL=https://abcdefghijklmnop.supabase.co
 
-# Bu satırı güncelleyin:
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key-here
-# ↓ Şöyle olmalı (çok uzun bir token):
-NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFiY2RlZmdoaWprbG1ub3AiLCJyb2xlIjoiYW5vbiIsImlhdCI6MTYzODk2NzI5MCwiZXhwIjoxOTU0NTQzMjkwfQ.xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+# Supabase Anon Key (public)
+NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+
+# Supabase Service Role Key (GIZLI - sadece server tarafında kullanılır)
+# ⚠️ Bu key'i asla frontend kodunda kullanmayın!
+SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 ```
+
+### Önemli Notlar:
+- `service_role` key Dashboard → Project Settings → API → **service_role** (secret) bölümünden alınır
+- Bu key veritabanına tam erişim sağlar, dikkatli kullanın
+- Görsel yükleme için bu key **zorunludur**
 
 ## 4. Development Server'ı Yeniden Başlatma
 

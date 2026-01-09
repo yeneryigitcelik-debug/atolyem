@@ -104,9 +104,22 @@ export const POST = withRequestContext<RouteParams>(
       logger.error(
         "Failed to upload image to Supabase Storage",
         new Error(uploadError.message),
-        { filename, listingId: listing.id }
+        { filename, listingId: listing.id, errorDetails: uploadError }
       );
-      throw new AppError(ErrorCodes.INTERNAL_ERROR, "Failed to upload image", 500);
+      
+      // Provide more specific error messages
+      let errorMessage = "Görsel yüklenemedi";
+      if (uploadError.message.includes("Bucket not found")) {
+        errorMessage = "Storage bucket bulunamadı. Lütfen Supabase Dashboard'da 'listing-images' bucket'ı oluşturun.";
+      } else if (uploadError.message.includes("Invalid key") || uploadError.message.includes("invalid JWT")) {
+        errorMessage = "Supabase yapılandırma hatası. SUPABASE_SERVICE_ROLE_KEY kontrol edin.";
+      } else if (uploadError.message.includes("Payload too large")) {
+        errorMessage = "Dosya boyutu çok büyük. Maksimum 10MB.";
+      } else {
+        errorMessage = `Görsel yüklenemedi: ${uploadError.message}`;
+      }
+      
+      throw new AppError(ErrorCodes.INTERNAL_ERROR, errorMessage, 500);
     }
 
     // Get public URL

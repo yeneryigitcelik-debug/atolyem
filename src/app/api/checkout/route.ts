@@ -278,7 +278,7 @@ export const POST = withRequestContext(
             personalizationSnapshot: snapshot.personalizationSnapshot as Prisma.InputJsonValue | undefined,
             processingTimeSnapshot: snapshot.processingTimeSnapshot as Prisma.InputJsonValue | undefined,
             policySnapshot: snapshot.policySnapshot as Prisma.InputJsonValue | undefined,
-            taxRateSnapshot: taxRate.rate, // Store tax rate at purchase time for invoice
+            taxRateSnapshot: new Prisma.Decimal(taxRate.rate), // Store tax rate at purchase time
             estimatedShipByDate,
           },
         });
@@ -302,7 +302,7 @@ export const POST = withRequestContext(
     
     // Get user email for payment
     const userEmail = user.email;
-    const buyerName = data.shippingAddress.name || user.displayName || undefined;
+    const buyerName = data.shippingAddress.fullName || user.displayName || undefined;
     const buyerPhone = data.shippingAddress.phone || user.phone || undefined;
 
     const paymentIntent = await paymentProvider.createPaymentIntent({

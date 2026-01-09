@@ -42,9 +42,35 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     setCartCount(prev => Math.max(0, prev - 1));
   }, []);
 
+  // Initial cart fetch on mount/user change
   useEffect(() => {
-    refreshCart();
-  }, [refreshCart]);
+    // Using a local variable to prevent race conditions
+    let isMounted = true;
+    
+    const initCart = async () => {
+      if (!user) {
+        if (isMounted) setCartCount(0);
+        return;
+      }
+
+      try {
+        const res = await fetch("/api/cart");
+        if (res.ok && isMounted) {
+          const data = await res.json();
+          const items = data.cart?.items || [];
+          setCartCount(items.reduce((sum: number, item: { quantity: number }) => sum + item.quantity, 0));
+        }
+      } catch (err) {
+        console.error("Error fetching cart:", err);
+      }
+    };
+
+    initCart();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [user]);
 
   return (
     <CartContext.Provider value={{ cartCount, refreshCart, incrementCart, decrementCart }}>

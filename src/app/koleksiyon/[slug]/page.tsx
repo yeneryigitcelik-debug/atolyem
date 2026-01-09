@@ -11,8 +11,17 @@ const collections: Record<string, { title: string; description: string; curator:
   "yeni-nesil": { title: "Yeni Nesil Sanatçılar", description: "Genç yeteneklerin çağdaş eserleri. Geleceğin sanatını bugünden keşfedin.", curator: "Emre Editör" },
 };
 
-// Products will be fetched from API
-const mockProducts: any[] = [];
+// Products will be fetched from API - empty until API integration
+interface Product {
+  id: string;
+  title: string;
+  artist: string;
+  price: number;
+  slug: string;
+  image: string;
+  artistSlug?: string;
+}
+const mockProducts: Product[] = [];
 
 export default async function KoleksiyonPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;

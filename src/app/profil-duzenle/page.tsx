@@ -37,6 +37,13 @@ export default function ProfilDuzenlePage() {
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const bannerInputRef = useRef<HTMLInputElement>(null);
 
+  // Redirect to login if not authenticated
+  useEffect(() => {
+    if (!isLoading && !user) {
+      router.push("/hesap?redirect=/profil-duzenle");
+    }
+  }, [isLoading, user, router]);
+
   // Load initial data
   useEffect(() => {
     if (profile) {
@@ -190,8 +197,12 @@ export default function ProfilDuzenlePage() {
   }
 
   if (!user) {
-    router.push("/hesap");
-    return null;
+    // Redirect handled by useEffect above
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
   }
 
   return (

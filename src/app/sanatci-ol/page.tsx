@@ -69,8 +69,8 @@ export default function SanatciOlPage() {
             <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
               <span className="material-symbols-outlined text-primary text-3xl">storefront</span>
             </div>
-            <h3 className="text-lg font-bold text-text-charcoal mb-2">Kendi Dükkanınız</h3>
-            <p className="text-text-secondary">Özelleştirilebilir mağaza sayfası ile markanızı oluşturun.</p>
+            <h3 className="text-lg font-bold text-text-charcoal mb-2">Kendi Atölyeniz</h3>
+            <p className="text-text-secondary">Özelleştirilebilir atölye sayfası ile markanızı oluşturun.</p>
           </div>
           <div className="text-center">
             <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">

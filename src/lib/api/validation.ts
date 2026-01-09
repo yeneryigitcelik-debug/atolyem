@@ -111,7 +111,8 @@ export const createListingSchema = z
     listingType: listingTypeSchema,
     title: z.string().min(3).max(200),
     description: z.string().max(10000).optional(),
-    basePriceMinor: z.number().int().positive("Price must be positive"),
+    // Allow 0 for draft listings - will be validated on publish
+    basePriceMinor: z.number().int().min(0, "Price cannot be negative"),
     currency: z.string().length(3).default("TRY"),
     baseQuantity: z.number().int().min(0).default(1),
     sectionId: uuidSchema.optional().nullable(),

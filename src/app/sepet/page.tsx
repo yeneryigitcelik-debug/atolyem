@@ -43,7 +43,8 @@ export default function SepetPage() {
         const cart = data.cart;
         
         // Handle case where cart or items might be undefined
-        const items: CartItem[] = (cart?.items || []).map((item: any) => ({
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const items: CartItem[] = (cart?.items || []).map((item: Record<string, any>) => ({
           id: item.id,
           listingId: item.listingId || item.listing?.id,
           title: item.listing?.title || "",

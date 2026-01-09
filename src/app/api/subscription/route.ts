@@ -17,21 +17,8 @@ export const GET = withRequestContext(async (request: NextRequest, { requestId }
 
   const subscriptionInfo = await getSubscriptionInfo(user.id);
 
-  if (!subscriptionInfo) {
-    return NextResponse.json(
-      {
-        subscription: null,
-        limitInfo: {
-          canCreate: false,
-          remaining: 0,
-          currentCount: 0,
-          limit: 0,
-        },
-      },
-      { headers: { "x-request-id": requestId } }
-    );
-  }
-
+  // getSubscriptionInfo always returns a valid object with limitInfo
+  // For users without subscription, it defaults to BASIC plan limits
   return NextResponse.json(subscriptionInfo, {
     headers: { "x-request-id": requestId },
   });

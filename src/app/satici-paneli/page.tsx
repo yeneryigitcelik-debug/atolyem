@@ -13,16 +13,18 @@ interface SellerStats {
   totalViews: number;
 }
 
-interface SubscriptionInfo {
-  plan: string | null;
-  listingsThisPeriod: number;
-  listingLimit: number;
-}
+// Subscription system disabled - keeping interface for future use
+// interface SubscriptionInfo {
+//   plan: string | null;
+//   listingsThisPeriod: number;
+//   listingLimit: number;
+// }
 
 export default function SaticiPaneliPage() {
   const { user, profile, isLoading: authLoading } = useAuth();
   const [stats, setStats] = useState<SellerStats | null>(null);
-  const [subscriptionInfo, setSubscriptionInfo] = useState<SubscriptionInfo | null>(null);
+  // Subscription system disabled
+  // const [subscriptionInfo, setSubscriptionInfo] = useState<SubscriptionInfo | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -31,10 +33,7 @@ export default function SaticiPaneliPage() {
       
       try {
         // Fetch seller stats
-        const [statsRes, subRes] = await Promise.all([
-          fetch("/api/seller/stats").catch(() => null),
-          fetch("/api/subscription").catch(() => null),
-        ]);
+        const statsRes = await fetch("/api/seller/stats").catch(() => null);
 
         if (statsRes?.ok) {
           const data = await statsRes.json();
@@ -49,10 +48,12 @@ export default function SaticiPaneliPage() {
           });
         }
 
-        if (subRes?.ok) {
-          const data = await subRes.json();
-          setSubscriptionInfo(data.subscription);
-        }
+        // Subscription system disabled
+        // const subRes = await fetch("/api/subscription").catch(() => null);
+        // if (subRes?.ok) {
+        //   const data = await subRes.json();
+        //   setSubscriptionInfo(data.subscription);
+        // }
       } catch (err) {
         console.error("Error fetching seller data:", err);
       } finally {
@@ -170,17 +171,7 @@ export default function SaticiPaneliPage() {
                 <p className="text-text-secondary">Satıcı panelinize hoş geldiniz.</p>
               </div>
             </div>
-            {subscriptionInfo?.plan && (
-              <div className="hidden sm:block">
-                <span className={`px-3 py-1.5 rounded-full text-sm font-medium ${
-                  subscriptionInfo.plan === "PREMIUM" 
-                    ? "bg-primary/10 text-primary" 
-                    : "bg-gray-100 text-text-secondary"
-                }`}>
-                  {subscriptionInfo.plan === "PREMIUM" ? "Premium" : "Basic"} Plan
-                </span>
-              </div>
-            )}
+            {/* Subscription badge disabled */}
           </div>
         </div>
 
@@ -216,29 +207,7 @@ export default function SaticiPaneliPage() {
           </div>
         </div>
 
-        {/* Subscription Info */}
-        {subscriptionInfo && (
-          <div className="bg-surface-white rounded-lg border border-border-subtle p-6 mb-8">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="font-semibold text-text-charcoal mb-1">Abonelik Durumu</h3>
-                {subscriptionInfo.plan ? (
-                  <p className="text-text-secondary text-sm">
-                    Bu ay {subscriptionInfo.listingsThisPeriod} / {subscriptionInfo.listingLimit === -1 ? "Sınırsız" : subscriptionInfo.listingLimit} ürün
-                  </p>
-                ) : (
-                  <p className="text-text-secondary text-sm">Aboneliğiniz bulunmuyor</p>
-                )}
-              </div>
-              <Link
-                href="/satici-paneli/abonelik"
-                className="px-4 py-2 bg-primary/10 hover:bg-primary/20 text-primary font-medium rounded-md transition-colors"
-              >
-                {subscriptionInfo.plan ? "Yönet" : "Plan Seç"}
-              </Link>
-            </div>
-          </div>
-        )}
+        {/* Subscription Info - disabled */}
 
         {/* Quick Actions */}
         <div className="bg-surface-white rounded-lg border border-border-subtle p-8 mb-8">
@@ -260,9 +229,9 @@ export default function SaticiPaneliPage() {
               <span className="material-symbols-outlined text-2xl group-hover:scale-110 transition-transform">mail</span>
               <span className="text-sm font-medium text-center">Mesajlar</span>
             </Link>
-            <Link href="/satici-paneli/abonelik" className="flex flex-col items-center gap-2 p-6 border border-border-subtle rounded-lg hover:border-primary hover:text-primary transition-colors group">
-              <span className="material-symbols-outlined text-2xl group-hover:scale-110 transition-transform">workspace_premium</span>
-              <span className="text-sm font-medium text-center">Abonelik</span>
+            <Link href="/profil-duzenle" className="flex flex-col items-center gap-2 p-6 border border-border-subtle rounded-lg hover:border-primary hover:text-primary transition-colors group">
+              <span className="material-symbols-outlined text-2xl group-hover:scale-110 transition-transform">edit</span>
+              <span className="text-sm font-medium text-center">Profil</span>
             </Link>
           </div>
         </div>
@@ -282,21 +251,6 @@ export default function SaticiPaneliPage() {
               <li className="flex items-center gap-3">
                 <span className="material-symbols-outlined text-[20px] text-green-500">check_circle</span>
                 <span>Sanatçı profilinizi oluşturdunuz</span>
-              </li>
-              <li className="flex items-center gap-3">
-                {subscriptionInfo?.plan ? (
-                  <span className="material-symbols-outlined text-[20px] text-green-500">check_circle</span>
-                ) : (
-                  <span className="material-symbols-outlined text-[20px] text-border-subtle">radio_button_unchecked</span>
-                )}
-                <span>
-                  Abonelik planı seçin
-                  {!subscriptionInfo?.plan && (
-                    <Link href="/satici-paneli/abonelik" className="ml-2 text-primary hover:underline">
-                      Plan Seç →
-                    </Link>
-                  )}
-                </span>
               </li>
               <li className="flex items-center gap-3">
                 <span className="material-symbols-outlined text-[20px] text-border-subtle">radio_button_unchecked</span>

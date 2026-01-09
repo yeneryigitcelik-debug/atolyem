@@ -58,7 +58,10 @@ export default function HeroCarousel({
   useEffect(() => {
     if (!emblaApi) return;
 
-    onSelect();
+    // Initialize with current index without triggering cascade
+    const initialIndex = emblaApi.selectedScrollSnap();
+    setSelectedIndex(initialIndex);
+    
     emblaApi.on("select", onSelect);
     emblaApi.on("reInit", onSelect);
 
@@ -66,7 +69,8 @@ export default function HeroCarousel({
       emblaApi.off("select", onSelect);
       emblaApi.off("reInit", onSelect);
     };
-  }, [emblaApi, onSelect]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [emblaApi]);
 
   // Auto-play functionality
   useEffect(() => {

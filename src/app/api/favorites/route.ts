@@ -8,7 +8,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/db/prisma";
 
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
   try {
     const supabase = await createSupabaseServerClient();
     const { data: { user } } = await supabase.auth.getUser();
@@ -33,15 +33,7 @@ export async function GET(request: NextRequest) {
                 id: true,
                 shopName: true,
                 shopSlug: true,
-                owner: {
-                  select: {
-                    publicProfile: {
-                      select: {
-                        username: true,
-                      },
-                    },
-                  },
-                },
+                ownerUserId: true,
               },
             },
             media: {
@@ -51,7 +43,7 @@ export async function GET(request: NextRequest) {
             },
             tags: {
               take: 1,
-              select: { tag: { select: { name: true } } },
+              select: { tag: true },
             },
           },
         },
@@ -59,21 +51,40 @@ export async function GET(request: NextRequest) {
       orderBy: { createdAt: "desc" },
     });
 
+    // Get shop owner usernames in batch
+    const shopOwnerIds = [...new Set(
+      favorites
+        .map((f) => f.listing.shop?.ownerUserId)
+        .filter((id): id is string => !!id)
+    )];
+    const shopOwners = await prisma.user.findMany({
+      where: { id: { in: shopOwnerIds } },
+      include: {
+        publicProfile: {
+          select: { username: true },
+        },
+      },
+    });
+    const ownerUsernameMap = new Map(
+      shopOwners.map((u) => [u.id, u.publicProfile?.username ?? null])
+    );
+
     // Filter to only include published listings
     const publishedFavorites = favorites.filter((f) => f.listing.status === "PUBLISHED");
 
     return NextResponse.json({
       favorites: publishedFavorites.map((f) => ({
-        id: f.id,
         listingId: f.listingId,
         title: f.listing.title,
         slug: f.listing.slug,
-        price: f.listing.basePriceMinor / 100, // Convert from minor to major currency
+        price: f.listing.basePriceMinor / 100,
         currency: f.listing.currency,
         image: f.listing.media[0]?.url ?? null,
         artist: f.listing.shop?.shopName ?? "Bilinmeyen",
-        artistSlug: f.listing.shop?.owner?.publicProfile?.username ?? null,
-        badge: f.listing.tags[0]?.tag?.name ?? null,
+        artistSlug: f.listing.shop?.ownerUserId 
+          ? ownerUsernameMap.get(f.listing.shop.ownerUserId) 
+          : null,
+        badge: f.listing.tags[0]?.tag ?? null,
         favoritedAt: f.createdAt,
       })),
       total: publishedFavorites.length,
